@@ -25,6 +25,8 @@ export interface InstallOptions {
   locked?: boolean;
   vendor?: boolean;
   quiet?: boolean;
+  existingLockOverride?: LockfileV2 | null;
+  path?: string;
 }
 
 export interface PackageManagerResult {
@@ -127,6 +129,12 @@ export class PackageManager2 {
       getPackageManifest: (pkgName: string, version: string): HkdManifest | null => {
         // Path dependency
         if (version === "local") {
+          const rootManifest = readManifest(dir);
+          const depEntry = rootManifest?.dependencies?.[pkgName] || rootManifest?.devDependencies?.[pkgName];
+          if (typeof depEntry === "object" && depEntry !== null && "path" in depEntry) {
+            const pathDepDir = path.resolve(dir, depEntry.path);
+            return readManifest(pathDepDir);
+          }
           const pathDepDir = path.resolve(dir, pkgName);
           return readManifest(pathDepDir);
         }
@@ -141,6 +149,19 @@ export class PackageManager2 {
       },
 
       getPackageIntegrity: (pkgName: string, version: string): string => {
+        if (version === "local") {
+          const rootManifest = readManifest(dir);
+          const depEntry = rootManifest?.dependencies?.[pkgName] || rootManifest?.devDependencies?.[pkgName];
+          let targetPath = path.resolve(dir, pkgName);
+          if (typeof depEntry === "object" && depEntry !== null && "path" in depEntry) {
+            targetPath = path.resolve(dir, depEntry.path);
+          }
+          const m = readManifest(targetPath);
+          if (m) {
+            const hash = crypto.createHash("sha256").update(JSON.stringify(m)).digest("hex");
+            return `sha256:${hash}`;
+          }
+        }
         for (const entry of this.cache.list()) {
           if (entry.name === pkgName && entry.version === version) {
             return entry.checksum;
@@ -161,7 +182,7 @@ export class PackageManager2 {
     }
 
     const offline = options.offline || process.env.HKD_OFFLINE === "1";
-    const existingLock = readLockfile(dir);
+    const existingLock = options.existingLockOverride !== undefined ? options.existingLockOverride : readLockfile(dir);
 
     if (options.locked && !existingLock) {
       return { ok: false, message: "error[PKG010]: --locked specified but no hkd.lock found" };
@@ -286,11 +307,60 @@ export class PackageManager2 {
 
   /**
    * Adds a new dependency and runs installation.
+   * Supports:
+   * - Registry package: `hkd add http@^1.0.0` or `hkd add http`
+   * - Local path: `hkd add ../my-lib` or `hkd add my-lib --path ../my-lib`
+   * - Archive: `hkd add ./vendor/my-pkg.hkdpack`
    */
   async add(dir: string, pkgSpec: string, options: InstallOptions = {}): Promise<PackageManagerResult> {
     const manifest = readManifest(dir);
     if (!manifest) {
       return { ok: false, message: "No hkd.toml found. Run `hkd init` first." };
+    }
+
+    if (options.path) {
+      const targetDir = path.resolve(dir, options.path);
+      const targetManifest = readManifest(targetDir);
+      if (!targetManifest) {
+        return { ok: false, message: `No hkd.toml found in path '${options.path}'` };
+      }
+      const pkgName = normalizePackageName(pkgSpec || targetManifest.name);
+      const relPath = path.relative(dir, targetDir).replace(/\\/g, "/");
+      manifest.dependencies[pkgName] = { path: relPath } as any;
+      writeManifest(dir, manifest);
+      return this.install(dir, options);
+    }
+
+    if (pkgSpec.endsWith(".hkdpack")) {
+      const archivePath = path.resolve(dir, pkgSpec);
+      if (!fs.existsSync(archivePath)) {
+        return { ok: false, message: `Archive file not found: ${pkgSpec}` };
+      }
+      const archiveBuf = fs.readFileSync(archivePath);
+      const tmpExtract = path.join(dir, ".hkd", "tmp_pack_add");
+      const unpacked = unpackArchive(archiveBuf, tmpExtract);
+      fs.rmSync(tmpExtract, { recursive: true, force: true });
+      this.cache.store(unpacked.checksum, archiveBuf, unpacked.manifest);
+      manifest.dependencies[unpacked.manifest.name] = unpacked.manifest.version;
+      writeManifest(dir, manifest);
+      return this.install(dir, options);
+    }
+
+    const resolvedPath = path.resolve(dir, pkgSpec);
+    if (
+      (pkgSpec.startsWith(".") || pkgSpec.startsWith("/") || pkgSpec.startsWith("\\") || fs.existsSync(resolvedPath)) &&
+      fs.existsSync(resolvedPath) &&
+      fs.statSync(resolvedPath).isDirectory()
+    ) {
+      const targetManifest = readManifest(resolvedPath);
+      if (!targetManifest) {
+        return { ok: false, message: `No hkd.toml found in directory '${pkgSpec}'` };
+      }
+      const pkgName = normalizePackageName(targetManifest.name);
+      const relPath = path.relative(dir, resolvedPath).replace(/\\/g, "/");
+      manifest.dependencies[pkgName] = { path: relPath } as any;
+      writeManifest(dir, manifest);
+      return this.install(dir, options);
     }
 
     let pkgName = "";
@@ -334,6 +404,28 @@ export class PackageManager2 {
     writeManifest(dir, manifest);
 
     return this.install(dir, options);
+  }
+
+  /**
+   * Updates dependencies within version ranges.
+   * If pkgName is specified, only that dependency is re-resolved.
+   * Otherwise, all dependencies are re-resolved.
+   */
+  async update(dir: string, pkgName?: string, options: InstallOptions = {}): Promise<PackageManagerResult> {
+    const manifest = readManifest(dir);
+    if (!manifest) {
+      return { ok: false, message: "No hkd.toml found. Run `hkd init` first." };
+    }
+
+    let existingLock = readLockfile(dir);
+    if (existingLock && pkgName) {
+      const norm = normalizePackageName(pkgName);
+      existingLock.packages = existingLock.packages.filter((p) => p.name !== norm);
+    } else {
+      existingLock = null;
+    }
+
+    return this.install(dir, { ...options, existingLockOverride: existingLock });
   }
 
   /**

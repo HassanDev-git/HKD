@@ -410,11 +410,12 @@ export class Compiler {
     const prevStruct = this.currentStruct;
     this.currentStruct = stmt.structName;
     for (const method of stmt.methods) {
-      const mangledName = `${stmt.structName}__${method.name}`;
+      const effectiveMethod = method.isAsync ? desugarAsyncFunction(method) : method;
+      const mangledName = `${stmt.structName}__${effectiveMethod.name}`;
       const { fn, upvalues } = this.compileFunction(
         mangledName,
-        method.params,
-        method.body,
+        effectiveMethod.params,
+        effectiveMethod.body,
         l
       );
       this.emitClosure(fn, upvalues, l);
@@ -873,10 +874,11 @@ export class Compiler {
           const structName = parts.slice(1).join("__");
           const prevSpec = this.currentSpecializedReceiverStruct;
           this.currentSpecializedReceiverStruct = structName;
+          const effectiveFunc = origFunc.isAsync ? desugarAsyncFunction(origFunc) : origFunc;
           const { fn, upvalues } = this.compileFunction(
             monoName,
-            origFunc.params,
-            origFunc.body,
+            effectiveFunc.params,
+            effectiveFunc.body,
             l
           );
           this.currentSpecializedReceiverStruct = prevSpec;

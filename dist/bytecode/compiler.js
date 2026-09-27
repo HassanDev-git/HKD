@@ -397,8 +397,9 @@ class Compiler {
         const prevStruct = this.currentStruct;
         this.currentStruct = stmt.structName;
         for (const method of stmt.methods) {
-            const mangledName = `${stmt.structName}__${method.name}`;
-            const { fn, upvalues } = this.compileFunction(mangledName, method.params, method.body, l);
+            const effectiveMethod = method.isAsync ? (0, async_lowering_js_1.desugarAsyncFunction)(method) : method;
+            const mangledName = `${stmt.structName}__${effectiveMethod.name}`;
+            const { fn, upvalues } = this.compileFunction(mangledName, effectiveMethod.params, effectiveMethod.body, l);
             this.emitClosure(fn, upvalues, l);
             this.declareVariable(mangledName, l, false);
         }
@@ -795,7 +796,8 @@ class Compiler {
                     const structName = parts.slice(1).join("__");
                     const prevSpec = this.currentSpecializedReceiverStruct;
                     this.currentSpecializedReceiverStruct = structName;
-                    const { fn, upvalues } = this.compileFunction(monoName, origFunc.params, origFunc.body, l);
+                    const effectiveFunc = origFunc.isAsync ? (0, async_lowering_js_1.desugarAsyncFunction)(origFunc) : origFunc;
+                    const { fn, upvalues } = this.compileFunction(monoName, effectiveFunc.params, effectiveFunc.body, l);
                     this.currentSpecializedReceiverStruct = prevSpec;
                     this.emitClosure(fn, upvalues, l);
                     this.declareVariable(monoName, l, false);

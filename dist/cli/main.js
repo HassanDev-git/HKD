@@ -60,6 +60,7 @@ const manager_js_1 = require("../package-manager/manager.js");
 const audit_js_1 = require("../package-manager/audit.js");
 const reproducible_js_1 = require("../package-manager/reproducible.js");
 const cache_js_1 = require("../package-manager/cache.js");
+const lockfile_js_1 = require("../package-manager/lockfile.js");
 const repl_js_1 = require("./repl.js");
 const test_runner_js_1 = require("./test-runner.js");
 const analyser_js_1 = require("../semantic/analyser.js");
@@ -179,6 +180,9 @@ function main() {
             break;
         case "cache":
             cmdCache(args.slice(1));
+            break;
+        case "tree":
+            cmdTree(args.slice(1));
             break;
         case "ci":
             cmdCi(args.slice(1));
@@ -774,17 +778,32 @@ Examples:
     }
     (0, repl_js_1.startRepl)(edition);
 }
-function cmdFmt(args) {
-    if (args.length === 0) {
-        console.error(RED("hkd fmt: Expected a file path"));
-        process.exit(2);
+function findHkdFiles(dir) {
+    const results = [];
+    try {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+            if (entry.name === "node_modules" ||
+                entry.name === ".git" ||
+                entry.name === "target" ||
+                entry.name === ".hkd" ||
+                entry.name === "vendor" ||
+                entry.name === "tmp_dev_journey") {
+                continue;
+            }
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+                results.push(...findHkdFiles(fullPath));
+            }
+            else if (entry.isFile() && entry.name.endsWith(".hkd")) {
+                results.push(fullPath);
+            }
+        }
     }
-    const filePath = args[0];
-    if (!fs.existsSync(filePath)) {
-        console.error(RED(`File not found: ${filePath}`));
-        process.exit(1);
-    }
-    const source = fs.readFileSync(filePath, "utf-8");
+    catch { }
+    return results.sort();
+}
+function formatHkdSource(filePath, source) {
     const fileName = path.resolve(filePath);
     const reporter = new index_js_3.ErrorReporter(source, fileName);
     const lexer = new lexer_js_1.Lexer(source, fileName, reporter);
@@ -799,14 +818,78 @@ function cmdFmt(args) {
         console.error(RED(`fmt: ${filePath} has parse errors — cannot format`));
         process.exit(1);
     }
-    const formatted = (0, index_js_4.format)(ast);
+    return (0, index_js_4.format)(ast);
+}
+function cmdFmt(args) {
     const inPlace = args.includes("--write") || args.includes("-w");
-    if (inPlace) {
-        fs.writeFileSync(filePath, formatted, "utf-8");
-        console.log(GREEN(`✓ Formatted ${filePath}`));
+    const checkOnly = args.includes("--check");
+    const cleanArgs = args.filter((a) => !a.startsWith("-"));
+    let targetFiles = [];
+    if (cleanArgs.length === 0) {
+        const projectDir = getProjectDir() || process.cwd();
+        targetFiles = findHkdFiles(projectDir);
+        if (targetFiles.length === 0) {
+            console.log(DIM("No .hkd files found to format."));
+            return;
+        }
     }
     else {
+        for (const arg of cleanArgs) {
+            if (!fs.existsSync(arg)) {
+                console.error(RED(`File or directory not found: ${arg}`));
+                process.exit(1);
+            }
+            const stat = fs.statSync(arg);
+            if (stat.isDirectory()) {
+                targetFiles.push(...findHkdFiles(arg));
+            }
+            else {
+                targetFiles.push(path.resolve(arg));
+            }
+        }
+    }
+    // Single file without write or check flag: output to stdout
+    if (cleanArgs.length === 1 && !inPlace && !checkOnly && fs.existsSync(cleanArgs[0]) && !fs.statSync(cleanArgs[0]).isDirectory()) {
+        const filePath = targetFiles[0];
+        const source = fs.readFileSync(filePath, "utf-8");
+        const formatted = formatHkdSource(filePath, source);
         process.stdout.write(formatted);
+        return;
+    }
+    // Multi-file or in-place or check-only mode
+    let formattedCount = 0;
+    const unformattedFiles = [];
+    for (const filePath of targetFiles) {
+        const source = fs.readFileSync(filePath, "utf-8");
+        const formatted = formatHkdSource(filePath, source);
+        if (source !== formatted) {
+            unformattedFiles.push(filePath);
+            if (!checkOnly) {
+                fs.writeFileSync(filePath, formatted, "utf-8");
+                console.log(GREEN(`✓ Formatted ${path.relative(process.cwd(), filePath)}`));
+                formattedCount++;
+            }
+        }
+    }
+    if (checkOnly) {
+        if (unformattedFiles.length > 0) {
+            for (const f of unformattedFiles) {
+                console.log(RED(`Would format: ${path.relative(process.cwd(), f)}`));
+            }
+            console.error(RED(`\n${unformattedFiles.length} file(s) need formatting. Run \`hkd fmt\` to fix.`));
+            process.exit(1);
+        }
+        else {
+            console.log(GREEN(`✓ All ${targetFiles.length} file(s) are properly formatted.`));
+        }
+    }
+    else if (cleanArgs.length === 0 || inPlace) {
+        if (formattedCount === 0) {
+            console.log(GREEN(`✓ All ${targetFiles.length} file(s) already formatted.`));
+        }
+        else {
+            console.log(GREEN(`✓ Successfully formatted ${formattedCount} file(s).`));
+        }
     }
 }
 function applyLintFixes(source, issues) {
@@ -942,33 +1025,51 @@ function cmdTest(args) {
     (0, test_runner_js_1.runTests)(target, { filter, verbose, quiet, conformance, differential });
 }
 function cmdCheck(args) {
-    if (args.length === 0) {
-        console.error(RED("hkd check: Expected a file path"));
-        process.exit(2);
+    const cleanArgs = args.filter((a) => !a.startsWith("-"));
+    let targetFiles = [];
+    if (cleanArgs.length === 0) {
+        const projectDir = getProjectDir();
+        if (!projectDir) {
+            console.error(RED("hkd check: Expected a file path or an HKD project (no hkd.toml found)"));
+            process.exit(2);
+        }
+        const manifest = (0, index_js_6.readManifest)(projectDir);
+        const entryFile = path.resolve(projectDir, manifest?.main ?? "src/main.hkd");
+        if (!fs.existsSync(entryFile)) {
+            console.error(RED(`hkd check: Entry file not found: ${entryFile}`));
+            process.exit(1);
+        }
+        targetFiles = [entryFile];
     }
-    const filePath = args[0];
-    if (!fs.existsSync(filePath)) {
-        console.error(RED(`File not found: ${filePath}`));
-        process.exit(1);
+    else {
+        for (const arg of cleanArgs) {
+            if (!fs.existsSync(arg)) {
+                console.error(RED(`File not found: ${arg}`));
+                process.exit(1);
+            }
+            targetFiles.push(path.resolve(arg));
+        }
     }
-    const source = fs.readFileSync(filePath, "utf-8");
-    const fileName = path.resolve(filePath);
-    const reporter = new index_js_3.ErrorReporter(source, fileName);
-    const lexer = new lexer_js_1.Lexer(source, fileName, reporter);
-    const tokens = lexer.tokenize();
-    const parser = new parser_js_1.Parser(tokens, source, fileName, reporter, detectFileEdition(fileName));
-    const ast = parser.parse();
-    if (reporter.hasErrors()) {
-        console.log(reporter.format());
-        process.exit(1);
+    for (const filePath of targetFiles) {
+        const source = fs.readFileSync(filePath, "utf-8");
+        const fileName = path.resolve(filePath);
+        const reporter = new index_js_3.ErrorReporter(source, fileName);
+        const lexer = new lexer_js_1.Lexer(source, fileName, reporter);
+        const tokens = lexer.tokenize();
+        const parser = new parser_js_1.Parser(tokens, source, fileName, reporter, detectFileEdition(fileName));
+        const ast = parser.parse();
+        if (reporter.hasErrors()) {
+            console.log(reporter.format());
+            process.exit(1);
+        }
+        const analyser = new analyser_js_1.SemanticAnalyser(reporter, source);
+        analyser.analyse(ast);
+        if (reporter.hasErrors()) {
+            console.log(reporter.format());
+            process.exit(1);
+        }
+        console.log(GREEN(`✓ ${path.basename(filePath)} — no errors`));
     }
-    const analyser = new analyser_js_1.SemanticAnalyser(reporter, source);
-    analyser.analyse(ast);
-    if (reporter.hasErrors()) {
-        console.log(reporter.format());
-        process.exit(1);
-    }
-    console.log(GREEN(`✓ ${path.basename(filePath)} — no errors`));
 }
 function cmdInit(args) {
     if (args.includes("--help") || args.includes("-h")) {
@@ -1049,8 +1150,19 @@ Examples:
     }
 }
 async function cmdAdd(args) {
-    if (args.length === 0) {
-        console.error(RED("hkd add: Expected a package name, e.g. hkd add http@^1.0.0"));
+    const pathIdx = args.indexOf("--path");
+    const pathVal = pathIdx !== -1 ? args[pathIdx + 1] : undefined;
+    const cleanArgs = args.filter((a, idx) => {
+        if (a === "--path")
+            return false;
+        if (idx > 0 && args[idx - 1] === "--path")
+            return false;
+        if (a.startsWith("-"))
+            return false;
+        return true;
+    });
+    if (cleanArgs.length === 0 && !pathVal) {
+        console.error(RED("hkd add: Expected a package name or path, e.g. hkd add http@^1.0.0 or hkd add --path ../my-lib"));
         process.exit(1);
     }
     const projectDir = getProjectDir();
@@ -1059,8 +1171,10 @@ async function cmdAdd(args) {
         process.exit(1);
     }
     const pm = new manager_js_1.PackageManager2();
-    const res = await pm.add(projectDir, args[0], {
+    const pkgSpec = cleanArgs[0] || "";
+    const res = await pm.add(projectDir, pkgSpec, {
         offline: args.includes("--offline"),
+        path: pathVal,
     });
     if (res.ok) {
         console.log(GREEN("✓ ") + res.message);
@@ -1116,8 +1230,10 @@ async function cmdUpdate(args) {
         console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
         process.exit(1);
     }
+    const cleanArgs = args.filter((a) => !a.startsWith("-"));
+    const targetPkg = cleanArgs[0];
     const pm = new manager_js_1.PackageManager2();
-    const res = await pm.install(projectDir, { offline: args.includes("--offline") });
+    const res = await pm.update(projectDir, targetPkg, { offline: args.includes("--offline") });
     if (res.ok) {
         console.log(GREEN("✓ ") + res.message);
     }
@@ -1254,6 +1370,82 @@ function cmdAudit(args) {
     }
     if (!res.ok)
         process.exit(1);
+}
+function cmdTree(args) {
+    const isJson = args.includes("--json");
+    const projectDir = getProjectDir();
+    if (!projectDir) {
+        console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
+        process.exit(1);
+    }
+    const manifest = (0, index_js_6.readManifest)(projectDir);
+    if (!manifest) {
+        console.error(RED("Error: Could not read hkd.toml"));
+        process.exit(1);
+    }
+    const lock = (0, lockfile_js_1.readLockfile)(projectDir);
+    const pkgMap = new Map();
+    if (lock && lock.packages) {
+        for (const pkg of lock.packages) {
+            pkgMap.set(pkg.name, pkg);
+        }
+    }
+    function buildSubtree(pkgName, seen) {
+        const locked = pkgMap.get(pkgName);
+        const version = locked
+            ? locked.version
+            : typeof manifest?.dependencies?.[pkgName] === "string"
+                ? manifest.dependencies[pkgName]
+                : "local";
+        const node = {
+            name: pkgName,
+            version: version || "unknown",
+            dependencies: [],
+        };
+        if (seen.has(pkgName)) {
+            return node;
+        }
+        const nextSeen = new Set(seen);
+        nextSeen.add(pkgName);
+        if (locked && locked.dependencies) {
+            for (const depStr of locked.dependencies) {
+                const depName = depStr.split(" ")[0];
+                node.dependencies.push(buildSubtree(depName, nextSeen));
+            }
+        }
+        return node;
+    }
+    const rootNode = {
+        name: manifest.name,
+        version: manifest.version,
+        dependencies: [],
+    };
+    const directDeps = Object.keys(manifest.dependencies || {}).sort();
+    for (const dep of directDeps) {
+        rootNode.dependencies.push(buildSubtree(dep, new Set([manifest.name])));
+    }
+    if (isJson) {
+        console.log(JSON.stringify(rootNode, null, 2));
+        return;
+    }
+    console.log(`${BOLD(rootNode.name)} v${rootNode.version}`);
+    if (rootNode.dependencies.length === 0) {
+        console.log("└── " + DIM("(no dependencies)"));
+        return;
+    }
+    function printTree(node, prefix, isLast) {
+        const branch = isLast ? "└── " : "├── ";
+        console.log(`${prefix}${branch}${CYAN(node.name)} v${node.version}`);
+        const nextPrefix = prefix + (isLast ? "    " : "│   ");
+        for (let i = 0; i < node.dependencies.length; i++) {
+            const isLastChild = i === node.dependencies.length - 1;
+            printTree(node.dependencies[i], nextPrefix, isLastChild);
+        }
+    }
+    for (let i = 0; i < rootNode.dependencies.length; i++) {
+        const isLast = i === rootNode.dependencies.length - 1;
+        printTree(rootNode.dependencies[i], "", isLast);
+    }
 }
 function cmdCache(args) {
     const sub = args[0] || "list";
@@ -1587,9 +1779,10 @@ ${BOLD("COMMANDS:")}
   ${CYAN("run")}       [file.hkd]          Run an HKD project or source file
   ${CYAN("build")}     [options]           Compile project modules incrementally
   ${CYAN("test")}      [file/dir]          Run tests
-  ${CYAN("fmt")}       <file.hkd> [-w]     Format source code (use -w to write back)
+  ${CYAN("fmt")}       [file.hkd] [-w]     Format source code (formats project if no file given)
   ${CYAN("lint")}      <file.hkd>          Lint source code for issues
-  ${CYAN("check")}     <file.hkd>          Type-check without running
+  ${CYAN("check")}     [file.hkd]          Type-check project or source file
+  ${CYAN("tree")}      [--json]            Display the resolved dependency tree
   ${CYAN("explain")}   <error_code>        Explain compiler error codes with code examples
   ${CYAN("rfc")}       <list|check|status> Language Evolution RFC proposal inspector & validator
   ${CYAN("doctor")}    [--json]            Run system and IDE integration diagnostic

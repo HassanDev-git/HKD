@@ -64,6 +64,22 @@ function makeReturnFuture(span) {
         span,
     };
 }
+function makeMember(obj, property, span) {
+    return {
+        kind: "MemberExpr",
+        object: obj,
+        property,
+        optional: false,
+        span,
+    };
+}
+function makeString(value, span) {
+    return {
+        kind: "StringLiteral",
+        value,
+        span,
+    };
+}
 /** Check if an expression or any subexpression is an AwaitExpr. */
 function hasAwait(node) {
     if (!node)
@@ -88,16 +104,169 @@ function hasAwait(node) {
     }
     return false;
 }
+let liftCounter = 0;
+/** Recursively lift AwaitExpr from arbitrary subexpressions into top-level statements. */
+function liftAwaitsFromExpr(expr, liftedStmts) {
+    if (!expr || !hasAwait(expr))
+        return expr;
+    if (expr.kind === "AwaitExpr") {
+        const operand = liftAwaitsFromExpr(expr.expr, liftedStmts);
+        const tmpName = `__await_lift_${liftCounter++}__`;
+        const span = expr.span;
+        liftedStmts.push(makeVarDecl(tmpName, { kind: "AwaitExpr", expr: operand, span }, span));
+        return makeIdent(tmpName, span);
+    }
+    const anyExpr = { ...expr };
+    for (const key of Object.keys(anyExpr)) {
+        if (key === "span")
+            continue;
+        const val = anyExpr[key];
+        if (Array.isArray(val)) {
+            anyExpr[key] = val.map((item) => item && typeof item === "object" && item.kind ? liftAwaitsFromExpr(item, liftedStmts) : item);
+        }
+        else if (val && typeof val === "object" && val.kind) {
+            anyExpr[key] = liftAwaitsFromExpr(val, liftedStmts);
+        }
+    }
+    return anyExpr;
+}
+/** Flatten blocks and lift awaits out of expressions in statements. */
+function flattenAndLiftStmts(stmts) {
+    const result = [];
+    for (const s of stmts) {
+        if (s.kind === "BlockStmt") {
+            result.push(...flattenAndLiftStmts(s.body));
+            continue;
+        }
+        if (!hasAwait(s)) {
+            result.push(s);
+            continue;
+        }
+        if (s.kind === "VarDeclStmt" && s.initializer) {
+            if (s.initializer.kind === "AwaitExpr" && !hasAwait(s.initializer.expr)) {
+                result.push(s);
+            }
+            else {
+                const lifted = [];
+                const newInit = liftAwaitsFromExpr(s.initializer, lifted);
+                result.push(...flattenAndLiftStmts(lifted));
+                result.push({ ...s, initializer: newInit });
+            }
+        }
+        else if (s.kind === "ExprStmt") {
+            if (s.expr.kind === "AwaitExpr" && !hasAwait(s.expr.expr)) {
+                result.push(s);
+            }
+            else if (s.expr.kind === "AssignExpr" &&
+                s.expr.value.kind === "AwaitExpr" &&
+                !hasAwait(s.expr.value.expr)) {
+                result.push(s);
+            }
+            else {
+                const lifted = [];
+                const newExpr = liftAwaitsFromExpr(s.expr, lifted);
+                result.push(...flattenAndLiftStmts(lifted));
+                result.push({ ...s, expr: newExpr });
+            }
+        }
+        else if (s.kind === "ReturnStmt") {
+            if (s.value && s.value.kind === "AwaitExpr" && !hasAwait(s.value.expr)) {
+                result.push(s);
+            }
+            else if (s.value) {
+                const lifted = [];
+                const newVal = liftAwaitsFromExpr(s.value, lifted);
+                result.push(...flattenAndLiftStmts(lifted));
+                result.push({ ...s, value: newVal });
+            }
+            else {
+                result.push(s);
+            }
+        }
+        else if (s.kind === "IfStmt") {
+            if (hasAwait(s.condition)) {
+                const lifted = [];
+                const newCond = liftAwaitsFromExpr(s.condition, lifted);
+                result.push(...flattenAndLiftStmts(lifted));
+                result.push({ ...s, condition: newCond });
+            }
+            else {
+                result.push(s);
+            }
+        }
+        else if (s.kind === "WhileStmt") {
+            if (hasAwait(s.condition)) {
+                const condAwait = s.condition;
+                const tmpCond = `__await_cond_${liftCounter++}__`;
+                const span = s.span;
+                const breakStmt = { kind: "BreakStmt", span };
+                const ifNotBreak = {
+                    kind: "IfStmt",
+                    condition: {
+                        kind: "UnaryExpr",
+                        op: "!",
+                        operand: makeIdent(tmpCond, span),
+                        span,
+                    },
+                    then: {
+                        kind: "BlockStmt",
+                        body: [breakStmt],
+                        span,
+                    },
+                    else_: null,
+                    span,
+                };
+                const newBodyStmts = [
+                    makeVarDecl(tmpCond, condAwait, span),
+                    ifNotBreak,
+                    ...s.body.body,
+                ];
+                const infiniteWhile = {
+                    kind: "WhileStmt",
+                    condition: { kind: "BoolLiteral", value: true, span },
+                    body: {
+                        kind: "BlockStmt",
+                        body: flattenAndLiftStmts(newBodyStmts),
+                        span,
+                    },
+                    span,
+                };
+                result.push(infiniteWhile);
+            }
+            else {
+                result.push(s);
+            }
+        }
+        else {
+            result.push(s);
+        }
+    }
+    return result;
+}
 /** Collect all variable names declared via `let` in statement list. */
 function collectDeclaredVariables(stmts) {
     const vars = [];
+    function walk(node) {
+        if (!node || typeof node !== "object")
+            return;
+        if (node.kind === "VarDeclStmt" && typeof node.name === "string") {
+            vars.push(node.name);
+        }
+        for (const key of Object.keys(node)) {
+            if (key === "span")
+                continue;
+            const child = node[key];
+            if (Array.isArray(child)) {
+                for (const item of child)
+                    walk(item);
+            }
+            else if (child && typeof child === "object" && child.kind) {
+                walk(child);
+            }
+        }
+    }
     for (const s of stmts) {
-        if (s.kind === "VarDeclStmt") {
-            vars.push(s.name);
-        }
-        else if (s.kind === "BlockStmt") {
-            vars.push(...collectDeclaredVariables(s.body));
-        }
+        walk(s);
     }
     return Array.from(new Set(vars));
 }
@@ -152,13 +321,14 @@ function rewriteReturnsInStmt(stmt) {
  */
 function desugarAsyncFunction(stmt) {
     const span = stmt.span;
-    const declaredVars = collectDeclaredVariables(stmt.body.body);
+    const canonicalStmts = flattenAndLiftStmts(stmt.body.body);
+    const declaredVars = collectDeclaredVariables(canonicalStmts);
     // States partitions: array of statements per state
     const states = [[]];
     let currentStateIdx = 0;
     let awaitCounter = 0;
-    for (let i = 0; i < stmt.body.body.length; i++) {
-        const s = stmt.body.body[i];
+    for (let i = 0; i < canonicalStmts.length; i++) {
+        const s = canonicalStmts[i];
         if (s.kind === "VarDeclStmt" && s.initializer && s.initializer.kind === "AwaitExpr") {
             // let x = await operand
             const operand = s.initializer.expr;
@@ -201,6 +371,24 @@ function desugarAsyncFunction(stmt) {
                 span: s.span,
             };
             states[currentStateIdx].push(ifPendingStmt);
+            states[currentStateIdx].push({
+                kind: "IfStmt",
+                condition: makeCall("__hkd_is_rejected", [makeIdent(futName, s.span)], s.span),
+                then: {
+                    kind: "BlockStmt",
+                    body: [
+                        {
+                            kind: "ExprStmt",
+                            expr: makeCall("__hkd_reject", [makeIdent("__future__", s.span), makeCall("__hkd_error", [makeIdent(futName, s.span)], s.span)], s.span),
+                            span: s.span,
+                        },
+                        makeReturnFuture(s.span),
+                    ],
+                    span: s.span,
+                },
+                else_: null,
+                span: s.span,
+            });
             // 3. If resolved, unwrap immediately and proceed to next state
             states[currentStateIdx].push(makeAssign("__resume_val__", makeCall("__hkd_unwrap", [makeIdent(futName, s.span)], s.span), s.span));
             states[currentStateIdx].push(makeAssign("__state__", makeInt(nextState, s.span), s.span));
@@ -243,6 +431,24 @@ function desugarAsyncFunction(stmt) {
                         {
                             kind: "ExprStmt",
                             expr: makeCall("__hkd_on_complete", [makeIdent(futName, s.span), onCompleteCallback], s.span),
+                            span: s.span,
+                        },
+                        makeReturnFuture(s.span),
+                    ],
+                    span: s.span,
+                },
+                else_: null,
+                span: s.span,
+            });
+            states[currentStateIdx].push({
+                kind: "IfStmt",
+                condition: makeCall("__hkd_is_rejected", [makeIdent(futName, s.span)], s.span),
+                then: {
+                    kind: "BlockStmt",
+                    body: [
+                        {
+                            kind: "ExprStmt",
+                            expr: makeCall("__hkd_reject", [makeIdent("__future__", s.span), makeCall("__hkd_error", [makeIdent(futName, s.span)], s.span)], s.span),
                             span: s.span,
                         },
                         makeReturnFuture(s.span),
@@ -297,6 +503,24 @@ function desugarAsyncFunction(stmt) {
                 else_: null,
                 span: s.span,
             });
+            states[currentStateIdx].push({
+                kind: "IfStmt",
+                condition: makeCall("__hkd_is_rejected", [makeIdent(futName, s.span)], s.span),
+                then: {
+                    kind: "BlockStmt",
+                    body: [
+                        {
+                            kind: "ExprStmt",
+                            expr: makeCall("__hkd_reject", [makeIdent("__future__", s.span), makeCall("__hkd_error", [makeIdent(futName, s.span)], s.span)], s.span),
+                            span: s.span,
+                        },
+                        makeReturnFuture(s.span),
+                    ],
+                    span: s.span,
+                },
+                else_: null,
+                span: s.span,
+            });
             states[currentStateIdx].push(makeAssign("__resume_val__", makeCall("__hkd_unwrap", [makeIdent(futName, s.span)], s.span), s.span));
             states[currentStateIdx].push(makeAssign("__state__", makeInt(nextState, s.span), s.span));
             states.push([]);
@@ -332,6 +556,24 @@ function desugarAsyncFunction(stmt) {
                         {
                             kind: "ExprStmt",
                             expr: makeCall("__hkd_on_complete", [makeIdent(futName, s.span), onCompleteCallback], s.span),
+                            span: s.span,
+                        },
+                        makeReturnFuture(s.span),
+                    ],
+                    span: s.span,
+                },
+                else_: null,
+                span: s.span,
+            });
+            states[currentStateIdx].push({
+                kind: "IfStmt",
+                condition: makeCall("__hkd_is_rejected", [makeIdent(futName, s.span)], s.span),
+                then: {
+                    kind: "BlockStmt",
+                    body: [
+                        {
+                            kind: "ExprStmt",
+                            expr: makeCall("__hkd_reject", [makeIdent("__future__", s.span), makeCall("__hkd_error", [makeIdent(futName, s.span)], s.span)], s.span),
                             span: s.span,
                         },
                         makeReturnFuture(s.span),

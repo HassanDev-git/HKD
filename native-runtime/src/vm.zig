@@ -1116,6 +1116,7 @@ pub const VM = struct {
                     return err;
                 };
                 
+                retain(res);
                 // Pop arguments and callee
                 for (0..argc + 1) |_| {
                     const popped = self.pop();
@@ -1149,6 +1150,7 @@ pub const VM = struct {
                     return err;
                 };
                 
+                retain(res);
                 // Pop arguments and callee
                 for (0..argc + 1) |_| {
                     const popped = self.pop();
@@ -1180,6 +1182,12 @@ pub const VM = struct {
         try self.defineNative("__assert__", assertNative);
         try self.defineNative("__import__", importNative);
         try self.defineNative("__register_test__", registerTestNative);
+        try self.defineNative("__hkd_future", hkdFutureNative);
+        try self.defineNative("__hkd_is_pending", hkdIsPendingNative);
+        try self.defineNative("__hkd_unwrap", hkdUnwrapNative);
+        try self.defineNative("__hkd_resolve", hkdResolveNative);
+        try self.defineNative("__hkd_reject", hkdRejectNative);
+        try self.defineNative("__hkd_on_complete", hkdOnCompleteNative);
     }
 
     pub fn defineNative(self: *VM, name: []const u8, fn_ptr: value_mod.HkdNativeFn) !void {
@@ -1363,6 +1371,77 @@ fn importNative(allocator: std.mem.Allocator, args: []const Value) anyerror!Valu
     // 2. Otherwise try loading it dynamically as .hkdb file
     // Wait, the deserializer logic in main.zig handles this. We will register a custom resolver in main.zig.
     // For now we will return Null if it is not stdlib (handled recursively).
+    return .Null;
+}
+
+fn hkdFutureNative(allocator: std.mem.Allocator, args: []const Value) anyerror!Value {
+    const val = if (args.len > 0) args[0] else .Null;
+    const isResolved = val != .Null;
+    const obj = try allocObject(allocator);
+    errdefer release(allocator, Value{ .Object = obj });
+
+    try obj.fields.put(try allocator.dupe(u8, "__type__"), Value{ .String = try allocString(allocator, "Future") });
+    try obj.fields.put(try allocator.dupe(u8, "state"), Value{ .String = try allocString(allocator, if (isResolved) "resolved" else "pending") });
+    try obj.fields.put(try allocator.dupe(u8, "value"), val);
+    try obj.fields.put(try allocator.dupe(u8, "error"), .Null);
+    return Value{ .Object = obj };
+}
+
+fn hkdIsPendingNative(allocator: std.mem.Allocator, args: []const Value) anyerror!Value {
+    _ = allocator;
+    if (args.len < 1 or args[0] != .Object) return Value{ .Boolean = false };
+    const obj = args[0].Object;
+    if (obj.fields.get("state")) |st| {
+        if (st == .String and std.mem.eql(u8, st.String.chars, "pending")) {
+            return Value{ .Boolean = true };
+        }
+    }
+    return Value{ .Boolean = false };
+}
+
+fn hkdUnwrapNative(allocator: std.mem.Allocator, args: []const Value) anyerror!Value {
+    _ = allocator;
+    if (args.len < 1) return .Null;
+    if (args[0] == .Object) {
+        const obj = args[0].Object;
+        if (obj.fields.get("value")) |v| {
+            return v;
+        }
+    }
+    return args[0];
+}
+
+fn hkdResolveNative(allocator: std.mem.Allocator, args: []const Value) anyerror!Value {
+    if (args.len < 1 or args[0] != .Object) return if (args.len > 0) args[0] else .Null;
+    const val = if (args.len > 1) args[1] else .Null;
+    const obj = args[0].Object;
+    if (obj.fields.get("state")) |st| {
+        if (st == .String and !std.mem.eql(u8, st.String.chars, "pending")) {
+            return args[0];
+        }
+    }
+    try obj.fields.put(try allocator.dupe(u8, "state"), Value{ .String = try allocString(allocator, "resolved") });
+    try obj.fields.put(try allocator.dupe(u8, "value"), val);
+    return args[0];
+}
+
+fn hkdRejectNative(allocator: std.mem.Allocator, args: []const Value) anyerror!Value {
+    if (args.len < 1 or args[0] != .Object) return if (args.len > 0) args[0] else .Null;
+    const errVal = if (args.len > 1) args[1] else .Null;
+    const obj = args[0].Object;
+    if (obj.fields.get("state")) |st| {
+        if (st == .String and !std.mem.eql(u8, st.String.chars, "pending")) {
+            return args[0];
+        }
+    }
+    try obj.fields.put(try allocator.dupe(u8, "state"), Value{ .String = try allocString(allocator, "rejected") });
+    try obj.fields.put(try allocator.dupe(u8, "error"), errVal);
+    return args[0];
+}
+
+fn hkdOnCompleteNative(allocator: std.mem.Allocator, args: []const Value) anyerror!Value {
+    _ = allocator;
+    _ = args;
     return .Null;
 }
 

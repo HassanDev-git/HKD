@@ -32,6 +32,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PackageManager2 = void 0;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
+const crypto = __importStar(require("crypto"));
 const index_js_1 = require("./index.js");
 const identity_js_1 = require("./identity.js");
 const semver_js_1 = require("./semver.js");
@@ -118,6 +119,12 @@ class PackageManager2 {
             getPackageManifest: (pkgName, version) => {
                 // Path dependency
                 if (version === "local") {
+                    const rootManifest = (0, index_js_1.readManifest)(dir);
+                    const depEntry = rootManifest?.dependencies?.[pkgName] || rootManifest?.devDependencies?.[pkgName];
+                    if (typeof depEntry === "object" && depEntry !== null && "path" in depEntry) {
+                        const pathDepDir = path.resolve(dir, depEntry.path);
+                        return (0, index_js_1.readManifest)(pathDepDir);
+                    }
                     const pathDepDir = path.resolve(dir, pkgName);
                     return (0, index_js_1.readManifest)(pathDepDir);
                 }
@@ -131,6 +138,19 @@ class PackageManager2 {
                 return null;
             },
             getPackageIntegrity: (pkgName, version) => {
+                if (version === "local") {
+                    const rootManifest = (0, index_js_1.readManifest)(dir);
+                    const depEntry = rootManifest?.dependencies?.[pkgName] || rootManifest?.devDependencies?.[pkgName];
+                    let targetPath = path.resolve(dir, pkgName);
+                    if (typeof depEntry === "object" && depEntry !== null && "path" in depEntry) {
+                        targetPath = path.resolve(dir, depEntry.path);
+                    }
+                    const m = (0, index_js_1.readManifest)(targetPath);
+                    if (m) {
+                        const hash = crypto.createHash("sha256").update(JSON.stringify(m)).digest("hex");
+                        return `sha256:${hash}`;
+                    }
+                }
                 for (const entry of this.cache.list()) {
                     if (entry.name === pkgName && entry.version === version) {
                         return entry.checksum;
@@ -149,7 +169,7 @@ class PackageManager2 {
             return { ok: false, message: "No hkd.toml found. Run `hkd init` first." };
         }
         const offline = options.offline || process.env.HKD_OFFLINE === "1";
-        const existingLock = (0, lockfile_js_1.readLockfile)(dir);
+        const existingLock = options.existingLockOverride !== undefined ? options.existingLockOverride : (0, lockfile_js_1.readLockfile)(dir);
         if (options.locked && !existingLock) {
             return { ok: false, message: "error[PKG010]: --locked specified but no hkd.lock found" };
         }
@@ -266,11 +286,55 @@ class PackageManager2 {
     }
     /**
      * Adds a new dependency and runs installation.
+     * Supports:
+     * - Registry package: `hkd add http@^1.0.0` or `hkd add http`
+     * - Local path: `hkd add ../my-lib` or `hkd add my-lib --path ../my-lib`
+     * - Archive: `hkd add ./vendor/my-pkg.hkdpack`
      */
     async add(dir, pkgSpec, options = {}) {
         const manifest = (0, index_js_1.readManifest)(dir);
         if (!manifest) {
             return { ok: false, message: "No hkd.toml found. Run `hkd init` first." };
+        }
+        if (options.path) {
+            const targetDir = path.resolve(dir, options.path);
+            const targetManifest = (0, index_js_1.readManifest)(targetDir);
+            if (!targetManifest) {
+                return { ok: false, message: `No hkd.toml found in path '${options.path}'` };
+            }
+            const pkgName = (0, identity_js_1.normalizePackageName)(pkgSpec || targetManifest.name);
+            const relPath = path.relative(dir, targetDir).replace(/\\/g, "/");
+            manifest.dependencies[pkgName] = { path: relPath };
+            (0, index_js_1.writeManifest)(dir, manifest);
+            return this.install(dir, options);
+        }
+        if (pkgSpec.endsWith(".hkdpack")) {
+            const archivePath = path.resolve(dir, pkgSpec);
+            if (!fs.existsSync(archivePath)) {
+                return { ok: false, message: `Archive file not found: ${pkgSpec}` };
+            }
+            const archiveBuf = fs.readFileSync(archivePath);
+            const tmpExtract = path.join(dir, ".hkd", "tmp_pack_add");
+            const unpacked = (0, archive_js_1.unpackArchive)(archiveBuf, tmpExtract);
+            fs.rmSync(tmpExtract, { recursive: true, force: true });
+            this.cache.store(unpacked.checksum, archiveBuf, unpacked.manifest);
+            manifest.dependencies[unpacked.manifest.name] = unpacked.manifest.version;
+            (0, index_js_1.writeManifest)(dir, manifest);
+            return this.install(dir, options);
+        }
+        const resolvedPath = path.resolve(dir, pkgSpec);
+        if ((pkgSpec.startsWith(".") || pkgSpec.startsWith("/") || pkgSpec.startsWith("\\") || fs.existsSync(resolvedPath)) &&
+            fs.existsSync(resolvedPath) &&
+            fs.statSync(resolvedPath).isDirectory()) {
+            const targetManifest = (0, index_js_1.readManifest)(resolvedPath);
+            if (!targetManifest) {
+                return { ok: false, message: `No hkd.toml found in directory '${pkgSpec}'` };
+            }
+            const pkgName = (0, identity_js_1.normalizePackageName)(targetManifest.name);
+            const relPath = path.relative(dir, resolvedPath).replace(/\\/g, "/");
+            manifest.dependencies[pkgName] = { path: relPath };
+            (0, index_js_1.writeManifest)(dir, manifest);
+            return this.install(dir, options);
         }
         let pkgName = "";
         let range = "*";
@@ -306,6 +370,26 @@ class PackageManager2 {
         delete manifest.devDependencies[name];
         (0, index_js_1.writeManifest)(dir, manifest);
         return this.install(dir, options);
+    }
+    /**
+     * Updates dependencies within version ranges.
+     * If pkgName is specified, only that dependency is re-resolved.
+     * Otherwise, all dependencies are re-resolved.
+     */
+    async update(dir, pkgName, options = {}) {
+        const manifest = (0, index_js_1.readManifest)(dir);
+        if (!manifest) {
+            return { ok: false, message: "No hkd.toml found. Run `hkd init` first." };
+        }
+        let existingLock = (0, lockfile_js_1.readLockfile)(dir);
+        if (existingLock && pkgName) {
+            const norm = (0, identity_js_1.normalizePackageName)(pkgName);
+            existingLock.packages = existingLock.packages.filter((p) => p.name !== norm);
+        }
+        else {
+            existingLock = null;
+        }
+        return this.install(dir, { ...options, existingLockOverride: existingLock });
     }
     /**
      * Packs directory into deterministic .hkdpack archive.

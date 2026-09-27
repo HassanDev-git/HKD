@@ -125,13 +125,20 @@ class DebugSession {
                     return;
                 }
                 const rawFrames = this.vm.getCallFrames();
-                const stackFrames = rawFrames.map((f, i) => ({
-                    id: i,
-                    name: f.name,
-                    source: { path: this.programPath, name: path.basename(this.programPath) },
-                    line: f.line > 0 ? f.line : 1,
-                    column: 1,
-                }));
+                const stackFrames = rawFrames.map((f, i) => {
+                    let displayName = f.name;
+                    if (f.name === "__step__") {
+                        const parent = rawFrames[i - 1];
+                        displayName = parent && parent.name && parent.name !== "<script>" ? `${parent.name} (async)` : "async fn";
+                    }
+                    return {
+                        id: i,
+                        name: displayName,
+                        source: { path: this.programPath, name: path.basename(this.programPath) },
+                        line: f.line > 0 ? f.line : 1,
+                        column: 1,
+                    };
+                });
                 this.transport.sendResponse(req, true, {
                     stackFrames: stackFrames.reverse(), // Top-of-stack first
                     totalFrames: stackFrames.length,
@@ -156,8 +163,15 @@ class DebugSession {
                         const frameId = varRef - 1000;
                         const locals = this.vm.getFrameLocals(frameId);
                         for (const loc of locals) {
+                            if (loc.name.startsWith("__fut_") ||
+                                loc.name.startsWith("__await_") ||
+                                loc.name === "__resume_val__" ||
+                                loc.name === "__state__" ||
+                                loc.name === "__step__") {
+                                continue; // Filter internal synthetic compiler state-machine variables
+                            }
                             variables.push({
-                                name: loc.name,
+                                name: loc.name === "__future__" ? "<future>" : loc.name,
                                 value: (0, chunk_js_1.formatValue)(loc.value),
                                 variablesReference: 0,
                             });

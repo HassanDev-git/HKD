@@ -5,6 +5,7 @@
  * pack, publish, search, info, vendor, and cache management.
  */
 import { ContentAddressedCache } from "./cache.js";
+import { LockfileV2 } from "./lockfile.js";
 import { RegistryClient } from "./registry/registry-client.js";
 import { LanguageEdition } from "../utils/index.js";
 export interface InstallOptions {
@@ -12,6 +13,8 @@ export interface InstallOptions {
     locked?: boolean;
     vendor?: boolean;
     quiet?: boolean;
+    existingLockOverride?: LockfileV2 | null;
+    path?: string;
 }
 export interface PackageManagerResult {
     ok: boolean;
@@ -38,12 +41,22 @@ export declare class PackageManager2 {
     install(dir: string, options?: InstallOptions): Promise<PackageManagerResult>;
     /**
      * Adds a new dependency and runs installation.
+     * Supports:
+     * - Registry package: `hkd add http@^1.0.0` or `hkd add http`
+     * - Local path: `hkd add ../my-lib` or `hkd add my-lib --path ../my-lib`
+     * - Archive: `hkd add ./vendor/my-pkg.hkdpack`
      */
     add(dir: string, pkgSpec: string, options?: InstallOptions): Promise<PackageManagerResult>;
     /**
      * Removes a dependency and prunes tree.
      */
     remove(dir: string, rawName: string, options?: InstallOptions): Promise<PackageManagerResult>;
+    /**
+     * Updates dependencies within version ranges.
+     * If pkgName is specified, only that dependency is re-resolved.
+     * Otherwise, all dependencies are re-resolved.
+     */
+    update(dir: string, pkgName?: string, options?: InstallOptions): Promise<PackageManagerResult>;
     /**
      * Packs directory into deterministic .hkdpack archive.
      */

@@ -439,7 +439,9 @@ export class Parser {
       this.skipNewlines();
       if (this.check(TokenKind.RBrace)) break;
       if (this.check(TokenKind.Fn)) {
-        methods.push(this.parseFunctionDecl(false));
+        methods.push(this.parseFunctionDecl(false, false));
+      } else if (this.check(TokenKind.Async)) {
+        methods.push(this.parseFunctionDecl(false, true));
       } else {
         this.error(
           ErrorCode.E201,

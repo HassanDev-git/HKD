@@ -617,7 +617,9 @@ function buildTask(): StdModule {
   const m = new Map<string, HkdValue>();
 
   m.set("sleep", native("sleep", 1, (a) => {
-    const ms = typeof a[0] === "number" ? a[0] : 0;
+    let ms = typeof a[0] === "number" ? a[0] : 0;
+    if (isNaN(ms) || ms < 0) ms = 0;
+    if (ms > 2147483647) ms = 2147483647;
     if (ms > 0) {
       const start = Date.now();
       const waitTime = Math.min(ms, 100);
@@ -639,13 +641,19 @@ function buildTask(): StdModule {
     fields.set("state", isResolved ? "resolved" : "pending");
     fields.set("value", val);
     fields.set("error", null);
-    return { type: "object", fields };
+    const fut: HkdObject = { type: "object", fields };
+    (fut as any).__callbacks = [];
+    return fut;
   }));
 
   m.set("resolve", native("resolve", 2, (a) => {
     const fut = a[0] as HkdObject;
     const val = a[1] !== undefined ? a[1] : null;
     if (fut && typeof fut === "object" && fut.type === "object") {
+      const state = fut.fields.get("state");
+      if (state !== "pending") {
+        return fut; // Terminal state: legal transition is only pending -> resolved
+      }
       fut.fields.set("state", "resolved");
       fut.fields.set("value", val);
       const callbacks = (fut as any).__callbacks;
@@ -663,49 +671,84 @@ function buildTask(): StdModule {
     const fut = a[0] as HkdObject;
     const err = a[1] !== undefined ? a[1] : null;
     if (fut && typeof fut === "object" && fut.type === "object") {
+      const state = fut.fields.get("state");
+      if (state !== "pending") {
+        return fut; // Terminal state: legal transition is only pending -> rejected
+      }
       fut.fields.set("state", "rejected");
       fut.fields.set("error", err);
+      const callbacks = (fut as any).__callbacks;
+      if (Array.isArray(callbacks)) {
+        delete (fut as any).__callbacks;
+        for (const cb of callbacks) {
+          invokeCallback(cb, [null]);
+        }
+      }
     }
     return fut;
   }));
 
   m.set("is_pending", native("is_pending", 1, (a) => {
     const v = a[0] as HkdObject;
-    return Boolean(v && typeof v === "object" && v.type === "object" && v.fields.get("state") === "pending");
+    return Boolean(v && typeof v === "object" && v.type === "object" && v.fields?.get("state") === "pending");
   }));
 
   m.set("is_resolved", native("is_resolved", 1, (a) => {
     const v = a[0] as HkdObject;
-    return Boolean(v && typeof v === "object" && v.type === "object" && v.fields.get("state") === "resolved");
+    return Boolean(v && typeof v === "object" && v.type === "object" && v.fields?.get("state") === "resolved");
+  }));
+
+  m.set("is_rejected", native("is_rejected", 1, (a) => {
+    const v = a[0] as HkdObject;
+    return Boolean(v && typeof v === "object" && v.type === "object" && v.fields?.get("state") === "rejected");
   }));
 
   m.set("is_future", native("is_future", 1, (a) => {
     const v = a[0] as HkdObject;
-    return Boolean(v && typeof v === "object" && v.type === "object" && v.fields.get("__type__") === "Future");
+    return Boolean(v && typeof v === "object" && v.type === "object" && v.fields?.get("__type__") === "Future");
   }));
 
   m.set("unwrap", native("unwrap", 1, (a) => {
     const v = a[0] as HkdObject;
-    if (v && typeof v === "object" && v.type === "object" && v.fields.get("__type__") === "Future") {
-      return v.fields.get("value") ?? null;
+    if (!v || typeof v !== "object" || v.type !== "object" || v.fields?.get("__type__") !== "Future") {
+      throw new Error(`TaskError: task.unwrap() expects a Future object, got ${v ? typeof v : "null"}`);
     }
-    return a[0];
+    const state = v.fields.get("state");
+    if (state === "pending") {
+      throw new Error("TaskError: Cannot unwrap pending Future. Task has not completed.");
+    }
+    if (state === "rejected") {
+      const err = v.fields.get("error");
+      throw new Error(`TaskError: Called task.unwrap() on a rejected Future: ${err !== null ? String(err) : "Unknown error"}`);
+    }
+    return v.fields.get("value") ?? null;
   }));
 
   m.set("unwrap_future", native("unwrap_future", 1, (a) => {
     const v = a[0] as HkdObject;
-    if (v && typeof v === "object" && v.type === "object" && v.fields.get("__type__") === "Future") {
-      return v.fields.get("value") ?? null;
+    if (!v || typeof v !== "object" || v.type !== "object" || v.fields?.get("__type__") !== "Future") {
+      throw new Error(`TaskError: task.unwrap_future() expects a Future object, got ${v ? typeof v : "null"}`);
     }
-    return a[0];
+    const state = v.fields.get("state");
+    if (state === "pending") {
+      throw new Error("TaskError: Cannot unwrap pending Future. Task has not completed.");
+    }
+    if (state === "rejected") {
+      const err = v.fields.get("error");
+      throw new Error(`TaskError: Called task.unwrap_future() on a rejected Future: ${err !== null ? String(err) : "Unknown error"}`);
+    }
+    return v.fields.get("value") ?? null;
   }));
 
   m.set("on_complete", native("on_complete", 2, (a) => {
     const fut = a[0] as HkdObject;
     const cb = a[1];
     if (fut && typeof fut === "object" && fut.type === "object") {
-      if (fut.fields.get("state") === "resolved") {
+      const state = fut.fields.get("state");
+      if (state === "resolved") {
         invokeCallback(cb, [fut.fields.get("value") ?? null]);
+      } else if (state === "rejected") {
+        invokeCallback(cb, [null]);
       } else {
         if (!(fut as any).__callbacks) (fut as any).__callbacks = [];
         (fut as any).__callbacks.push(cb);
@@ -731,43 +774,221 @@ function buildTask(): StdModule {
   m.set("all", native("all", 1, (a) => {
     const arr = a[0] as HkdArray;
     const elements = arr && arr.type === "array" ? arr.elements : [];
-    const results: HkdValue[] = [];
+    if (elements.length === 0) {
+      const fields = new Map<string, HkdValue>();
+      fields.set("__type__", "Future");
+      fields.set("state", "resolved");
+      fields.set("value", { type: "array", elements: [] });
+      fields.set("error", null);
+      return { type: "object", fields };
+    }
+
+    // Check if any element is already rejected
     for (const item of elements) {
       if (item && typeof item === "object" && (item as any).type === "object" && (item as HkdObject).fields.get("__type__") === "Future") {
-        results.push((item as HkdObject).fields.get("value") ?? null);
-      } else {
-        results.push(item);
+        const itemFut = item as HkdObject;
+        if (itemFut.fields.get("state") === "rejected") {
+          const fields = new Map<string, HkdValue>();
+          fields.set("__type__", "Future");
+          fields.set("state", "rejected");
+          fields.set("value", null);
+          fields.set("error", itemFut.fields.get("error") ?? null);
+          return { type: "object", fields };
+        }
       }
     }
+
+    const pendingItems = elements.filter(
+      (item) => item && typeof item === "object" && (item as any).type === "object" && (item as HkdObject).fields.get("__type__") === "Future" && (item as HkdObject).fields.get("state") === "pending"
+    );
+
+    if (pendingItems.length === 0) {
+      const results: HkdValue[] = elements.map((item) => {
+        if (item && typeof item === "object" && (item as any).type === "object" && (item as HkdObject).fields.get("__type__") === "Future") {
+          return (item as HkdObject).fields.get("value") ?? null;
+        }
+        return item;
+      });
+      const fields = new Map<string, HkdValue>();
+      fields.set("__type__", "Future");
+      fields.set("state", "resolved");
+      fields.set("value", { type: "array", elements: results });
+      fields.set("error", null);
+      return { type: "object", fields };
+    }
+
     const fields = new Map<string, HkdValue>();
     fields.set("__type__", "Future");
-    fields.set("state", "resolved");
-    fields.set("value", { type: "array", elements: results });
+    fields.set("state", "pending");
+    fields.set("value", null);
     fields.set("error", null);
-    return { type: "object", fields };
+    const aggFut: HkdObject = { type: "object", fields };
+    (aggFut as any).__callbacks = [];
+
+    const results: HkdValue[] = new Array(elements.length);
+    let remaining = elements.length;
+    let settled = false;
+
+    elements.forEach((item, idx) => {
+      if (item && typeof item === "object" && (item as any).type === "object" && (item as HkdObject).fields.get("__type__") === "Future") {
+        const itemFut = item as HkdObject;
+        const st = itemFut.fields.get("state");
+        if (st === "resolved") {
+          results[idx] = itemFut.fields.get("value") ?? null;
+          remaining--;
+          if (remaining === 0 && !settled) {
+            settled = true;
+            aggFut.fields.set("state", "resolved");
+            aggFut.fields.set("value", { type: "array", elements: results });
+            const cbs = (aggFut as any).__callbacks;
+            if (Array.isArray(cbs)) {
+              delete (aggFut as any).__callbacks;
+              for (const cb of cbs) invokeCallback(cb, [aggFut.fields.get("value") ?? null]);
+            }
+          }
+        } else if (st === "rejected") {
+          if (!settled) {
+            settled = true;
+            aggFut.fields.set("state", "rejected");
+            aggFut.fields.set("error", itemFut.fields.get("error") ?? null);
+            const cbs = (aggFut as any).__callbacks;
+            if (Array.isArray(cbs)) {
+              delete (aggFut as any).__callbacks;
+              for (const cb of cbs) invokeCallback(cb, [null]);
+            }
+          }
+        } else {
+          if (!(itemFut as any).__callbacks) (itemFut as any).__callbacks = [];
+          (itemFut as any).__callbacks.push({
+            type: "native",
+            name: "<all_listener>",
+            arity: 1,
+            call: (listenerArgs: HkdValue[]) => {
+              if (settled) return null;
+              if (itemFut.fields.get("state") === "rejected") {
+                settled = true;
+                aggFut.fields.set("state", "rejected");
+                aggFut.fields.set("error", itemFut.fields.get("error") ?? null);
+                const cbs = (aggFut as any).__callbacks;
+                if (Array.isArray(cbs)) {
+                  delete (aggFut as any).__callbacks;
+                  for (const cb of cbs) invokeCallback(cb, [null]);
+                }
+                return null;
+              }
+              results[idx] = listenerArgs[0];
+              remaining--;
+              if (remaining === 0 && !settled) {
+                settled = true;
+                aggFut.fields.set("state", "resolved");
+                aggFut.fields.set("value", { type: "array", elements: results });
+                const cbs = (aggFut as any).__callbacks;
+                if (Array.isArray(cbs)) {
+                  delete (aggFut as any).__callbacks;
+                  for (const cb of cbs) invokeCallback(cb, [aggFut.fields.get("value") ?? null]);
+                }
+              }
+              return null;
+            }
+          });
+        }
+      } else {
+        results[idx] = item;
+        remaining--;
+        if (remaining === 0 && !settled) {
+          settled = true;
+          aggFut.fields.set("state", "resolved");
+          aggFut.fields.set("value", { type: "array", elements: results });
+          const cbs = (aggFut as any).__callbacks;
+          if (Array.isArray(cbs)) {
+            delete (aggFut as any).__callbacks;
+            for (const cb of cbs) invokeCallback(cb, [aggFut.fields.get("value") ?? null]);
+          }
+        }
+      }
+    });
+
+    return aggFut;
   }));
 
   m.set("race", native("race", 1, (a) => {
     const arr = a[0] as HkdArray;
     const elements = arr && arr.type === "array" ? arr.elements : [];
-    let winner: HkdValue = null;
+    if (elements.length === 0) {
+      const fields = new Map<string, HkdValue>();
+      fields.set("__type__", "Future");
+      fields.set("state", "pending");
+      fields.set("value", null);
+      fields.set("error", null);
+      return { type: "object", fields };
+    }
+
     for (const item of elements) {
       if (item && typeof item === "object" && (item as any).type === "object" && (item as HkdObject).fields.get("__type__") === "Future") {
-        if ((item as HkdObject).fields.get("state") === "resolved") {
-          winner = (item as HkdObject).fields.get("value") ?? null;
-          break;
+        const itemFut = item as HkdObject;
+        if (itemFut.fields.get("state") === "resolved") {
+          const fields = new Map<string, HkdValue>();
+          fields.set("__type__", "Future");
+          fields.set("state", "resolved");
+          fields.set("value", itemFut.fields.get("value") ?? null);
+          fields.set("error", null);
+          return { type: "object", fields };
+        }
+        if (itemFut.fields.get("state") === "rejected") {
+          const fields = new Map<string, HkdValue>();
+          fields.set("__type__", "Future");
+          fields.set("state", "rejected");
+          fields.set("value", null);
+          fields.set("error", itemFut.fields.get("error") ?? null);
+          return { type: "object", fields };
         }
       } else {
-        winner = item;
-        break;
+        const fields = new Map<string, HkdValue>();
+        fields.set("__type__", "Future");
+        fields.set("state", "resolved");
+        fields.set("value", item);
+        fields.set("error", null);
+        return { type: "object", fields };
       }
     }
+
     const fields = new Map<string, HkdValue>();
     fields.set("__type__", "Future");
-    fields.set("state", "resolved");
-    fields.set("value", winner);
+    fields.set("state", "pending");
+    fields.set("value", null);
     fields.set("error", null);
-    return { type: "object", fields };
+    const raceFut: HkdObject = { type: "object", fields };
+    (raceFut as any).__callbacks = [];
+
+    let settled = false;
+    for (const item of elements) {
+      const itemFut = item as HkdObject;
+      if (!(itemFut as any).__callbacks) (itemFut as any).__callbacks = [];
+      (itemFut as any).__callbacks.push({
+        type: "native",
+        name: "<race_listener>",
+        arity: 1,
+        call: (listenerArgs: HkdValue[]) => {
+          if (settled) return null;
+          settled = true;
+          if (itemFut.fields.get("state") === "rejected") {
+            raceFut.fields.set("state", "rejected");
+            raceFut.fields.set("error", itemFut.fields.get("error") ?? null);
+          } else {
+            raceFut.fields.set("state", "resolved");
+            raceFut.fields.set("value", listenerArgs[0]);
+          }
+          const cbs = (raceFut as any).__callbacks;
+          if (Array.isArray(cbs)) {
+            delete (raceFut as any).__callbacks;
+            for (const cb of cbs) invokeCallback(cb, [raceFut.fields.get("value") ?? null]);
+          }
+          return null;
+        }
+      });
+    }
+
+    return raceFut;
   }));
 
   return m;

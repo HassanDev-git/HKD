@@ -345,7 +345,10 @@ class Parser {
             if (this.check(token_js_1.TokenKind.RBrace))
                 break;
             if (this.check(token_js_1.TokenKind.Fn)) {
-                methods.push(this.parseFunctionDecl(false));
+                methods.push(this.parseFunctionDecl(false, false));
+            }
+            else if (this.check(token_js_1.TokenKind.Async)) {
+                methods.push(this.parseFunctionDecl(false, true));
             }
             else {
                 this.error(index_js_1.ErrorCode.E201, `Expected method declaration inside impl block, got \`${this.peek().value}\``, this.peek().span);

@@ -41,6 +41,9 @@ export declare class VM {
     private dbg;
     isPaused: boolean;
     private futureCallbacks;
+    private callbackQueue;
+    private isDispatchingCallbacks;
+    dispatchCallback(cb: HkdValue, args: HkdValue[]): void;
     constructor(output?: (s: string) => void);
     setDebugger(dbg: VmDebugger | null): void;
     run(chunk: Chunk): VmResult;

@@ -123,6 +123,7 @@ export function getCompletionItems(
         { name: "reject", detail: "task.reject(fut: Future<T>, err: any) -> Future<T>" },
         { name: "is_pending", detail: "task.is_pending(fut: Future<any>) -> bool" },
         { name: "is_resolved", detail: "task.is_resolved(fut: Future<any>) -> bool" },
+        { name: "is_rejected", detail: "task.is_rejected(fut: Future<any>) -> bool" },
         { name: "is_future", detail: "task.is_future(val: any) -> bool" },
         { name: "unwrap", detail: "task.unwrap(fut: Future<T>) -> T" },
         { name: "on_complete", detail: "task.on_complete(fut: Future<T>, cb: fn(T) -> any) -> Future<T>" },
@@ -213,7 +214,9 @@ export function getCompletionItems(
       if (stmt.kind === "FunctionDeclStmt") {
         const prefix = stmt.isAsync ? "async " : "";
         const params = stmt.params.map((p) => p.name).join(", ");
-        const ret = stmt.isAsync ? " -> Future" : (stmt.returnType ? ` -> ${formatTypeExpr(stmt.returnType)}` : "");
+        const ret = stmt.isAsync
+          ? (stmt.returnType ? ` -> Future<${formatTypeExpr(stmt.returnType)}>` : " -> Future")
+          : (stmt.returnType ? ` -> ${formatTypeExpr(stmt.returnType)}` : "");
         items.push({
           label: stmt.name,
           kind: CompletionItemKind.Function,
@@ -330,7 +333,9 @@ export function getHover(
         const params = stmt.params
           .map((p) => p.name + (p.typeAnnotation ? `: ${formatTypeExpr(p.typeAnnotation)}` : ""))
           .join(", ");
-        const ret = stmt.isAsync ? " -> Future" : (stmt.returnType ? ` -> ${formatTypeExpr(stmt.returnType)}` : "");
+        const ret = stmt.isAsync
+          ? (stmt.returnType ? ` -> Future<${formatTypeExpr(stmt.returnType)}>` : " -> Future")
+          : (stmt.returnType ? ` -> ${formatTypeExpr(stmt.returnType)}` : "");
         const desc = stmt.isAsync ? "User-defined async function" : "User-defined function";
         return {
           contents: {

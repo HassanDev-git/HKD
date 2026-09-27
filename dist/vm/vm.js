@@ -30,6 +30,23 @@ class VM {
     dbg = null;
     isPaused = false;
     futureCallbacks = new WeakMap();
+    callbackQueue = [];
+    isDispatchingCallbacks = false;
+    dispatchCallback(cb, args) {
+        this.callbackQueue.push([cb, args]);
+        if (this.isDispatchingCallbacks)
+            return;
+        this.isDispatchingCallbacks = true;
+        try {
+            while (this.callbackQueue.length > 0) {
+                const [nextCb, nextArgs] = this.callbackQueue.shift();
+                this.runCallable(nextCb, nextArgs);
+            }
+        }
+        finally {
+            this.isDispatchingCallbacks = false;
+        }
+    }
     constructor(output = (s) => process.stdout.write(s + "\n")) {
         this.output = output;
         this.registerBuiltins();
@@ -57,18 +74,16 @@ class VM {
             return this.execute();
         }
         catch (e) {
-            if (e instanceof VmError) {
-                const backtrace = [];
-                for (let i = this.frames.length - 1; i >= 0; i--) {
-                    const frame = this.frames[i];
-                    const ip = frame.ip;
-                    const line = (ip > 0 && ip - 1 < frame.chunk.lines.length) ? frame.chunk.lines[ip - 1] : 0;
-                    backtrace.push(`  at ${frame.closure?.fn.name ?? "<unknown>"} (line: ${line})`);
-                }
-                const fullMessage = e.message + (backtrace.length > 0 ? "\n" + backtrace.join("\n") : "");
-                return { ok: false, error: fullMessage, code: e.code };
+            const code = (e instanceof VmError) ? e.code : index_js_1.ErrorCode.E405;
+            const backtrace = [];
+            for (let i = this.frames.length - 1; i >= 0; i--) {
+                const frame = this.frames[i];
+                const ip = frame.ip;
+                const line = (ip > 0 && ip - 1 < frame.chunk.lines.length) ? frame.chunk.lines[ip - 1] : 0;
+                backtrace.push(`  at ${frame.closure?.fn.name ?? "<unknown>"} (line: ${line})`);
             }
-            throw e;
+            const fullMessage = (e?.message || String(e)) + (backtrace.length > 0 ? "\n" + backtrace.join("\n") : "");
+            return { ok: false, error: fullMessage, code };
         }
     }
     /** Register a native function in the global scope. */
@@ -979,10 +994,30 @@ class VM {
             }
             return false;
         });
+        this.defineNative("__hkd_is_rejected", 1, (args) => {
+            const v = args[0];
+            if (v && typeof v === "object" && v.type === "object") {
+                return v.fields.get("state") === "rejected";
+            }
+            return false;
+        });
+        this.defineNative("__hkd_error", 1, (args) => {
+            const v = args[0];
+            if (v && typeof v === "object" && v.type === "object") {
+                return v.fields.get("error") ?? null;
+            }
+            return null;
+        });
         this.defineNative("__hkd_unwrap", 1, (args) => {
             const v = args[0];
             if (v && typeof v === "object" && v.type === "object" && v.fields.get("__type__") === "Future") {
-                return v.fields.get("value") ?? null;
+                const obj = v;
+                const state = obj.fields.get("state");
+                if (state === "rejected") {
+                    const err = obj.fields.get("error");
+                    throw new Error(`TaskFailure: Future rejected with error: ${err !== null ? String(err) : "Unknown error"}`);
+                }
+                return obj.fields.get("value") ?? null;
             }
             return v;
         });
@@ -991,13 +1026,16 @@ class VM {
             const val = args[1] !== undefined ? args[1] : null;
             if (fut && typeof fut === "object" && fut.type === "object") {
                 const obj = fut;
+                if (obj.fields.get("state") !== "pending") {
+                    return fut; // Terminal transition: Resolved -> no transition, Rejected -> no transition
+                }
                 obj.fields.set("state", "resolved");
                 obj.fields.set("value", val);
                 const cbs = this.futureCallbacks.get(obj);
                 if (cbs) {
                     this.futureCallbacks.delete(obj);
                     for (const cb of cbs) {
-                        this.runCallable(cb, [val]);
+                        this.dispatchCallback(cb, [val]);
                     }
                 }
             }
@@ -1008,8 +1046,18 @@ class VM {
             const err = args[1] !== undefined ? args[1] : null;
             if (fut && typeof fut === "object" && fut.type === "object") {
                 const obj = fut;
+                if (obj.fields.get("state") !== "pending") {
+                    return fut; // Terminal transition: Resolved -> no transition, Rejected -> no transition
+                }
                 obj.fields.set("state", "rejected");
                 obj.fields.set("error", err);
+                const cbs = this.futureCallbacks.get(obj);
+                if (cbs) {
+                    this.futureCallbacks.delete(obj);
+                    for (const cb of cbs) {
+                        this.dispatchCallback(cb, [null]);
+                    }
+                }
             }
             return fut;
         });
@@ -1018,8 +1066,12 @@ class VM {
             const cb = args[1];
             if (fut && typeof fut === "object" && fut.type === "object") {
                 const obj = fut;
-                if (obj.fields.get("state") === "resolved") {
-                    this.runCallable(cb, [obj.fields.get("value") ?? null]);
+                const state = obj.fields.get("state");
+                if (state === "resolved") {
+                    this.dispatchCallback(cb, [obj.fields.get("value") ?? null]);
+                }
+                else if (state === "rejected") {
+                    this.dispatchCallback(cb, [null]);
                 }
                 else {
                     let cbs = this.futureCallbacks.get(obj);

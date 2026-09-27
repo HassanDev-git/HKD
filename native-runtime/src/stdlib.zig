@@ -1033,11 +1033,97 @@ fn taskSleep(allocator: std.mem.Allocator, args: []const Value) anyerror!Value {
     return .Null;
 }
 
+fn taskFutureNative(allocator: std.mem.Allocator, args: []const Value) anyerror!Value {
+    const val = if (args.len > 0) args[0] else .Null;
+    const isResolved = val != .Null;
+    const obj = try allocObject(allocator);
+    errdefer release(allocator, Value{ .Object = obj });
+
+    try obj.fields.put(try allocator.dupe(u8, "__type__"), Value{ .String = try allocString(allocator, "Future") });
+    try obj.fields.put(try allocator.dupe(u8, "state"), Value{ .String = try allocString(allocator, if (isResolved) "resolved" else "pending") });
+    retain(val);
+    try obj.fields.put(try allocator.dupe(u8, "value"), val);
+    try obj.fields.put(try allocator.dupe(u8, "error"), .Null);
+    return Value{ .Object = obj };
+}
+
+fn taskResolveNative(allocator: std.mem.Allocator, args: []const Value) anyerror!Value {
+    if (args.len < 1 or args[0] != .Object) return if (args.len > 0) args[0] else .Null;
+    const val = if (args.len > 1) args[1] else .Null;
+    const obj = args[0].Object;
+    if (obj.fields.get("state")) |st| {
+        if (st == .String and !std.mem.eql(u8, st.String.chars, "pending")) {
+            return args[0];
+        }
+    }
+    try obj.fields.put(try allocator.dupe(u8, "state"), Value{ .String = try allocString(allocator, "resolved") });
+    retain(val);
+    try obj.fields.put(try allocator.dupe(u8, "value"), val);
+    return args[0];
+}
+
+fn taskRejectNative(allocator: std.mem.Allocator, args: []const Value) anyerror!Value {
+    if (args.len < 1 or args[0] != .Object) return if (args.len > 0) args[0] else .Null;
+    const errVal = if (args.len > 1) args[1] else .Null;
+    const obj = args[0].Object;
+    if (obj.fields.get("state")) |st| {
+        if (st == .String and !std.mem.eql(u8, st.String.chars, "pending")) {
+            return args[0];
+        }
+    }
+    try obj.fields.put(try allocator.dupe(u8, "state"), Value{ .String = try allocString(allocator, "rejected") });
+    retain(errVal);
+    try obj.fields.put(try allocator.dupe(u8, "error"), errVal);
+    return args[0];
+}
+
+fn taskIsPendingNative(allocator: std.mem.Allocator, args: []const Value) anyerror!Value {
+    _ = allocator;
+    if (args.len < 1 or args[0] != .Object) return Value{ .Boolean = false };
+    const obj = args[0].Object;
+    if (obj.fields.get("state")) |st| {
+        if (st == .String and std.mem.eql(u8, st.String.chars, "pending")) {
+            return Value{ .Boolean = true };
+        }
+    }
+    return Value{ .Boolean = false };
+}
+
+fn taskIsResolvedNative(allocator: std.mem.Allocator, args: []const Value) anyerror!Value {
+    _ = allocator;
+    if (args.len < 1 or args[0] != .Object) return Value{ .Boolean = false };
+    const obj = args[0].Object;
+    if (obj.fields.get("state")) |st| {
+        if (st == .String and std.mem.eql(u8, st.String.chars, "resolved")) {
+            return Value{ .Boolean = true };
+        }
+    }
+    return Value{ .Boolean = false };
+}
+
+fn taskUnwrapNative(allocator: std.mem.Allocator, args: []const Value) anyerror!Value {
+    _ = allocator;
+    if (args.len < 1) return .Null;
+    if (args[0] == .Object) {
+        const obj = args[0].Object;
+        if (obj.fields.get("value")) |v| {
+            return v;
+        }
+    }
+    return args[0];
+}
+
 pub fn getTaskModule(allocator: std.mem.Allocator) !Value {
     const obj = try allocObject(allocator);
     errdefer release(allocator, Value{ .Object = obj });
 
     try obj.fields.put(try allocator.dupe(u8, "sleep"), Value{ .Native = taskSleep });
+    try obj.fields.put(try allocator.dupe(u8, "future"), Value{ .Native = taskFutureNative });
+    try obj.fields.put(try allocator.dupe(u8, "resolve"), Value{ .Native = taskResolveNative });
+    try obj.fields.put(try allocator.dupe(u8, "reject"), Value{ .Native = taskRejectNative });
+    try obj.fields.put(try allocator.dupe(u8, "is_pending"), Value{ .Native = taskIsPendingNative });
+    try obj.fields.put(try allocator.dupe(u8, "is_resolved"), Value{ .Native = taskIsResolvedNative });
+    try obj.fields.put(try allocator.dupe(u8, "unwrap"), Value{ .Native = taskUnwrapNative });
     return Value{ .Object = obj };
 }
 
@@ -1065,49 +1151,56 @@ pub fn getFfiModule(allocator: std.mem.Allocator) !Value {
 // ─── Module Loader Import Routing ────────────────────────────────────────────
 
 pub fn resolveStdModule(allocator: std.mem.Allocator, name: []const u8) !?Value {
-    if (std.mem.eql(u8, name, "math") or std.mem.eql(u8, name, "std.math")) {
+    var mod_name = name;
+    if (std.mem.startsWith(u8, mod_name, "std:")) {
+        mod_name = mod_name[4..];
+    } else if (std.mem.startsWith(u8, mod_name, "std.")) {
+        mod_name = mod_name[4..];
+    }
+
+    if (std.mem.eql(u8, mod_name, "math")) {
         return try getMathModule(allocator);
     }
-    if (std.mem.eql(u8, name, "time") or std.mem.eql(u8, name, "std.time")) {
+    if (std.mem.eql(u8, mod_name, "time")) {
         return try getTimeModule(allocator);
     }
-    if (std.mem.eql(u8, name, "io") or std.mem.eql(u8, name, "std.io")) {
+    if (std.mem.eql(u8, mod_name, "io")) {
         return try getIOModule(allocator);
     }
-    if (std.mem.eql(u8, name, "array") or std.mem.eql(u8, name, "std.array")) {
+    if (std.mem.eql(u8, mod_name, "array")) {
         return try getArrayModule(allocator);
     }
-    if (std.mem.eql(u8, name, "string") or std.mem.eql(u8, name, "std.string")) {
+    if (std.mem.eql(u8, mod_name, "string")) {
         return try getStringModule(allocator);
     }
-    if (std.mem.eql(u8, name, "fs") or std.mem.eql(u8, name, "std.fs")) {
+    if (std.mem.eql(u8, mod_name, "fs")) {
         return try getFsModule(allocator);
     }
-    if (std.mem.eql(u8, name, "path") or std.mem.eql(u8, name, "std.path")) {
+    if (std.mem.eql(u8, mod_name, "path")) {
         return try getPathModule(allocator);
     }
-    if (std.mem.eql(u8, name, "json") or std.mem.eql(u8, name, "std.json")) {
+    if (std.mem.eql(u8, mod_name, "json")) {
         return try getJsonModule(allocator);
     }
-    if (std.mem.eql(u8, name, "env") or std.mem.eql(u8, name, "std.env")) {
+    if (std.mem.eql(u8, mod_name, "env")) {
         return try getEnvModule(allocator);
     }
-    if (std.mem.eql(u8, name, "random") or std.mem.eql(u8, name, "std.random")) {
+    if (std.mem.eql(u8, mod_name, "random")) {
         return try getRandomModule(allocator);
     }
-    if (std.mem.eql(u8, name, "buffer") or std.mem.eql(u8, name, "std.buffer")) {
+    if (std.mem.eql(u8, mod_name, "buffer")) {
         return try getBufferModule(allocator);
     }
-    if (std.mem.eql(u8, name, "process") or std.mem.eql(u8, name, "std.process")) {
+    if (std.mem.eql(u8, mod_name, "process")) {
         return try getProcessModule(allocator);
     }
-    if (std.mem.eql(u8, name, "http") or std.mem.eql(u8, name, "std.http")) {
+    if (std.mem.eql(u8, mod_name, "http")) {
         return try getHttpModule(allocator);
     }
-    if (std.mem.eql(u8, name, "task") or std.mem.eql(u8, name, "std.task")) {
+    if (std.mem.eql(u8, mod_name, "task")) {
         return try getTaskModule(allocator);
     }
-    if (std.mem.eql(u8, name, "ffi") or std.mem.eql(u8, name, "std.ffi")) {
+    if (std.mem.eql(u8, mod_name, "ffi")) {
         return try getFfiModule(allocator);
     }
     return null;
