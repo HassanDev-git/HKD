@@ -50,7 +50,10 @@ Modern backend and systems programming often forces a compromise between languag
 ## Installation
 
 ### Pre-Built Standalone Binaries
-Download official standalone binaries for Windows x64 and Linux x64 from the [GitHub Releases](https://github.com/hkd-lang/hkd/releases) page. Checksums are recorded in `dist/SHA256SUMS`.
+Download official standalone binaries for Windows x64 and Linux x64 from the [GitHub Releases](https://github.com/HassanDev-git/HKD/releases) page. Checksums are recorded in `dist/SHA256SUMS`.
+
+Direct Download:
+- **[HKD v1.1.0 (Windows x64)](https://github.com/HassanDev-git/HKD/releases/download/v1.1.0/hkd-v1.1.0-windows-x64.zip)**
 
 On Windows:
 ```powershell
@@ -67,8 +70,8 @@ npm install -g hkd
 Prerequisites: Node.js >= 20.0.0, npm >= 10.0.0.
 
 ```bash
-git clone https://github.com/hkd-lang/hkd.git
-cd hkd
+git clone https://github.com/HassanDev-git/HKD.git
+cd HKD
 npm install
 npm run build
 ```

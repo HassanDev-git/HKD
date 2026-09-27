@@ -27,8 +27,8 @@ HKD is governed under a strict **Zero Breaking Changes Contract** for stable edi
 ### Initial Setup
 ```bash
 # Clone the repository
-git clone https://github.com/hkd-lang/hkd.git
-cd hkd
+git clone https://github.com/HassanDev-git/HKD.git
+cd HKD
 
 # Install dependencies
 npm install
