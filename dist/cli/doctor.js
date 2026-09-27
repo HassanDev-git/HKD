@@ -72,10 +72,29 @@ function runDoctor() {
             message: err.message,
         });
     }
+    function findFirstCandidate(candidates) {
+        for (const c of candidates) {
+            const p1 = path.resolve(__dirname, c);
+            if (fs.existsSync(p1))
+                return p1;
+            const p2 = path.resolve(process.cwd(), c);
+            if (fs.existsSync(p2))
+                return p2;
+        }
+        return null;
+    }
     // 2. Native Runtime Binary Check
     const isWindows = process.platform === "win32";
-    const nativeBinaryPath = path.resolve("native-runtime", "zig-out", "bin", isWindows ? "hkd-runtime.exe" : "hkd-runtime");
-    if (fs.existsSync(nativeBinaryPath)) {
+    const binName = isWindows ? "hkd-runtime.exe" : "hkd-runtime";
+    const nativeBinaryPath = findFirstCandidate([
+        `../../native-runtime/zig-out/bin/${binName}`,
+        `../../../native-runtime/zig-out/bin/${binName}`,
+        `../bin/${binName}`,
+        binName,
+        `native-runtime/zig-out/bin/${binName}`,
+        `bin/${binName}`,
+    ]);
+    if (nativeBinaryPath && fs.existsSync(nativeBinaryPath)) {
         const testRun = (0, child_process_1.spawnSync)(nativeBinaryPath, ["--version"], { encoding: "utf-8" });
         if (testRun.status === 0) {
             checks.push({
@@ -112,8 +131,15 @@ function runDoctor() {
         message: `${hostTarget.triple} (${hostTarget.tier})`,
     });
     // 4. Language Server Check (LSP 2.0)
-    const lspPath = path.resolve("dist", "lsp", "server.js");
-    if (fs.existsSync(lspPath) || fs.existsSync(path.resolve("src", "lsp", "server.ts"))) {
+    const lspPath = findFirstCandidate([
+        "../lsp/server.js",
+        "../lsp/server.ts",
+        "../../dist/lsp/server.js",
+        "../../src/lsp/server.ts",
+        "dist/lsp/server.js",
+        "src/lsp/server.ts",
+    ]);
+    if (lspPath) {
         checks.push({
             name: "HKD Language Server Protocol 2.0 (LSP)",
             category: "lsp",
@@ -130,8 +156,15 @@ function runDoctor() {
         });
     }
     // 5. Debug Adapter Protocol Check (DAP)
-    const dapPath = path.resolve("dist", "debug", "server.js");
-    if (fs.existsSync(dapPath) || fs.existsSync(path.resolve("src", "debug", "server.ts"))) {
+    const dapPath = findFirstCandidate([
+        "../debug/server.js",
+        "../debug/server.ts",
+        "../../dist/debug/server.js",
+        "../../src/debug/server.ts",
+        "dist/debug/server.js",
+        "src/debug/server.ts",
+    ]);
+    if (dapPath) {
         checks.push({
             name: "HKD Debug Adapter Protocol (DAP)",
             category: "debugger",
@@ -164,8 +197,12 @@ function runDoctor() {
         message: "Container generator verified with non-root execution (UID 10001)",
     });
     // 8. VS Code Extension Check
-    const vsCodePkg = path.resolve("vscode-extension", "package.json");
-    if (fs.existsSync(vsCodePkg)) {
+    const vsCodePkg = findFirstCandidate([
+        "../../vscode-extension/package.json",
+        "../../../vscode-extension/package.json",
+        "vscode-extension/package.json",
+    ]);
+    if (vsCodePkg) {
         checks.push({
             name: "VS Code Extension Manifest",
             category: "vscode",
@@ -182,7 +219,12 @@ function runDoctor() {
         });
     }
     // 9. Security, Fuzzing & Audit Subsystem
-    const hasFuzz = fs.existsSync(path.resolve("fuzz", "regressions")) || fs.existsSync(path.resolve("fuzz", "corpus"));
+    const hasFuzz = findFirstCandidate([
+        "../../fuzz/regressions",
+        "../../fuzz/corpus",
+        "fuzz/regressions",
+        "fuzz/corpus",
+    ]) !== null;
     checks.push({
         name: "Security, Fuzzing & Audit Engine",
         category: "security",

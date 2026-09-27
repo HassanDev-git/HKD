@@ -1,0 +1,119 @@
+// Application 4: HKD Project Inspector & Health Diagnostic Tool
+// Production dogfood utility demonstrating real-world language capabilities
+import fs
+import path
+import string
+import array
+
+struct ProjectReport {
+    name: String
+    version: String
+    edition: String
+    total_files: Int
+    total_loc: Int
+    has_lockfile: Bool
+    health_status: String
+}
+
+fn inspect_project(project_dir: String) -> ProjectReport {
+    println("[inspector] Scanning project root: " + project_dir)
+
+    let manifest_path = path.join(project_dir, "hkd.toml")
+    let has_manifest = fs.exists(manifest_path)
+
+    let pkg_name = "unknown"
+    let pkg_ver = "0.0.0"
+    let pkg_edition = "2026"
+
+    if has_manifest {
+        let manifest_content = fs.read(manifest_path)
+        let lines = string.split(manifest_content, "\n")
+        for line in lines {
+            let trimmed = string.trim(line)
+            if string.starts_with(trimmed, "name =") {
+                let parts = string.split(trimmed, "=")
+                if array.len(parts) > 1 {
+                    pkg_name = string.trim(parts[1])
+                }
+            }
+            if string.starts_with(trimmed, "version =") {
+                let parts = string.split(trimmed, "=")
+                if array.len(parts) > 1 {
+                    pkg_ver = string.trim(parts[1])
+                }
+            }
+            if string.starts_with(trimmed, "edition =") {
+                let parts = string.split(trimmed, "=")
+                if array.len(parts) > 1 {
+                    pkg_edition = string.trim(parts[1])
+                }
+            }
+        }
+    }
+
+    let lock_path = path.join(project_dir, "hkd.lock")
+    let has_lock = fs.exists(lock_path)
+
+    // Scan source files
+    let file_count = 0
+    let total_loc = 0
+
+    let src_dir = path.join(project_dir, "src")
+    if fs.exists(src_dir) {
+        if fs.is_dir(src_dir) {
+            let entries = fs.list_dir(src_dir)
+            for entry in entries {
+                let entry_path = path.join(src_dir, entry)
+                if !fs.is_dir(entry_path) {
+                    if string.ends_with(entry, ".hkd") {
+                        file_count += 1
+                        let content = fs.read(entry_path)
+                        let lines = string.split(content, "\n")
+                        total_loc += array.len(lines)
+                    }
+                }
+            }
+        }
+    }
+
+    // Health evaluation
+    let health = "HEALTHY"
+    if !has_manifest {
+        health = "CRITICAL: Missing hkd.toml"
+    } else if file_count == 0 {
+        health = "WARNING: No source files found in src/"
+    }
+
+    return ProjectReport {
+        name: pkg_name,
+        version: pkg_ver,
+        edition: pkg_edition,
+        total_files: file_count,
+        total_loc: total_loc,
+        has_lockfile: has_lock,
+        health_status: health
+    }
+}
+
+fn print_report(rep: ProjectReport) {
+    println("==================================================")
+    println("          HKD PROJECT INSPECTION REPORT           ")
+    println("==================================================")
+    println("  Package Name:     " + rep.name)
+    println("  Package Version:  " + rep.version)
+    println("  Target Edition:   " + rep.edition)
+    println("  Source Modules:   " + to_string(rep.total_files))
+    println("  Total Lines:      " + to_string(rep.total_loc))
+    println("  Lockfile Present: " + to_string(rep.has_lockfile))
+    println("  Health Status:    " + rep.health_status)
+    println("==================================================")
+}
+
+fn main() {
+    println("Starting HKD Project Inspector...")
+    let report = inspect_project(".")
+    print_report(report)
+    println("Project inspection finished successfully.")
+}
+
+main()

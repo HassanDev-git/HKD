@@ -1,0 +1,89 @@
+{
+  "timestamp": "2026-09-27T19:16:09.822Z",
+  "version": "1.1.0",
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "cpus": "Intel(R) Core(TM) i7-4900MQ CPU @ 2.80GHz",
+    "nodeVersion": "v24.19.0"
+  },
+  "startupLatency": [
+    {
+      "name": "CLI Version (`hkd --version`)",
+      "medianMs": 200.26,
+      "p95Ms": 234.82,
+      "runs": 5
+    },
+    {
+      "name": "Cold Startup Script (`hkd run minimal.hkd`)",
+      "medianMs": 252.72,
+      "p95Ms": 274.36,
+      "runs": 5
+    }
+  ],
+  "compilationSpeed": [
+    {
+      "workload": "Small File (<50 LOC)",
+      "loc": 5,
+      "medianMs": 1.434,
+      "linesPerSecond": 3487
+    },
+    {
+      "workload": "Medium Project (~300 LOC)",
+      "loc": 286,
+      "medianMs": 35.683,
+      "linesPerSecond": 8015
+    },
+    {
+      "workload": "Large Workload (~1200 LOC)",
+      "loc": 1141,
+      "medianMs": 109.393,
+      "linesPerSecond": 10430
+    }
+  ],
+  "runtimeExecution": [
+    {
+      "workload": "Arithmetic Loop (50,000 iterations)",
+      "iterations": 50000,
+      "medianMs": 0.08,
+      "p95Ms": 1.96,
+      "throughputOpsSec": 588928151
+    },
+    {
+      "workload": "Recursive Fibonacci (fib(20))",
+      "iterations": 20,
+      "medianMs": 22.09,
+      "p95Ms": 46.27,
+      "throughputOpsSec": 45
+    },
+    {
+      "workload": "String Concat (500 appends)",
+      "iterations": 500,
+      "medianMs": 0.04,
+      "p95Ms": 0.15,
+      "throughputOpsSec": 12077295
+    }
+  ],
+  "memoryMetrics": {
+    "initialRssBytes": 41783296,
+    "peakRssBytes": 103264256,
+    "heapUsedBytes": 17683176,
+    "heapTotalBytes": 84275200,
+    "growthRatio": 2.288,
+    "deltaBytes": 53833728
+  },
+  "artifactSizes": [
+    {
+      "name": "Compiled Bytecode (.hkdb) [300 LOC]",
+      "sizeBytes": 8137
+    },
+    {
+      "name": "Package Archive (.hkdpack)",
+      "sizeBytes": 5407
+    },
+    {
+      "name": "Lockfile (hkd.lock)",
+      "sizeBytes": 275
+    }
+  ]
+}

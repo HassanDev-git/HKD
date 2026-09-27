@@ -1,0 +1,7 @@
+[package]
+name = "project-inspector"
+version = "1.0.0"
+edition = "2026"
+main = "main.hkd"
+description = "Production dogfood developer utility for scanning HKD projects, calculating LOC, analyzing dependencies and checking health"
+authors = ["HKD Team <team@hkd.dev>"]

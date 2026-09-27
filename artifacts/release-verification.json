@@ -3,7 +3,7 @@
   "version": "1.1.0",
   "edition": "2026",
   "target": "x86_64-windows",
-  "timestamp": "2026-09-27T18:00:57.303Z",
+  "timestamp": "2026-09-27T19:26:45.688Z",
   "totalDimensions": 14,
   "passedDimensions": 14,
   "warningsCount": 0,
@@ -25,7 +25,7 @@
       "dimension": "Memory",
       "category": "Memory Model & GC",
       "status": "PASS",
-      "message": "Nursery & mature GC boundaries valid, zero memory leaks across 10,000 soak cycles (growth ratio: 1x)"
+      "message": "Nursery & mature GC boundaries valid, zero memory leaks across 10,000 soak cycles (growth ratio: 1.074x)"
     },
     {
       "dimension": "Resources",
@@ -132,7 +132,7 @@
       "status": "PASS",
       "severity": "critical",
       "command": "runSource(<generics + pattern matching>, edition: 2027)",
-      "duration_ms": 1,
+      "duration_ms": 8,
       "evidence": {
         "generics_ok": true,
         "pattern_matching_ok": true,
@@ -144,7 +144,7 @@
       "status": "PASS",
       "severity": "critical",
       "command": "runSource(<edition 2026 program>, edition: 2026)",
-      "duration_ms": 0,
+      "duration_ms": 1,
       "evidence": {
         "edition_2026_frozen": true,
         "pass": true
@@ -224,22 +224,22 @@
       "status": "PASS",
       "severity": "critical",
       "command": "soak_stress(10000 cycles) + process.memoryUsage()",
-      "duration_ms": 11,
+      "duration_ms": 8,
       "evidence": {
         "cycles": 10000,
-        "initial_rss_bytes": 365617152,
-        "final_rss_bytes": 365617152,
-        "peak_rss_bytes": 365617152,
-        "initial_heap_used_bytes": 190468488,
-        "final_heap_used_bytes": 195197824,
-        "initial_heap_total_bytes": 302669824,
-        "final_heap_total_bytes": 302669824,
-        "initial_external_bytes": 6628901,
-        "final_external_bytes": 6628901,
-        "initial_array_buffers_bytes": 2571786,
-        "final_array_buffers_bytes": 2571786,
-        "rss_growth_ratio": 1,
-        "heap_delta_bytes": 4729336,
+        "initial_rss_bytes": 43073536,
+        "final_rss_bytes": 46260224,
+        "peak_rss_bytes": 47190016,
+        "initial_heap_used_bytes": 8837000,
+        "final_heap_used_bytes": 9196728,
+        "initial_heap_total_bytes": 11923456,
+        "final_heap_total_bytes": 13234176,
+        "initial_external_bytes": 2313046,
+        "final_external_bytes": 2313086,
+        "initial_array_buffers_bytes": 143647,
+        "final_array_buffers_bytes": 143647,
+        "rss_growth_ratio": 1.074,
+        "heap_delta_bytes": 359728,
         "pass": true
       }
     },
@@ -248,7 +248,7 @@
       "status": "PASS",
       "severity": "critical",
       "command": "generateCycloneDxSbom + secret_scan",
-      "duration_ms": 7,
+      "duration_ms": 3,
       "evidence": {
         "sbom_format": "CycloneDX 1.5",
         "registered_components": 2,
@@ -329,7 +329,7 @@
       "status": "PASS",
       "severity": "critical",
       "command": "sha256(serialize(c1)) === sha256(serialize(c2))",
-      "duration_ms": 0,
+      "duration_ms": 1,
       "evidence": {
         "bitwise_identical": true,
         "pass": true
@@ -340,7 +340,7 @@
       "status": "PASS",
       "severity": "medium",
       "command": "check_core_documentation_files",
-      "duration_ms": 1,
+      "duration_ms": 0,
       "evidence": {
         "required_docs": 5,
         "pass": true
