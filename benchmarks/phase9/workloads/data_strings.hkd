@@ -1,0 +1,8 @@
+import string
+let s = "base"
+let i = 0
+while i < 5000 {
+    s = s + "x"
+    i = i + 1
+}
+print(to_string(string.len(s)))

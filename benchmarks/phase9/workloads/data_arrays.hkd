@@ -1,0 +1,8 @@
+import array
+let arr = []
+let i = 0
+while i < 10000 {
+    array.push(arr, i)
+    i = i + 1
+}
+print(to_string(array.len(arr)))

@@ -1,0 +1,12 @@
+fn step(v: Int) -> Int {
+    let a = v * 2
+    let b = a + 3
+    return b % 1000
+}
+let res = 0
+let i = 0
+while i < 50000 {
+    res = step(res)
+    i = i + 1
+}
+print(to_string(res))

@@ -1,0 +1,18 @@
+import array
+fn create_batch(size: Int) -> Int {
+    let batch = []
+    let i = 0
+    while i < size {
+        let item = [i, i + 1, i + 2]
+        array.push(batch, item)
+        i = i + 1
+    }
+    return array.len(batch)
+}
+let total = 0
+let k = 0
+while k < 50 {
+    total = total + create_batch(100)
+    k = k + 1
+}
+print(to_string(total))

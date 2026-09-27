@@ -1,0 +1,1267 @@
+// compiler_large.hkd - Large ~1200 LOC compilation workload
+struct Module_1 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_1(m: Module_1, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_2 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_2(m: Module_2, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_3 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_3(m: Module_3, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_4 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_4(m: Module_4, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_5 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_5(m: Module_5, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_6 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_6(m: Module_6, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_7 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_7(m: Module_7, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_8 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_8(m: Module_8, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_9 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_9(m: Module_9, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_10 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_10(m: Module_10, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_11 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_11(m: Module_11, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_12 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_12(m: Module_12, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_13 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_13(m: Module_13, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_14 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_14(m: Module_14, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_15 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_15(m: Module_15, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_16 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_16(m: Module_16, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_17 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_17(m: Module_17, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_18 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_18(m: Module_18, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_19 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_19(m: Module_19, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_20 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_20(m: Module_20, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_21 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_21(m: Module_21, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_22 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_22(m: Module_22, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_23 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_23(m: Module_23, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_24 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_24(m: Module_24, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_25 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_25(m: Module_25, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_26 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_26(m: Module_26, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_27 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_27(m: Module_27, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_28 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_28(m: Module_28, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_29 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_29(m: Module_29, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_30 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_30(m: Module_30, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_31 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_31(m: Module_31, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_32 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_32(m: Module_32, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_33 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_33(m: Module_33, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_34 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_34(m: Module_34, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_35 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_35(m: Module_35, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_36 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_36(m: Module_36, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_37 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_37(m: Module_37, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_38 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_38(m: Module_38, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_39 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_39(m: Module_39, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_40 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_40(m: Module_40, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_41 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_41(m: Module_41, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_42 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_42(m: Module_42, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_43 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_43(m: Module_43, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_44 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_44(m: Module_44, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_45 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_45(m: Module_45, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_46 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_46(m: Module_46, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_47 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_47(m: Module_47, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_48 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_48(m: Module_48, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_49 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_49(m: Module_49, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_50 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_50(m: Module_50, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_51 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_51(m: Module_51, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_52 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_52(m: Module_52, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_53 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_53(m: Module_53, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_54 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_54(m: Module_54, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_55 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_55(m: Module_55, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_56 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_56(m: Module_56, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_57 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_57(m: Module_57, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_58 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_58(m: Module_58, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_59 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_59(m: Module_59, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+struct Module_60 {
+  id: Int
+  weight: Int
+  scale: Int
+}
+fn compute_mod_60(m: Module_60, factor: Int) -> Int {
+  let acc = m.weight * factor + m.scale
+  let k = 0
+  while k < 5 {
+    if (acc + k) % 2 == 0 {
+      acc = acc + k * 3
+    } else {
+      acc = acc - k
+    }
+    k = k + 1
+  }
+  return acc
+}
+
+fn run_large_orchestrator() -> Int {
+  let total = 0
+  let m1 = Module_1 { id: 1, weight: 10, scale: 2 }
+  total = total + compute_mod_1(m1, 2)
+  let m2 = Module_2 { id: 2, weight: 20, scale: 4 }
+  total = total + compute_mod_2(m2, 2)
+  let m3 = Module_3 { id: 3, weight: 30, scale: 6 }
+  total = total + compute_mod_3(m3, 2)
+  let m4 = Module_4 { id: 4, weight: 40, scale: 8 }
+  total = total + compute_mod_4(m4, 2)
+  let m5 = Module_5 { id: 5, weight: 50, scale: 10 }
+  total = total + compute_mod_5(m5, 2)
+  let m6 = Module_6 { id: 6, weight: 60, scale: 12 }
+  total = total + compute_mod_6(m6, 2)
+  let m7 = Module_7 { id: 7, weight: 70, scale: 14 }
+  total = total + compute_mod_7(m7, 2)
+  let m8 = Module_8 { id: 8, weight: 80, scale: 16 }
+  total = total + compute_mod_8(m8, 2)
+  let m9 = Module_9 { id: 9, weight: 90, scale: 18 }
+  total = total + compute_mod_9(m9, 2)
+  let m10 = Module_10 { id: 10, weight: 100, scale: 20 }
+  total = total + compute_mod_10(m10, 2)
+  let m11 = Module_11 { id: 11, weight: 110, scale: 22 }
+  total = total + compute_mod_11(m11, 2)
+  let m12 = Module_12 { id: 12, weight: 120, scale: 24 }
+  total = total + compute_mod_12(m12, 2)
+  let m13 = Module_13 { id: 13, weight: 130, scale: 26 }
+  total = total + compute_mod_13(m13, 2)
+  let m14 = Module_14 { id: 14, weight: 140, scale: 28 }
+  total = total + compute_mod_14(m14, 2)
+  let m15 = Module_15 { id: 15, weight: 150, scale: 30 }
+  total = total + compute_mod_15(m15, 2)
+  let m16 = Module_16 { id: 16, weight: 160, scale: 32 }
+  total = total + compute_mod_16(m16, 2)
+  let m17 = Module_17 { id: 17, weight: 170, scale: 34 }
+  total = total + compute_mod_17(m17, 2)
+  let m18 = Module_18 { id: 18, weight: 180, scale: 36 }
+  total = total + compute_mod_18(m18, 2)
+  let m19 = Module_19 { id: 19, weight: 190, scale: 38 }
+  total = total + compute_mod_19(m19, 2)
+  let m20 = Module_20 { id: 20, weight: 200, scale: 40 }
+  total = total + compute_mod_20(m20, 2)
+  let m21 = Module_21 { id: 21, weight: 210, scale: 42 }
+  total = total + compute_mod_21(m21, 2)
+  let m22 = Module_22 { id: 22, weight: 220, scale: 44 }
+  total = total + compute_mod_22(m22, 2)
+  let m23 = Module_23 { id: 23, weight: 230, scale: 46 }
+  total = total + compute_mod_23(m23, 2)
+  let m24 = Module_24 { id: 24, weight: 240, scale: 48 }
+  total = total + compute_mod_24(m24, 2)
+  let m25 = Module_25 { id: 25, weight: 250, scale: 50 }
+  total = total + compute_mod_25(m25, 2)
+  let m26 = Module_26 { id: 26, weight: 260, scale: 52 }
+  total = total + compute_mod_26(m26, 2)
+  let m27 = Module_27 { id: 27, weight: 270, scale: 54 }
+  total = total + compute_mod_27(m27, 2)
+  let m28 = Module_28 { id: 28, weight: 280, scale: 56 }
+  total = total + compute_mod_28(m28, 2)
+  let m29 = Module_29 { id: 29, weight: 290, scale: 58 }
+  total = total + compute_mod_29(m29, 2)
+  let m30 = Module_30 { id: 30, weight: 300, scale: 60 }
+  total = total + compute_mod_30(m30, 2)
+  let m31 = Module_31 { id: 31, weight: 310, scale: 62 }
+  total = total + compute_mod_31(m31, 2)
+  let m32 = Module_32 { id: 32, weight: 320, scale: 64 }
+  total = total + compute_mod_32(m32, 2)
+  let m33 = Module_33 { id: 33, weight: 330, scale: 66 }
+  total = total + compute_mod_33(m33, 2)
+  let m34 = Module_34 { id: 34, weight: 340, scale: 68 }
+  total = total + compute_mod_34(m34, 2)
+  let m35 = Module_35 { id: 35, weight: 350, scale: 70 }
+  total = total + compute_mod_35(m35, 2)
+  let m36 = Module_36 { id: 36, weight: 360, scale: 72 }
+  total = total + compute_mod_36(m36, 2)
+  let m37 = Module_37 { id: 37, weight: 370, scale: 74 }
+  total = total + compute_mod_37(m37, 2)
+  let m38 = Module_38 { id: 38, weight: 380, scale: 76 }
+  total = total + compute_mod_38(m38, 2)
+  let m39 = Module_39 { id: 39, weight: 390, scale: 78 }
+  total = total + compute_mod_39(m39, 2)
+  let m40 = Module_40 { id: 40, weight: 400, scale: 80 }
+  total = total + compute_mod_40(m40, 2)
+  let m41 = Module_41 { id: 41, weight: 410, scale: 82 }
+  total = total + compute_mod_41(m41, 2)
+  let m42 = Module_42 { id: 42, weight: 420, scale: 84 }
+  total = total + compute_mod_42(m42, 2)
+  let m43 = Module_43 { id: 43, weight: 430, scale: 86 }
+  total = total + compute_mod_43(m43, 2)
+  let m44 = Module_44 { id: 44, weight: 440, scale: 88 }
+  total = total + compute_mod_44(m44, 2)
+  let m45 = Module_45 { id: 45, weight: 450, scale: 90 }
+  total = total + compute_mod_45(m45, 2)
+  let m46 = Module_46 { id: 46, weight: 460, scale: 92 }
+  total = total + compute_mod_46(m46, 2)
+  let m47 = Module_47 { id: 47, weight: 470, scale: 94 }
+  total = total + compute_mod_47(m47, 2)
+  let m48 = Module_48 { id: 48, weight: 480, scale: 96 }
+  total = total + compute_mod_48(m48, 2)
+  let m49 = Module_49 { id: 49, weight: 490, scale: 98 }
+  total = total + compute_mod_49(m49, 2)
+  let m50 = Module_50 { id: 50, weight: 500, scale: 100 }
+  total = total + compute_mod_50(m50, 2)
+  let m51 = Module_51 { id: 51, weight: 510, scale: 102 }
+  total = total + compute_mod_51(m51, 2)
+  let m52 = Module_52 { id: 52, weight: 520, scale: 104 }
+  total = total + compute_mod_52(m52, 2)
+  let m53 = Module_53 { id: 53, weight: 530, scale: 106 }
+  total = total + compute_mod_53(m53, 2)
+  let m54 = Module_54 { id: 54, weight: 540, scale: 108 }
+  total = total + compute_mod_54(m54, 2)
+  let m55 = Module_55 { id: 55, weight: 550, scale: 110 }
+  total = total + compute_mod_55(m55, 2)
+  let m56 = Module_56 { id: 56, weight: 560, scale: 112 }
+  total = total + compute_mod_56(m56, 2)
+  let m57 = Module_57 { id: 57, weight: 570, scale: 114 }
+  total = total + compute_mod_57(m57, 2)
+  let m58 = Module_58 { id: 58, weight: 580, scale: 116 }
+  total = total + compute_mod_58(m58, 2)
+  let m59 = Module_59 { id: 59, weight: 590, scale: 118 }
+  total = total + compute_mod_59(m59, 2)
+  let m60 = Module_60 { id: 60, weight: 600, scale: 120 }
+  total = total + compute_mod_60(m60, 2)
+  return total
+}
+
+print(to_string(run_large_orchestrator()))

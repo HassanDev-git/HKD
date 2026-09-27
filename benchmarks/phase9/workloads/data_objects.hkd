@@ -1,0 +1,12 @@
+struct Point {
+    x: Int
+    y: Int
+}
+let p = Point { x: 0, y: 0 }
+let i = 0
+while i < 50000 {
+    p.x = i
+    p.y = p.x + 1
+    i = i + 1
+}
+print(to_string(p.x) + "," + to_string(p.y))

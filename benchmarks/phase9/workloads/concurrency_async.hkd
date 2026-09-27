@@ -1,0 +1,21 @@
+async fn worker(id: Int) -> Int {
+    return id * 10
+}
+
+async fn run_batch() -> Int {
+    let f1 = worker(1)
+    let f2 = worker(2)
+    let f3 = worker(3)
+    let r1 = await f1
+    let r2 = await f2
+    let r3 = await f3
+    return r1 + r2 + r3
+}
+
+async fn main_async() -> Int {
+    let res = await run_batch()
+    print(to_string(res))
+    return res
+}
+
+main_async()

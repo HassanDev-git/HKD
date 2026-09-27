@@ -1,0 +1,7 @@
+let total = 0
+let i = 0
+while i < 100000 {
+    total = total + (i * 3 - (i / 2)) % 1000
+    i = i + 1
+}
+print(to_string(total))

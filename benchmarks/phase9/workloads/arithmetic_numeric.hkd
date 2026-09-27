@@ -1,0 +1,7 @@
+let x = 1.5
+let i = 0
+while i < 100000 {
+    x = (x * 1.00001 + 0.5) / 1.00001 - 0.49999
+    i = i + 1
+}
+print(to_string(x))
