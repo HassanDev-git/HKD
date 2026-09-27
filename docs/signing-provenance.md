@@ -93,7 +93,7 @@ HKD uses a dual signing strategy to guarantee both modern keyless infrastructure
 ```bash
 # Verify release tarball using Cosign keyless workflow
 cosign verify-blob \
-  --certificate-identity https://github.com/hkd-lang/hkd/.github/workflows/release.yml@refs/tags/v1.1.0 \
+  --certificate-identity https://github.com/HassanDev-git/HKD/.github/workflows/release.yml@refs/tags/v1.1.0 \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   --signature dist/releases/hkd-1.1.0-x86_64-windows.zip.sig \
   --certificate dist/releases/hkd-1.1.0-x86_64-windows.zip.pem \
@@ -115,7 +115,7 @@ minisign -Vm dist/SHA256SUMS -p hkd-release.pub
 
 The build produces an in-toto attestation (`dist/provenance.intoto.jsonl`) recording:
 - **Builder Identity**: GitHub Hosted Ubuntu/Windows Runner (`https://github.com/actions/runner`).
-- **Source Repository**: `https://github.com/hkd-lang/hkd`.
+- **Source Repository**: `https://github.com/HassanDev-git/HKD`.
 - **Source Revision**: Exact Git commit SHA-512.
 - **Build Invocation**: `npm run build`, Node SEA injection flags, and TypeScript compiler options.
 - **Reproducibility Digest**: Invariant hashes of input dependencies resolved via `package-lock.json` and `Cargo.lock` / `build.zig.zon`.
