@@ -19,7 +19,7 @@ If you identify a potential security vulnerability in HKD (compiler, native runt
 ### Reporting Channels
 Please disclose vulnerabilities through one of the following private channels:
 1. **GitHub Security Advisory**: Use GitHub's private vulnerability reporting feature on the official repository.
-2. **Direct Security Contact**: Email `security@hkd-lang.dev` with encrypted PGP details if available.
+2. **Direct Security Contact**: Email `hassnk.dev@gmail.com` with encrypted PGP details if available.
 
 ### Disclosure Information
 Please provide:

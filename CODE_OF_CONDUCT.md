@@ -51,4 +51,4 @@ an individual is officially representing the community in public spaces.
 ## Contact
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the HKD Core Team at conduct@hkdlang.org.
+reported to the HKD Core Team at hassnk.dev@gmail.com.
