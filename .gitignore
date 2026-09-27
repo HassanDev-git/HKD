@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Cache & Scratch
+.hkd/
+scratch/
+*.log
+.DS_Store
+Thumbs.db
+*.tmp
+.zig-cache/
+native-runtime/.zig-cache/
+
+# Build artifacts
+dist-release/
+target/

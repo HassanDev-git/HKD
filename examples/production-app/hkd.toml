@@ -1,0 +1,14 @@
+name = "production-app"
+version = "1.0.0"
+edition = "2026"
+description = "HKD Full Real-World Enterprise Production Application"
+main = "src/main.hkd"
+
+[build]
+profile = "release"
+target = "native"
+
+[deploy]
+target = "container"
+port = 8080
+healthcheck = "/health"

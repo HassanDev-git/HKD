@@ -1,0 +1,62 @@
+#feature(traits)
+#feature(generics)
+
+trait Serializable {
+  fn to_json(self) -> String
+}
+
+trait Validator {
+  fn is_valid(self) -> Bool
+}
+
+struct Account {
+  id: Int,
+  username: String,
+  active: Bool
+}
+
+struct Transaction {
+  tx_id: String,
+  amount: Int,
+  fee: Int
+}
+
+impl Serializable for Account {
+  fn to_json(self) -> String {
+    return "{\"id\":" + to_string(self.id) + ",\"username\":\"" + self.username + "\",\"active\":" + to_string(self.active) + "}"
+  }
+}
+
+impl Validator for Account {
+  fn is_valid(self) -> Bool {
+    return self.active && self.id > 0
+  }
+}
+
+impl Serializable for Transaction {
+  fn to_json(self) -> String {
+    return "{\"tx_id\":\"" + self.tx_id + "\",\"amount\":" + to_string(self.amount) + ",\"fee\":" + to_string(self.fee) + "}"
+  }
+}
+
+impl Validator for Transaction {
+  fn is_valid(self) -> Bool {
+    return self.amount > 0 && self.fee >= 0
+  }
+}
+
+fn serialize_record<T: Serializable>(record: T) -> String {
+  return record.to_json()
+}
+
+fn validate_record<T: Validator>(record: T) -> Bool {
+  return record.is_valid()
+}
+
+let acc = Account { id: 101, username: "dev_lead", active: true }
+let tx = Transaction { tx_id: "tx-9901", amount: 500, fee: 5 }
+
+print("Account JSON: " + serialize_record(acc))
+print("Account valid: " + to_string(validate_record(acc)))
+print("Tx JSON: " + serialize_record(tx))
+print("Tx valid: " + to_string(validate_record(tx)))

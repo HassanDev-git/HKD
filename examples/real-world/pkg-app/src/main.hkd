@@ -1,0 +1,17 @@
+import ops from "./math_ops.hkd"
+
+fn main() {
+    print("=== HKD Modular Package App ===")
+    let raw = 150
+    let clamped = ops.clamp(raw, 0, 100)
+    let scaled = ops.scale(clamped, 2)
+
+    print("Raw value: ")
+    print(raw)
+    print("Clamped (0..100): ")
+    print(clamped)
+    print("Scaled (x2): ")
+    print(scaled)
+}
+
+main()

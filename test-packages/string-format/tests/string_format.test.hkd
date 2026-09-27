@@ -1,0 +1,9 @@
+import sf from "../src/main.hkd"
+
+test "pad_left works" {
+    assert(sf.pad_left("42", 5, "0") == "00042")
+}
+
+test "pad_right works" {
+    assert(sf.pad_right("hi", 4, "!") == "hi!!")
+}

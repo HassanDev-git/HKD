@@ -1,0 +1,34 @@
+fn check_quota(used_mb, limit_mb) {
+    if used_mb > limit_mb {
+        return "EXCEEDED"
+    }
+    if used_mb * 100 / limit_mb >= 80 {
+        return "WARNING"
+    }
+    return "OK"
+}
+
+fn aggregate_batch_sizes(sizes) {
+    let total = 0
+    let max_item = 0
+    for s in sizes {
+        total = total + s
+        if s > max_item {
+            max_item = s
+        }
+    }
+    return [total, max_item]
+}
+
+test "check_quota states" {
+    assert(check_quota(50, 100) == "OK")
+    assert(check_quota(85, 100) == "WARNING")
+    assert(check_quota(120, 100) == "EXCEEDED")
+}
+
+test "aggregate_batch_sizes calculates total and peak" {
+    let items = [10, 40, 25, 5]
+    let res = aggregate_batch_sizes(items)
+    assert(res[0] == 80)
+    assert(res[1] == 40)
+}

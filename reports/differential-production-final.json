@@ -1,0 +1,62 @@
+{
+  "timestamp": "2026-09-04T01:28:40.612Z",
+  "totalTested": 6,
+  "totalEquivalent": 6,
+  "allEquivalent": true,
+  "results": [
+    {
+      "programName": "arithmetic_precedence",
+      "source": "let x = 10 + 20 * 3 - 5;\nprint(x);\n",
+      "vmOutput": "65",
+      "vmStatus": 0,
+      "nativeOutput": "65",
+      "nativeStatus": 0,
+      "equivalent": true
+    },
+    {
+      "programName": "loops_accumulator",
+      "source": "let s = 0;\nlet i = 0;\nwhile i < 10 {\n    i = i + 1;\n    s = s + i;\n}\nprint(s);\n",
+      "vmOutput": "55",
+      "vmStatus": 0,
+      "nativeOutput": "55",
+      "nativeStatus": 0,
+      "equivalent": true
+    },
+    {
+      "programName": "nested_functions",
+      "source": "fn outer(a) {\n    fn inner(b) { return a + b; }\n    return inner(5);\n}\nprint(outer(10));\n",
+      "vmOutput": "15",
+      "vmStatus": 0,
+      "nativeOutput": "15",
+      "nativeStatus": 0,
+      "equivalent": true
+    },
+    {
+      "programName": "conditional_branching",
+      "source": "let x = 42;\nif x > 20 {\n    print(1);\n} else {\n    print(0);\n}\n",
+      "vmOutput": "1",
+      "vmStatus": 0,
+      "nativeOutput": "1",
+      "nativeStatus": 0,
+      "equivalent": true
+    },
+    {
+      "programName": "array_operations",
+      "source": "let arr = [1, 2, 3, 4, 5];\nlet s = 0;\nfor item in arr {\n    s = s + item;\n}\nprint(s);\n",
+      "vmOutput": "15",
+      "vmStatus": 0,
+      "nativeOutput": "15",
+      "nativeStatus": 0,
+      "equivalent": true
+    },
+    {
+      "programName": "string_equality",
+      "source": "let s1 = \"HKD\";\nlet s2 = \"HKD\";\nprint(s1 == s2);\n",
+      "vmOutput": "true",
+      "vmStatus": 0,
+      "nativeOutput": "true",
+      "nativeStatus": 0,
+      "equivalent": true
+    }
+  ]
+}

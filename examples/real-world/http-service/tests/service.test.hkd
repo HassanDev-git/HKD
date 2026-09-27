@@ -1,0 +1,38 @@
+import http
+
+fn format_response(status_code, message) {
+    if status_code == 200 {
+        return "HTTP 200 OK: " + message
+    }
+    return "HTTP 500 ERROR: " + message
+}
+
+fn handle_request(route) {
+    if route == "/health" {
+        return 200
+    }
+    if route == "/api" {
+        return 200
+    }
+    return 404
+}
+
+test "handle_request routing" {
+    assert(handle_request("/health") == 200)
+    assert(handle_request("/api") == 200)
+    assert(handle_request("/unknown") == 404)
+}
+
+test "format_response string formatting" {
+    let ok = format_response(200, "healthy")
+    assert(ok == "HTTP 200 OK: healthy")
+    let err = format_response(500, "internal error")
+    assert(err == "HTTP 500 ERROR: internal error")
+}
+
+test "http stdlib client get and metrics" {
+    let resp = http.get("127.0.0.1", 8080, "/health")
+    assert(resp.status == 200)
+    let m = http.metrics()
+    assert(m.status == "ok")
+}

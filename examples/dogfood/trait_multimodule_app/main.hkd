@@ -1,0 +1,13 @@
+#feature(traits)
+#feature(generics)
+import { Package } from "./models.hkd"
+import { format_delivery, is_heavy } from "./services.hkd"
+
+let pkg1 = Package { tracking_id: "HKD-PKG-1", grams: 450 }
+let pkg2 = Package { tracking_id: "HKD-PKG-2", grams: 2500 }
+
+print(format_delivery(pkg1))
+print("pkg1 heavy: " + to_string(is_heavy(pkg1)))
+
+print(format_delivery(pkg2))
+print("pkg2 heavy: " + to_string(is_heavy(pkg2)))

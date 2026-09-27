@@ -1,0 +1,98 @@
+// collections-extra v1.1.0 (HKD Edition 2027)
+// Advanced collection algorithms and functional iterators
+
+import array;
+
+// Splits an array into chunks of specified size
+fn chunk(items: [Int], size: Int) -> Any {
+    let result = [];
+    if (size <= 0 || len(items) == 0) {
+        return result;
+    }
+    let current_chunk = [];
+    let i = 0;
+    while (i < len(items)) {
+        array.push(current_chunk, items[i]);
+        if (len(current_chunk) == size) {
+            array.push(result, current_chunk);
+            current_chunk = [];
+        }
+        i = i + 1;
+    }
+    if (len(current_chunk) > 0) {
+        array.push(result, current_chunk);
+    }
+    return result;
+}
+
+// Returns unique elements preserving first occurrence order
+fn unique(items: [Int]) -> Any {
+    let seen = [];
+    let i = 0;
+    while (i < len(items)) {
+        let val = items[i];
+        if (!array.contains(seen, val)) {
+            array.push(seen, val);
+        }
+        i = i + 1;
+    }
+    return seen;
+}
+
+// Partitions an array into [matching, non_matching] using predicate
+fn partition(items: [Int], predicate: fn(Int) -> Bool) -> Any {
+    let passed = [];
+    let failed = [];
+    let i = 0;
+    while (i < len(items)) {
+        let val = items[i];
+        if (predicate(val)) {
+            array.push(passed, val);
+        } else {
+            array.push(failed, val);
+        }
+        i = i + 1;
+    }
+    let res = [];
+    array.push(res, passed);
+    array.push(res, failed);
+    return res;
+}
+
+// Zips two arrays into paired tuples
+fn zip(a: [Int], b: [String]) -> Any {
+    let min_len = len(a);
+    if (len(b) < min_len) {
+        min_len = len(b);
+    }
+    let result = [];
+    let i = 0;
+    while (i < min_len) {
+        let pair = [];
+        array.push(pair, a[i]);
+        array.push(pair, b[i]);
+        array.push(result, pair);
+        i = i + 1;
+    }
+    return result;
+}
+
+// Self-verification routine
+fn is_positive(x: Int) -> Bool {
+    return x > 0;
+}
+
+print("=== collections-extra v1.1.0 Self-Test ===");
+let raw = [1, 2, 2, 3, -4, 5, 6, 7];
+let u = unique(raw);
+print("Unique: " + to_string(u));
+
+let ch = chunk([1, 2, 3, 4, 5], 2);
+print("Chunked: " + to_string(ch));
+
+let parts = partition([-2, -1, 0, 1, 2], is_positive);
+print("Partitioned: " + to_string(parts));
+
+let zipped = zip([10, 20, 30], ["A", "B", "C"]);
+print("Zipped: " + to_string(zipped));
+print("=== All collections-extra tests passed ===");

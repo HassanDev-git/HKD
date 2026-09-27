@@ -1,0 +1,12 @@
+name = "cli-tool"
+version = "1.0.0"
+edition = "2026"
+description = "HKD Real-World Log Analyzer & CLI Statistics Tool"
+main = "src/main.hkd"
+
+[build]
+profile = "release"
+target = "native"
+
+[deploy]
+target = "standalone"

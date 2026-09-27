@@ -1,0 +1,5 @@
+// Fuzz edge: deeply nested parens and strings
+let s = "Special chars: \n \t \" \\ \r \0";
+let res = ((((((1 + 2) * 3) - 4) / 2) % 3));
+print(s);
+print(res);

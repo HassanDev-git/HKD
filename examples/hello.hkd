@@ -1,0 +1,6 @@
+// Hello World in HKD
+fn main() {
+    println("Hello, World from HKD 1.1!");
+}
+
+main();

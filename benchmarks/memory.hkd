@@ -1,0 +1,12 @@
+// memory.hkd - Memory footprint benchmark workload
+fn test_allocs() {
+    let list = []
+    let i = 0
+    while i < 10000 {
+        let obj = { index: i, text: "string_" + to_string(i) }
+        list.push(obj)
+        i = i + 1
+    }
+}
+
+test_allocs()

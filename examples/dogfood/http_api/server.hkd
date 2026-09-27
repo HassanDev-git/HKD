@@ -1,0 +1,174 @@
+// Project B: HTTP REST API Service
+import http
+import json
+import result
+import string
+
+struct User {
+    id: Int
+    name: String
+    email: String
+}
+
+struct HttpResponse {
+    status_code: Int
+    body: String
+}
+
+fn handle_health() -> HttpResponse {
+    let payload = {
+        "status": "healthy",
+        "service": "user-api",
+        "version": "1.1.0"
+    }
+    return HttpResponse {
+        status_code: 200,
+        body: json.stringify(payload)
+    }
+}
+
+fn handle_get_users() -> HttpResponse {
+    let u1 = { "id": 1, "name": "Alice", "email": "alice@example.com" }
+    let u2 = { "id": 2, "name": "Bob", "email": "bob@example.com" }
+    let users_list = [u1, u2]
+
+    return HttpResponse {
+        status_code: 200,
+        body: json.stringify(users_list)
+    }
+}
+
+fn find_user_by_id(id: Int) -> Any {
+    if id == 1 {
+        let u = { "id": 1, "name": "Alice", "email": "alice@example.com" }
+        return result.ok(u)
+    }
+    if id == 2 {
+        let u = { "id": 2, "name": "Bob", "email": "bob@example.com" }
+        return result.ok(u)
+    }
+    return result.err("User not found")
+}
+
+fn handle_get_user_by_id(id: Int) -> HttpResponse {
+    let res = find_user_by_id(id)
+    if result.is_ok(res) {
+        let user = result.unwrap(res)
+        return HttpResponse {
+            status_code: 200,
+            body: json.stringify(user)
+        }
+    }
+
+    let err_msg = result.unwrap_err(res)
+    let err_obj = { "error": err_msg, "user_id": id }
+    return HttpResponse {
+        status_code: 404,
+        body: json.stringify(err_obj)
+    }
+}
+
+fn handle_post_user(raw_body: String) -> HttpResponse {
+    if string.len(raw_body) == 0 {
+        let err_obj = { "error": "Request body cannot be empty" }
+        return HttpResponse {
+            status_code: 400,
+            body: json.stringify(err_obj)
+        }
+    }
+
+    let parsed = json.parse(raw_body)
+    if parsed == null {
+        let err_obj = { "error": "Invalid JSON format" }
+        return HttpResponse {
+            status_code: 400,
+            body: json.stringify(err_obj)
+        }
+    }
+
+    // Validate fields
+    if parsed.name == null || parsed.email == null {
+        let err_obj = { "error": "Missing required fields: name, email" }
+        return HttpResponse {
+            status_code: 400,
+            body: json.stringify(err_obj)
+        }
+    }
+
+    let created_user = {
+        "id": 3,
+        "name": parsed.name,
+        "email": parsed.email
+    }
+
+    return HttpResponse {
+        status_code: 201,
+        body: json.stringify(created_user)
+    }
+}
+
+fn dispatch(method: String, path: String, body: String) -> HttpResponse {
+    println("--> Incoming Request: " + method + " " + path)
+
+    if method == "GET" && path == "/health" {
+        return handle_health()
+    }
+    if method == "GET" && path == "/users" {
+        return handle_get_users()
+    }
+    if method == "GET" && path == "/users/1" {
+        return handle_get_user_by_id(1)
+    }
+    if method == "GET" && path == "/users/999" {
+        return handle_get_user_by_id(999)
+    }
+    if method == "POST" && path == "/users" {
+        return handle_post_user(body)
+    }
+
+    let err_obj = { "error": "Route not found", "path": path }
+    return HttpResponse {
+        status_code: 404,
+        body: json.stringify(err_obj)
+    }
+}
+
+fn main() {
+    println("==========================================")
+    println("       HKD HTTP User REST Service         ")
+    println("==========================================")
+
+    let srv = http.serve(8080)
+    println("Server status: " + srv.status + " on port 8080")
+
+    // Route 1: Health Check
+    let r1 = dispatch("GET", "/health", "")
+    println("<-- [" + to_string(r1.status_code) + "] " + r1.body)
+
+    // Route 2: Get all users
+    let r2 = dispatch("GET", "/users", "")
+    println("<-- [" + to_string(r2.status_code) + "] " + r2.body)
+
+    // Route 3: Get user by ID (existing)
+    let r3 = dispatch("GET", "/users/1", "")
+    println("<-- [" + to_string(r3.status_code) + "] " + r3.body)
+
+    // Route 4: Get user by ID (not found)
+    let r4 = dispatch("GET", "/users/999", "")
+    println("<-- [" + to_string(r4.status_code) + "] " + r4.body)
+
+    // Route 5: Create user (valid)
+    let valid_payload = json.stringify({ "name": "Charlie", "email": "charlie@example.com" })
+    let r5 = dispatch("POST", "/users", valid_payload)
+    println("<-- [" + to_string(r5.status_code) + "] " + r5.body)
+
+    // Route 6: Create user (invalid - missing email)
+    let invalid_payload = json.stringify({ "name": "Incomplete" })
+    let r6 = dispatch("POST", "/users", invalid_payload)
+    println("<-- [" + to_string(r6.status_code) + "] " + r6.body)
+
+    println("==========================================")
+    println("All test requests completed successfully.")
+}
+
+main()

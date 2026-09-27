@@ -1,0 +1,60 @@
+#feature(traits)
+#feature(generics)
+
+trait Printable {
+  fn print_info(self) -> String
+}
+
+trait Summarizable {
+  fn summary(self) -> String
+}
+
+struct Book {
+  title: String,
+  pages: Int
+}
+
+struct Article {
+  headline: String,
+  word_count: Int
+}
+
+impl Printable for Book {
+  fn print_info(self) -> String {
+    return self.title + " (" + to_string(self.pages) + " pages)"
+  }
+}
+
+impl Summarizable for Book {
+  fn summary(self) -> String {
+    return "Book: " + self.title
+  }
+}
+
+impl Printable for Article {
+  fn print_info(self) -> String {
+    return self.headline + " (" + to_string(self.word_count) + " words)"
+  }
+}
+
+impl Summarizable for Article {
+  fn summary(self) -> String {
+    return "Article: " + self.headline
+  }
+}
+
+fn display_item<T: Printable>(item: T) -> String {
+  return item.print_info()
+}
+
+fn describe_item<T: Summarizable>(item: T) -> String {
+  return item.summary()
+}
+
+let b = Book { title: "The Pragmatic Programmer", pages: 352 }
+let a = Article { headline: "HKD 1.2 Traits Launched", word_count: 1250 }
+
+print(display_item(b))
+print(describe_item(b))
+print(display_item(a))
+print(describe_item(a))

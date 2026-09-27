@@ -1,0 +1,8 @@
+let obj = { x: 0 }
+let i = 0
+while i < 500000 {
+    obj.x = i
+    let temp = obj.x
+    i = i + 1
+}
+print(to_string(obj.x))

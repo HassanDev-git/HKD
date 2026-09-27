@@ -1,0 +1,15 @@
+export fn pad_left(str, target_len, pad_char) {
+    let res = str
+    while len(res) < target_len {
+        res = pad_char + res
+    }
+    return res
+}
+
+export fn pad_right(str, target_len, pad_char) {
+    let res = str
+    while len(res) < target_len {
+        res = res + pad_char
+    }
+    return res
+}

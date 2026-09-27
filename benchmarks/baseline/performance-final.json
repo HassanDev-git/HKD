@@ -1,0 +1,207 @@
+{
+  "timestamp": "2026-09-04T05:50:00.000Z",
+  "version": "1.0.0",
+  "edition": "2026",
+  "system": {
+    "platform": "win32",
+    "arch": "x64",
+    "nodeVersion": "v24.19.0",
+    "nativeCompiler": "zig 0.13.0"
+  },
+  "nativeBinarySizeBytes": 2739712,
+  "summary": {
+    "totalWorkloads": 17,
+    "maxSpeedup": "9.42x",
+    "averageSpeedup": "2.18x",
+    "zeroRegressions": true
+  },
+  "workloads": [
+    {
+      "workload": "startup",
+      "file": "benchmarks/minimal.hkd",
+      "iterations": 10,
+      "refMedianMs": 128.45,
+      "refP95Ms": 142.10,
+      "nativeMedianMs": 13.64,
+      "nativeP95Ms": 16.20,
+      "nativeSpeedup": "9.42x",
+      "status": "PASS"
+    },
+    {
+      "workload": "fib(30)",
+      "file": "benchmarks/fib.hkd",
+      "iterations": 10,
+      "refMedianMs": 2480.12,
+      "refP95Ms": 2590.30,
+      "nativeMedianMs": 1940.55,
+      "nativeP95Ms": 2110.42,
+      "nativeSpeedup": "1.28x",
+      "status": "PASS"
+    },
+    {
+      "workload": "loop (1M)",
+      "file": "benchmarks/loop.hkd",
+      "iterations": 10,
+      "refMedianMs": 1820.40,
+      "refP95Ms": 1960.80,
+      "nativeMedianMs": 1410.20,
+      "nativeP95Ms": 1580.90,
+      "nativeSpeedup": "1.29x",
+      "status": "PASS"
+    },
+    {
+      "workload": "function_calls",
+      "file": "benchmarks/function_calls.hkd",
+      "iterations": 10,
+      "refMedianMs": 3950.80,
+      "refP95Ms": 4200.50,
+      "nativeMedianMs": 2980.10,
+      "nativeP95Ms": 3210.40,
+      "nativeSpeedup": "1.33x",
+      "status": "PASS"
+    },
+    {
+      "workload": "closures",
+      "file": "benchmarks/closures.hkd",
+      "iterations": 10,
+      "refMedianMs": 460.10,
+      "refP95Ms": 510.30,
+      "nativeMedianMs": 380.40,
+      "nativeP95Ms": 420.10,
+      "nativeSpeedup": "1.21x",
+      "status": "PASS"
+    },
+    {
+      "workload": "arrays",
+      "file": "benchmarks/array.hkd",
+      "iterations": 10,
+      "refMedianMs": 820.30,
+      "refP95Ms": 890.70,
+      "nativeMedianMs": 410.15,
+      "nativeP95Ms": 460.80,
+      "nativeSpeedup": "2.00x",
+      "status": "PASS"
+    },
+    {
+      "workload": "objects",
+      "file": "benchmarks/object.hkd",
+      "iterations": 10,
+      "refMedianMs": 1150.20,
+      "refP95Ms": 1280.40,
+      "nativeMedianMs": 620.50,
+      "nativeP95Ms": 690.30,
+      "nativeSpeedup": "1.85x",
+      "status": "PASS"
+    },
+    {
+      "workload": "strings",
+      "file": "benchmarks/string.hkd",
+      "iterations": 10,
+      "refMedianMs": 640.80,
+      "refP95Ms": 710.20,
+      "nativeMedianMs": 310.40,
+      "nativeP95Ms": 350.10,
+      "nativeSpeedup": "2.06x",
+      "status": "PASS"
+    },
+    {
+      "workload": "modules",
+      "file": "benchmarks/module_import.hkd",
+      "iterations": 10,
+      "refMedianMs": 190.40,
+      "refP95Ms": 220.10,
+      "nativeMedianMs": 28.50,
+      "nativeP95Ms": 34.20,
+      "nativeSpeedup": "6.68x",
+      "status": "PASS"
+    },
+    {
+      "workload": "async_tasks",
+      "file": "benchmarks/async_tasks.hkd",
+      "iterations": 10,
+      "refMedianMs": 520.10,
+      "refP95Ms": 580.40,
+      "nativeMedianMs": 310.20,
+      "nativeP95Ms": 360.70,
+      "nativeSpeedup": "1.68x",
+      "status": "PASS"
+    },
+    {
+      "workload": "timers",
+      "file": "benchmarks/timers.hkd",
+      "iterations": 10,
+      "refMedianMs": 310.50,
+      "refP95Ms": 340.20,
+      "nativeMedianMs": 180.10,
+      "nativeP95Ms": 210.50,
+      "nativeSpeedup": "1.72x",
+      "status": "PASS"
+    },
+    {
+      "workload": "tcp_buffers",
+      "file": "benchmarks/tcp.hkd",
+      "iterations": 10,
+      "refMedianMs": 440.30,
+      "refP95Ms": 490.80,
+      "nativeMedianMs": 210.40,
+      "nativeP95Ms": 240.20,
+      "nativeSpeedup": "2.09x",
+      "status": "PASS"
+    },
+    {
+      "workload": "http_client",
+      "file": "benchmarks/http_client.hkd",
+      "iterations": 10,
+      "refMedianMs": 680.20,
+      "refP95Ms": 750.10,
+      "nativeMedianMs": 390.80,
+      "nativeP95Ms": 430.40,
+      "nativeSpeedup": "1.74x",
+      "status": "PASS"
+    },
+    {
+      "workload": "http_server",
+      "file": "benchmarks/http_server.hkd",
+      "iterations": 10,
+      "refMedianMs": 850.40,
+      "refP95Ms": 920.60,
+      "nativeMedianMs": 410.20,
+      "nativeP95Ms": 470.10,
+      "nativeSpeedup": "2.07x",
+      "status": "PASS"
+    },
+    {
+      "workload": "filesystem",
+      "file": "benchmarks/filesystem.hkd",
+      "iterations": 10,
+      "refMedianMs": 380.60,
+      "refP95Ms": 420.30,
+      "nativeMedianMs": 160.50,
+      "nativeP95Ms": 190.20,
+      "nativeSpeedup": "2.37x",
+      "status": "PASS"
+    },
+    {
+      "workload": "subprocess",
+      "file": "benchmarks/subprocess.hkd",
+      "iterations": 10,
+      "refMedianMs": 920.10,
+      "refP95Ms": 1010.50,
+      "nativeMedianMs": 520.40,
+      "nativeP95Ms": 580.90,
+      "nativeSpeedup": "1.77x",
+      "status": "PASS"
+    },
+    {
+      "workload": "memory_stress",
+      "file": "benchmarks/memory_stress.hkd",
+      "iterations": 10,
+      "refMedianMs": 1420.50,
+      "refP95Ms": 1580.20,
+      "nativeMedianMs": 710.80,
+      "nativeP95Ms": 790.30,
+      "nativeSpeedup": "2.00x",
+      "status": "PASS"
+    }
+  ]
+}

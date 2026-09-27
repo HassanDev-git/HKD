@@ -1,0 +1,7 @@
+import buffer
+let buf = buffer.alloc(1024)
+let i = 0
+while i < 10000 {
+    i = i + 1
+}
+print(to_string(buf.len))

@@ -1,0 +1,59 @@
+// Project D: Multi-file Modular Application (Main Entry Point)
+import { Customer, Item, Order, Invoice } from "./models.hkd"
+import { create_order, process_checkout, print_invoice_summary } from "./services.hkd"
+import { format_currency } from "./utils.hkd"
+
+fn main() {
+    println("========================================")
+    println("   HKD E-Commerce Checkout Engine       ")
+    println("========================================")
+
+    // 1. Setup Customer
+    let customer = Customer {
+        id: 101,
+        name: "Hassan Ali",
+        email: "hassan@example.com",
+        tier: "VIP"
+    }
+
+    // 2. Setup Items
+    let item1 = Item {
+        sku: "DEV-KEYBOARD",
+        name: "Mechanical Ergonomic Keyboard",
+        unit_price: 180.0,
+        quantity: 1
+    }
+
+    let item2 = Item {
+        sku: "DEV-MOUSE",
+        name: "Wireless Precision Mouse",
+        unit_price: 85.0,
+        quantity: 2
+    }
+
+    let item3 = Item {
+        sku: "DEV-MONITOR",
+        name: "4K High-DPI Monitor",
+        unit_price: 450.0,
+        quantity: 1
+    }
+
+    let cart = [item1, item2, item3]
+
+    // 3. Create Order
+    println("Creating order ORD-98721...")
+    let order = create_order("98721", customer, cart)
+    println("Order created with status: " + order.status)
+
+    // 4. Process Checkout
+    println("Processing checkout & calculating totals...")
+    let invoice = process_checkout(order)
+
+    // 5. Render Output
+    print_invoice_summary(invoice, customer)
+
+    println("Checkout completed successfully.")
+    println("========================================")
+}
+
+main()

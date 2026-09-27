@@ -1,0 +1,7 @@
+let i = 0
+let arr = []
+while i < 10000 {
+    arr.push({ id: i, name: "item" + to_string(i) })
+    i = i + 1
+}
+print(to_string(arr.len))

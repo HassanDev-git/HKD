@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "lib": ["ES2022"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": false,
+    "paths": {
+      "@hkd/lexer": ["./src/lexer/index.ts"],
+      "@hkd/parser": ["./src/parser/index.ts"],
+      "@hkd/ast": ["./src/ast/index.ts"],
+      "@hkd/semantic": ["./src/semantic/index.ts"],
+      "@hkd/bytecode": ["./src/bytecode/index.ts"],
+      "@hkd/vm": ["./src/vm/index.ts"],
+      "@hkd/runtime": ["./src/runtime/index.ts"],
+      "@hkd/stdlib": ["./src/stdlib/index.ts"],
+      "@hkd/errors": ["./src/errors/index.ts"],
+      "@hkd/utils": ["./src/utils/index.ts"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "tests", "vscode-extension"]
+}

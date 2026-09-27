@@ -1,0 +1,41 @@
+fn count_severity(logs, target_level) {
+    let count = 0
+    for entry in logs {
+        if entry == target_level {
+            count = count + 1
+        }
+    }
+    return count
+}
+
+fn compute_percentage(count, total) {
+    if total == 0 {
+        return 0
+    }
+    return (count * 100) / total
+}
+
+fn main() {
+    let logs = ["INFO", "INFO", "WARN", "INFO", "ERROR", "WARN", "INFO", "ERROR"]
+    let total_records = len(logs)
+
+    let info_count = count_severity(logs, "INFO")
+    let warn_count = count_severity(logs, "WARN")
+    let error_count = count_severity(logs, "ERROR")
+
+    let error_pct = compute_percentage(error_count, total_records)
+
+    print("=== HKD CLI Log Analyzer ===")
+    print("Total Log Records Processed: ")
+    print(total_records)
+    print("INFO Count: ")
+    print(info_count)
+    print("WARN Count: ")
+    print(warn_count)
+    print("ERROR Count: ")
+    print(error_count)
+    print("Error Percentage (%): ")
+    print(error_pct)
+}
+
+main()

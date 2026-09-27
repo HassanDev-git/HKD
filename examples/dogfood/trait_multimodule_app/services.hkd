@@ -1,0 +1,11 @@
+#feature(traits)
+#feature(generics)
+import { Renderable, Measurable } from "./traits.hkd"
+
+export fn format_delivery<T: Renderable>(item: T) -> String {
+  return "Delivery: " + item.render()
+}
+
+export fn is_heavy<T: Measurable>(item: T) -> Bool {
+  return item.weight() > 1000
+}

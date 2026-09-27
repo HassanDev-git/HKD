@@ -1,0 +1,46 @@
+name: Feature Request / RFC Proposal
+description: Suggest an enhancement or propose a new RFC for the HKD language or toolchain
+title: "[FEATURE]: "
+labels: ["enhancement", "discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a feature! Please note that HKD follows an explicit **Zero Breaking Changes Contract** under Edition 2026. Any non-backward-compatible or major language evolution requires an RFC in `rfcs/`.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a problem or limitation? Please describe clearly.
+      placeholder: "I'm always frustrated when [...]"
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution / Syntax
+      description: Describe the solution you'd like to see, including hypothetical HKD code snippets.
+      placeholder: |
+        // Proposed syntax or API
+      render: hkd
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What alternative solutions or workarounds have you considered?
+    validations:
+      required: false
+  - type: dropdown
+    id: rfc_needed
+    attributes:
+      label: Language Syntax Impact
+      description: Does this introduce new keywords, grammar changes, or stdlib additions?
+      options:
+        - "Standard Library addition only (Non-breaking)"
+        - "Compiler / Tooling enhancement only"
+        - "Grammar / Syntax change (Requires formal RFC process)"
+        - "Unsure"
+    validations:
+      required: true

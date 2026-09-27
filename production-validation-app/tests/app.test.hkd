@@ -1,0 +1,23 @@
+fn calculate_total(subtotal, tax_rate) {
+    let tax = subtotal * tax_rate
+    return subtotal + tax
+}
+
+fn sum_array(items) {
+    let total = 0
+    for item in items {
+        total = total + item
+    }
+    return total
+}
+
+test "calculate_total with 15 percent tax" {
+    let res = calculate_total(100, 0.15)
+    assert(res == 115)
+}
+
+test "sum_array sums elements correctly" {
+    let arr = [10, 20, 30]
+    let s = sum_array(arr)
+    assert(s == 60)
+}

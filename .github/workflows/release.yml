@@ -1,0 +1,45 @@
+name: HKD Production Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    name: Build & Package Release Bundle
+    runs-on: \${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-linux
+          - os: windows-latest
+            target: x86_64-windows
+          - os: macos-latest
+            target: aarch64-macos
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm ci
+      - name: Compile Compiler
+        run: npm run build
+      - name: Run Pre-Flight Deployment Check
+        run: node dist/cli/main.js deploy check --target \${{ matrix.target }} --profile release
+      - name: Build & Package Release
+        run: node dist/cli/main.js release --target \${{ matrix.target }} --profile release
+      - name: Generate CycloneDX SBOM
+        run: node dist/cli/main.js sbom
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hkd-release-\${{ matrix.target }}
+          path: target/releases/

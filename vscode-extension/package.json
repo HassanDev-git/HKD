@@ -1,0 +1,120 @@
+{
+  "name": "hkd",
+  "displayName": "HKD",
+  "description": "Professional Language Support, LSP 2.0, Debugging & Tooling for the HKD Programming Language",
+  "version": "1.0.0",
+  "publisher": "hkd-lang",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Debuggers",
+    "Formatters",
+    "Linters"
+  ],
+  "activationEvents": [
+    "onLanguage:hkd",
+    "onDebugResolve:hkd-debug"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "hkd",
+        "aliases": ["HKD", "hkd"],
+        "extensions": [".hkd", ".test.hkd"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "hkd",
+        "scopeName": "source.hkd",
+        "path": "./syntaxes/hkd.tmLanguage.json"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "hkd-debug",
+        "label": "HKD Debugger",
+        "languages": ["hkd"],
+        "configurationSnippets": [
+          {
+            "label": "HKD: Launch Current File",
+            "description": "Debug active HKD script with breakpoints and stepping",
+            "body": {
+              "type": "hkd-debug",
+              "request": "launch",
+              "name": "Debug HKD: ${fileBasename}",
+              "program": "${file}",
+              "stopOnEntry": false
+            }
+          }
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "hkd.restartServer",
+        "title": "HKD: Restart Language Server",
+        "category": "HKD"
+      },
+      {
+        "command": "hkd.runFile",
+        "title": "HKD: Run Active File",
+        "category": "HKD"
+      },
+      {
+        "command": "hkd.debugFile",
+        "title": "HKD: Debug Active File",
+        "category": "HKD"
+      },
+      {
+        "command": "hkd.doctor",
+        "title": "HKD: Run Tooling Doctor",
+        "category": "HKD"
+      },
+      {
+        "command": "hkd.installDeps",
+        "title": "HKD: Install Project Dependencies",
+        "category": "HKD"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "HKD Configuration",
+      "properties": {
+        "hkd.lsp.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable HKD Language Server Protocol 2.0"
+        },
+        "hkd.lsp.path": {
+          "type": "string",
+          "default": "",
+          "description": "Custom path to HKD LSP server executable"
+        },
+        "hkd.format.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable authoritative document formatting on save"
+        },
+        "hkd.lint.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable background linting diagnostics"
+        },
+        "hkd.debug.mode": {
+          "type": "string",
+          "enum": ["auto", "vm", "native"],
+          "default": "auto",
+          "description": "Execution tier for debugging sessions"
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "vscode-languageclient": "^8.1.0"
+  }
+}

@@ -1,0 +1,22 @@
+// Golden Edition 2026 Data Structures Corpus
+struct UserRecord {
+    id: Int
+    name: String
+    active: Bool
+}
+
+fn make_user(id: Int, name: String) -> UserRecord {
+    return UserRecord {
+        id: id,
+        name: name,
+        active: true
+    };
+}
+
+let u1 = make_user(1, "Alice");
+let u2 = make_user(2, "Bob");
+
+let list = [u1, u2];
+print("count=" + to_string(len(list)));
+print("user1=" + list[0].name);
+print("user2=" + list[1].name);

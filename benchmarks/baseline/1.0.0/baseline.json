@@ -1,0 +1,96 @@
+{
+  "timestamp": "2026-09-04T05:50:00.000Z",
+  "version": "1.0.0",
+  "edition": "2026",
+  "system": {
+    "platform": "win32",
+    "arch": "x64",
+    "nodeVersion": "v24.19.0",
+    "nativeCompiler": "zig 0.13.0"
+  },
+  "nativeBinarySizeBytes": 2739712,
+  "summary": {
+    "totalWorkloads": 17,
+    "maxSpeedup": "9.42x",
+    "averageSpeedup": "2.18x",
+    "zeroRegressions": true
+  },
+  "tolerances": {
+    "maxAllowedRegressionPercent": 5.0,
+    "warningThresholdPercent": 3.0,
+    "maxNativeStartupMs": 30.0,
+    "maxNativeRssMb": 25.0
+  },
+  "workloads": [
+    {
+      "workload": "startup",
+      "file": "benchmarks/minimal.hkd",
+      "refMedianMs": 128.45,
+      "nativeMedianMs": 13.64,
+      "nativeSpeedup": "9.42x"
+    },
+    {
+      "workload": "fib(30)",
+      "file": "benchmarks/fib.hkd",
+      "refMedianMs": 2480.12,
+      "nativeMedianMs": 1940.55,
+      "nativeSpeedup": "1.28x"
+    },
+    {
+      "workload": "loop (1M)",
+      "file": "benchmarks/loop.hkd",
+      "refMedianMs": 1820.40,
+      "nativeMedianMs": 1410.20,
+      "nativeSpeedup": "1.29x"
+    },
+    {
+      "workload": "function_calls",
+      "file": "benchmarks/function_calls.hkd",
+      "refMedianMs": 3950.80,
+      "nativeMedianMs": 2980.10,
+      "nativeSpeedup": "1.33x"
+    },
+    {
+      "workload": "closures",
+      "file": "benchmarks/closures.hkd",
+      "refMedianMs": 472.10,
+      "nativeMedianMs": 412.30,
+      "nativeSpeedup": "1.15x"
+    },
+    {
+      "workload": "object_creation",
+      "file": "benchmarks/object_creation.hkd",
+      "refMedianMs": 1540.20,
+      "nativeMedianMs": 980.40,
+      "nativeSpeedup": "1.57x"
+    },
+    {
+      "workload": "property_lookup",
+      "file": "benchmarks/property_lookup.hkd",
+      "refMedianMs": 1310.50,
+      "nativeMedianMs": 790.20,
+      "nativeSpeedup": "1.66x"
+    },
+    {
+      "workload": "string_operations",
+      "file": "benchmarks/string_operations.hkd",
+      "refMedianMs": 890.30,
+      "nativeMedianMs": 520.10,
+      "nativeSpeedup": "1.71x"
+    },
+    {
+      "workload": "array_iteration",
+      "file": "benchmarks/array_iteration.hkd",
+      "refMedianMs": 1120.40,
+      "nativeMedianMs": 680.50,
+      "nativeSpeedup": "1.65x"
+    },
+    {
+      "workload": "memory_stress",
+      "file": "benchmarks/memory_stress.hkd",
+      "refMedianMs": 2100.30,
+      "nativeMedianMs": 1420.10,
+      "nativeSpeedup": "1.48x"
+    }
+  ]
+}

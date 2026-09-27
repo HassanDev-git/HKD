@@ -1,0 +1,7 @@
+let i = 0
+while i < 1000 {
+    import helper from "./helper.hkd"
+    let _ = helper.add(1, 2)
+    i = i + 1
+}
+print("module load done")

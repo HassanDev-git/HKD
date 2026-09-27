@@ -1,0 +1,86 @@
+struct Customer {
+  id: Int
+  name: String
+  is_vip: Bool
+}
+
+struct Item {
+  name: String
+  price: Int
+  quantity: Int
+}
+
+struct Order {
+  id: Int
+  customer_id: Int
+  items: Array
+  discount_rate: Int
+}
+
+impl Customer {
+  fn get_badge(self) -> String {
+    if self.is_vip {
+      return "[VIP] " + self.name
+    }
+    return "[REGULAR] " + self.name
+  }
+}
+
+impl Item {
+  fn line_total(self) -> Int {
+    return self.price * self.quantity
+  }
+}
+
+impl Order {
+  fn subtotal(self) -> Int {
+    let sum = 0
+    for item in self.items {
+      let it: Item = item
+      sum = sum + it.line_total()
+    }
+    return sum
+  }
+
+  fn discount_amount(self) -> Int {
+    let sub = self.subtotal()
+    return (sub * self.discount_rate) / 100
+  }
+
+  fn final_total(self) -> Int {
+    let sub = self.subtotal()
+    let disc = self.discount_amount()
+    return sub - disc
+  }
+
+  fn is_free_shipping(self) -> Bool {
+    return self.final_total() >= 100
+  }
+
+  fn summarize(self) -> String {
+    let total = self.final_total()
+    return "Order #" + to_string(self.id) + ": total $" + to_string(total)
+  }
+}
+
+let cust = Customer { id: 101, name: "Alice", is_vip: true }
+println(cust.get_badge())
+
+let item1 = Item { name: "Mechanical Keyboard", price: 120, quantity: 1 }
+let item2 = Item { name: "Keycaps", price: 30, quantity: 2 }
+
+println("Item 1 total: $" + to_string(item1.line_total()))
+println("Item 2 total: $" + to_string(item2.line_total()))
+
+let order = Order {
+  id: 5001,
+  customer_id: 101,
+  items: [item1, item2],
+  discount_rate: 10
+}
+
+println("Subtotal: $" + to_string(order.subtotal()))
+println("Discount: $" + to_string(order.discount_amount()))
+println("Final total: $" + to_string(order.final_total()))
+println("Free shipping: " + to_string(order.is_free_shipping()))
+println(order.summarize())

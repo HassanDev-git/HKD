@@ -1,0 +1,12 @@
+// Fuzz seed: functions, closures, and collections
+fn makeMultiplier(m) {
+  fn mult(v) {
+    return v * m;
+  }
+  return mult;
+}
+let triple = makeMultiplier(3);
+let items = [1, 2, 3, 4];
+for it in items {
+  print(triple(it));
+}

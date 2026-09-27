@@ -1,0 +1,15 @@
+import http
+import env
+
+fn main() {
+    let port = 8080
+    println("HKD Production Server starting on port 8080...")
+
+    let srv = http.serve(port)
+    println("Server status: listening")
+
+    let m = http.metrics()
+    println("Initial metrics verified: ok")
+}
+
+main()

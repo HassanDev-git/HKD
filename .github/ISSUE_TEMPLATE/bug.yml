@@ -1,0 +1,73 @@
+name: Bug Report
+description: File a bug report or regression issue for HKD
+title: "[BUG]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue! Please verify you are using a supported HKD version (1.0.x or 1.1.x) and have searched existing issues before submitting.
+  - type: input
+    id: version
+    attributes:
+      label: HKD Version
+      description: What version of HKD are you using? (Run `hkd --version`)
+      placeholder: e.g. 1.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System / Target
+      description: What platform are you running on?
+      options:
+        - Windows (x86_64)
+        - Linux (x86_64 glibc)
+        - Linux (x86_64 musl)
+        - Linux (aarch64)
+        - macOS (aarch64 Apple Silicon)
+        - macOS (x86_64 Intel)
+        - Other (specify in description)
+    validations:
+      required: true
+  - type: dropdown
+    id: execution_mode
+    attributes:
+      label: Execution Mode
+      description: Which runtime engine reproduces the issue?
+      options:
+        - Stack Virtual Machine (default)
+        - Native Zig VM
+        - Baseline JIT
+        - Optimizing JIT (PGO)
+        - AOT Compiled Binary
+        - LSP / Tooling / CLI
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal Reproducible Example (MRE)
+      description: Provide a minimal, self-contained HKD snippet or repository that demonstrates the bug.
+      placeholder: |
+        fn main() {
+            // minimal code here
+        }
+      render: hkd
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior & Error Diagnostics
+      description: What actually happened? Include full stack trace or CLI diagnostic output.
+      render: shell
+    validations:
+      required: true

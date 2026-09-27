@@ -1,0 +1,7 @@
+import http
+let i = 0
+while i < 200 {
+    let r = http.post("127.0.0.1", 8080, "/api", "payload")
+    i = i + 1
+}
+print(to_string(i))

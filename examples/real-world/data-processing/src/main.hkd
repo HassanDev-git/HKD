@@ -1,0 +1,108 @@
+// HKD 1.1 Real-World Data Processing Pipeline
+// Demonstrates array functional iterators (find, every, some, reduce), Result, and Pattern Matching
+
+import array;
+import result;
+
+struct Record {
+    id: Int
+    category: String
+    value: Int
+    valid: Bool
+}
+
+// Generic identity and mapping helper (RFC-001)
+fn sanitize<T>(val: T) -> T {
+    return val;
+}
+
+fn create_record(id: Int, cat: String, val: Int, valid: Bool) -> Record {
+    return Record {
+        id: id,
+        category: cat,
+        value: val,
+        valid: valid
+    };
+}
+
+// Categorize transaction value using Pattern Matching (RFC-002)
+fn classify_value(val: Int) -> String {
+    return match val {
+        v if v < 0 => "Negative / Invalid",
+        0 => "Zero",
+        v if v > 1000 => "High Value",
+        _ => "Standard"
+    };
+}
+
+// Aggregation function for array.reduce
+fn sum_values(acc: Int, rec: Record) -> Int {
+    return acc + rec.value;
+}
+
+// Predicate functions for array iterators
+fn is_valid_record(rec: Record) -> Bool {
+    return rec.valid;
+}
+
+fn is_high_value(rec: Record) -> Bool {
+    return rec.value > 1000;
+}
+
+fn has_anomaly(rec: Record) -> Bool {
+    return rec.value < 0;
+}
+
+print("=== Starting HKD 1.1 Data Processing Pipeline ===");
+
+// 1. Ingest dataset
+let dataset = [
+    create_record(1, "hardware", 450, true),
+    create_record(2, "cloud", 1200, true),
+    create_record(3, "subscription", 80, true),
+    create_record(4, "enterprise", 2500, true),
+    create_record(5, "support", 300, true)
+];
+
+print("Dataset ingested: " + to_string(len(dataset)) + " records");
+
+// 2. Validate all records with array.every (Stdlib 1.1)
+let all_valid = array.every(dataset, is_valid_record);
+print("All records valid: " + to_string(all_valid));
+
+// 3. Detect anomalies with array.some (Stdlib 1.1)
+let any_anomalies = array.some(dataset, has_anomaly);
+print("Any anomalies detected: " + to_string(any_anomalies));
+
+// 4. Find first high-value transaction with array.find (Stdlib 1.1)
+let first_high = array.find(dataset, is_high_value);
+if (first_high != null) {
+    let r = first_high as Record;
+    print("First high-value transaction: ID " + to_string(r.id) + " (" + r.category + ") = $" + to_string(r.value));
+}
+
+// 5. Compute total revenue with array.reduce (Stdlib 1.1)
+let total_revenue = array.reduce(dataset, sum_values, 0);
+print("Total pipeline revenue: $" + to_string(total_revenue));
+
+// 6. Classify summary status with Result and Pattern Matching
+fn finalize_audit(total: Int, valid: Bool) -> Any {
+    if (!valid) {
+        return result.err("Audit rejected: invalid data detected");
+    }
+    let tier = match total {
+        t if t > 4000 => "Tier 1 Enterprise",
+        t if t > 1000 => "Tier 2 Mid-Market",
+        _ => "Tier 3 Standard"
+    };
+    return result.ok(tier);
+}
+
+let audit_result = finalize_audit(total_revenue, all_valid);
+if (result.is_ok(audit_result)) {
+    print("Audit status: Approved [" + to_string(result.unwrap(audit_result)) + "]");
+} else {
+    print("Audit status: " + to_string(audit_result.error));
+}
+
+print("=== Data Processing Pipeline Completed Successfully ===");

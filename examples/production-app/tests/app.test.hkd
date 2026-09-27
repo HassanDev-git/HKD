@@ -1,0 +1,36 @@
+fn compute_discount(subtotal, tier) {
+    if tier == "gold" {
+        return subtotal * 0.20
+    }
+    if tier == "silver" {
+        return subtotal * 0.10
+    }
+    return 0
+}
+
+fn calculate_order_total(items, tier) {
+    let subtotal = 0
+    for price in items {
+        subtotal = subtotal + price
+    }
+    let discount = compute_discount(subtotal, tier)
+    let discounted = subtotal - discount
+    let tax = discounted * 0.08
+    return discounted + tax
+}
+
+test "compute_discount for gold customer" {
+    let d = compute_discount(500, "gold")
+    assert(d == 100)
+}
+
+test "compute_discount for silver customer" {
+    let d = compute_discount(500, "silver")
+    assert(d == 50)
+}
+
+test "calculate_order_total with tax" {
+    let items = [100, 200]
+    let total = calculate_order_total(items, "silver")
+    assert(total == 291.6)
+}

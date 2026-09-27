@@ -1,0 +1,36 @@
+fn compute_discount(subtotal, tier) {
+    if tier == "gold" {
+        return subtotal * 0.20
+    }
+    if tier == "silver" {
+        return subtotal * 0.10
+    }
+    return 0
+}
+
+fn calculate_order_total(items, tier) {
+    let subtotal = 0
+    for price in items {
+        subtotal = subtotal + price
+    }
+    let discount = compute_discount(subtotal, tier)
+    let discounted = subtotal - discount
+    let tax = discounted * 0.08
+    return discounted + tax
+}
+
+fn main() {
+    let order_items = [120, 250, 45, 80]
+    let customer_tier = "gold"
+    let total = calculate_order_total(order_items, customer_tier)
+
+    print("HKD Enterprise Order Processing System")
+    print("Order Items Count: ")
+    print(len(order_items))
+    print("Customer Tier: ")
+    print(customer_tier)
+    print("Final Order Total: ")
+    print(total)
+}
+
+main()

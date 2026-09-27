@@ -1,0 +1,9 @@
+name = "data-processing"
+version = "1.1.0"
+edition = "2027"
+description = "HKD 1.1 Real-World Data Processing Pipeline with Iterators & Result"
+main = "src/main.hkd"
+
+[build]
+profile = "release"
+target = "native"

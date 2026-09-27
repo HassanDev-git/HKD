@@ -1,0 +1,6 @@
+import log from "../src/main.hkd"
+
+test "format_log prefixes level and tag" {
+    let entry = log.format_log("INFO", "auth", "User logged in")
+    assert(entry == "[INFO] [auth] User logged in")
+}

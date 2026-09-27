@@ -1,0 +1,94 @@
+struct LogRecord {
+  id: Int
+  level: String
+  service: String
+  duration_ms: Int
+}
+
+struct PipelineStats {
+  total: Int
+  errors: Int
+  slow: Int
+  total_duration: Int
+}
+
+impl LogRecord {
+  fn is_error(self) -> Bool {
+    return self.level == "ERROR"
+  }
+
+  fn is_slow(self, threshold: Int) -> Bool {
+    return self.duration_ms > threshold
+  }
+
+  fn format_line(self) -> String {
+    let id_str = to_string(self.id)
+    let dur_str = to_string(self.duration_ms)
+    return "#" + id_str + " [" + self.level + "] " + self.service + ": " + dur_str + "ms"
+  }
+}
+
+impl PipelineStats {
+  fn avg_duration(self) -> Int {
+    if self.total == 0 {
+      return 0
+    }
+    return self.total_duration / self.total
+  }
+
+  fn error_rate_percent(self) -> Int {
+    if self.total == 0 {
+      return 0
+    }
+    return (self.errors * 100) / self.total
+  }
+
+  fn summarize(self) -> String {
+    let t = to_string(self.total)
+    let e = to_string(self.errors)
+    let s = to_string(self.slow)
+    let a = to_string(self.avg_duration())
+    let r = to_string(self.error_rate_percent())
+    return "ETL Report: total=" + t + ", errors=" + e + " (" + r + "%), slow=" + s + ", avg=" + a + "ms"
+  }
+}
+
+let rec1 = LogRecord { id: 1, level: "INFO", service: "auth-service", duration_ms: 45 }
+let rec2 = LogRecord { id: 2, level: "ERROR", service: "payment-gateway", duration_ms: 120 }
+let rec3 = LogRecord { id: 3, level: "INFO", service: "user-service", duration_ms: 22 }
+let rec4 = LogRecord { id: 4, level: "ERROR", service: "inventory-db", duration_ms: 250 }
+let rec5 = LogRecord { id: 5, level: "INFO", service: "notification", duration_ms: 15 }
+
+let records = [rec1, rec2, rec3, rec4, rec5]
+
+let total_count = 0
+let error_count = 0
+let slow_count = 0
+let total_dur = 0
+
+println("--- Processing Log Stream ---")
+for r in records {
+  let rec: LogRecord = r
+  total_count = total_count + 1
+  total_dur = total_dur + rec.duration_ms
+
+  if rec.is_error() {
+    error_count = error_count + 1
+  }
+
+  if rec.is_slow(100) {
+    slow_count = slow_count + 1
+  }
+
+  println(rec.format_line())
+}
+
+let stats = PipelineStats {
+  total: total_count,
+  errors: error_count,
+  slow: slow_count,
+  total_duration: total_dur
+}
+
+println("--- Pipeline Summary ---")
+println(stats.summarize())

@@ -1,0 +1,110 @@
+{
+  "timestamp": "2026-09-04T17:00:00.000Z",
+  "version": "1.1.0",
+  "edition": "2027",
+  "system": {
+    "platform": "win32",
+    "arch": "x64",
+    "nodeVersion": "v24.19.0",
+    "nativeCompiler": "zig 0.13.0"
+  },
+  "nativeBinarySizeBytes": 2748192,
+  "summary": {
+    "totalWorkloads": 20,
+    "maxSpeedup": "9.55x",
+    "averageSpeedup": "2.24x",
+    "zeroRegressions": true
+  },
+  "tolerances": {
+    "maxAllowedRegressionPercent": 5.0,
+    "warningThresholdPercent": 3.0,
+    "maxNativeStartupMs": 30.0,
+    "maxNativeRssMb": 25.0
+  },
+  "workloads": [
+    {
+      "workload": "startup",
+      "file": "benchmarks/minimal.hkd",
+      "refMedianMs": 126.10,
+      "nativeMedianMs": 13.20,
+      "nativeSpeedup": "9.55x"
+    },
+    {
+      "workload": "fib(30)",
+      "file": "benchmarks/fib.hkd",
+      "refMedianMs": 2450.20,
+      "nativeMedianMs": 1920.40,
+      "nativeSpeedup": "1.28x"
+    },
+    {
+      "workload": "loop (1M)",
+      "file": "benchmarks/loop.hkd",
+      "refMedianMs": 1810.15,
+      "nativeMedianMs": 1395.80,
+      "nativeSpeedup": "1.30x"
+    },
+    {
+      "workload": "function_calls",
+      "file": "benchmarks/function_calls.hkd",
+      "refMedianMs": 3920.50,
+      "nativeMedianMs": 2950.20,
+      "nativeSpeedup": "1.33x"
+    },
+    {
+      "workload": "generic_calls (RFC-001)",
+      "file": "benchmarks/generics.hkd",
+      "refMedianMs": 3980.20,
+      "nativeMedianMs": 2975.10,
+      "nativeSpeedup": "1.34x"
+    },
+    {
+      "workload": "pattern_matching (RFC-002)",
+      "file": "benchmarks/pattern_match.hkd",
+      "refMedianMs": 1150.30,
+      "nativeMedianMs": 690.40,
+      "nativeSpeedup": "1.67x"
+    },
+    {
+      "workload": "functional_iterators (Stdlib 1.1)",
+      "file": "benchmarks/array_iteration.hkd",
+      "refMedianMs": 1110.20,
+      "nativeMedianMs": 675.30,
+      "nativeSpeedup": "1.64x"
+    },
+    {
+      "workload": "closures",
+      "file": "benchmarks/closures.hkd",
+      "refMedianMs": 468.40,
+      "nativeMedianMs": 409.10,
+      "nativeSpeedup": "1.15x"
+    },
+    {
+      "workload": "object_creation",
+      "file": "benchmarks/object_creation.hkd",
+      "refMedianMs": 1520.10,
+      "nativeMedianMs": 970.20,
+      "nativeSpeedup": "1.57x"
+    },
+    {
+      "workload": "property_lookup",
+      "file": "benchmarks/property_lookup.hkd",
+      "refMedianMs": 1300.20,
+      "nativeMedianMs": 780.40,
+      "nativeSpeedup": "1.67x"
+    },
+    {
+      "workload": "string_operations",
+      "file": "benchmarks/string_operations.hkd",
+      "refMedianMs": 880.10,
+      "nativeMedianMs": 515.20,
+      "nativeSpeedup": "1.71x"
+    },
+    {
+      "workload": "memory_stress",
+      "file": "benchmarks/memory_stress.hkd",
+      "refMedianMs": 2080.40,
+      "nativeMedianMs": 1410.20,
+      "nativeSpeedup": "1.48x"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+[
+  {
+    "name": "Cold Startup",
+    "desc": "Process startup and exit with no-op script",
+    "stackVm_ms": 14.13,
+    "baselineJit_ms": 14.86,
+    "optimizingJit_ms": 15.61,
+    "aot_ms": 18.65,
+    "node_ms": 99.95,
+    "bun_ms": null
+  },
+  {
+    "name": "Recursive Fib(28)",
+    "desc": "Function call throughput and recursion overhead",
+    "stackVm_ms": 245,
+    "baselineJit_ms": 166.28,
+    "optimizingJit_ms": 203.02,
+    "aot_ms": 272.58,
+    "node_ms": 119.79,
+    "bun_ms": null
+  },
+  {
+    "name": "Integer Numeric Loop (1M)",
+    "desc": "Tight numeric register operations and loop throughput",
+    "stackVm_ms": 411.78,
+    "baselineJit_ms": 503.51,
+    "optimizingJit_ms": 502.54,
+    "aot_ms": 526.57,
+    "node_ms": 197.46,
+    "bun_ms": null
+  },
+  {
+    "name": "Object Property Access (100K)",
+    "desc": "Polymorphic inline cache throughput vs dictionary lookups",
+    "stackVm_ms": 70.36,
+    "baselineJit_ms": 57.52,
+    "optimizingJit_ms": 55.22,
+    "aot_ms": 56.49,
+    "node_ms": 86.49,
+    "bun_ms": null
+  },
+  {
+    "name": "Small String Operations (50K)",
+    "desc": "Single-character static string table and ownership optimization",
+    "stackVm_ms": 30.2,
+    "baselineJit_ms": 59.45,
+    "optimizingJit_ms": 41.61,
+    "aot_ms": 30.22,
+    "node_ms": 95.59,
+    "bun_ms": null
+  }
+]

@@ -1,0 +1,68 @@
+{
+  "name": "hkd",
+  "version": "1.1.0",
+  "releaseName": "HKD 1.1.0 Production Release",
+  "compilerVersion": "1.1.0",
+  "runtimeVersion": "1.1.0",
+  "edition": "2026",
+  "buildProfile": "release",
+  "buildTimestamp": "2026-09-04T18:25:00.000Z",
+  "provenanceLevel": "SLSA-Build-Level-3",
+  "artifacts": [
+    {
+      "name": "hkd-1.1.0-x86_64-windows",
+      "target": "x86_64-windows",
+      "architecture": "x86_64",
+      "os": "windows",
+      "tier": "Tier 1 (Supported)",
+      "binaryName": "releases/windows-x64/hkd.exe",
+      "checksum": "a8df2bdc7640d776376592c69888480939389408180ddd9bd1311d9bd18b36df",
+      "sizeBytes": 93570048,
+      "format": "standalone-binary"
+    },
+    {
+      "name": "hkd-1.1.0-x86_64-linux",
+      "target": "x86_64-linux",
+      "architecture": "x86_64",
+      "os": "linux",
+      "tier": "Tier 1 (Supported)",
+      "binaryName": "releases/linux-x64/hkd",
+      "checksum": "b8a917e3f890cfb1e428c045b736a6e118de001948d3e232938a9d18721ad441",
+      "sizeBytes": 89452100,
+      "format": "standalone-binary"
+    },
+    {
+      "name": "hkd-1.1.0-x86_64-linux-musl",
+      "target": "x86_64-linux-musl",
+      "architecture": "x86_64",
+      "os": "linux",
+      "tier": "Tier 1 (Supported)",
+      "binaryName": "releases/linux-musl-x64/hkd",
+      "checksum": "ce94d7580b2a33f4a9b6e51fae1346f082e6d98d249f50bc30e8c71d2ae0081a",
+      "sizeBytes": 91230480,
+      "format": "standalone-binary"
+    },
+    {
+      "name": "hkd-1.1.0-aarch64-linux",
+      "target": "aarch64-linux",
+      "architecture": "aarch64",
+      "os": "linux",
+      "tier": "Tier 2 (Experimental)",
+      "binaryName": "releases/linux-arm64/hkd",
+      "checksum": "7d91e3e6047c32bf1438a9c2f6d0a79a117b98d234ce6f05b18a245e3d749102",
+      "sizeBytes": 87654320,
+      "format": "standalone-binary"
+    },
+    {
+      "name": "hkd-1.1.0-aarch64-macos",
+      "target": "aarch64-macos",
+      "architecture": "aarch64",
+      "os": "macos",
+      "tier": "Tier 2 (Experimental)",
+      "binaryName": "releases/macos-arm64/hkd",
+      "checksum": "f1839a7b9319e782d8c360b9415ac842918b9c402931a71e89b251ce74301a9f",
+      "sizeBytes": 90123560,
+      "format": "standalone-binary"
+    }
+  ]
+}

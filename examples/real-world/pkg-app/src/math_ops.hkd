@@ -1,0 +1,13 @@
+export fn clamp(val, low, high) {
+    if val < low {
+        return low
+    }
+    if val > high {
+        return high
+    }
+    return val
+}
+
+export fn scale(val, factor) {
+    return val * factor
+}

@@ -1,0 +1,79 @@
+// Project A: Directory Analyzer & File Inspector CLI
+import fs
+import path
+import string
+
+struct FileStats {
+    total_files: Int
+    total_dirs: Int
+    total_size: Int
+}
+
+fn format_bytes(bytes: Int) -> String {
+    if bytes < 1024 {
+        return to_string(bytes) + " B"
+    }
+    if bytes < 1048576 {
+        let kb = bytes / 1024
+        return to_string(kb) + " KB"
+    }
+    let mb = bytes / 1048576
+    return to_string(mb) + " MB"
+}
+
+fn analyze_directory(target_dir: String) -> FileStats {
+    let files = 0
+    let dirs = 0
+    let size = 0
+
+    if !fs.exists(target_dir) {
+        println("Error: Directory not found: " + target_dir)
+        return FileStats { total_files: 0, total_dirs: 0, total_size: 0 }
+    }
+
+    let entries = fs.list_dir(target_dir)
+
+    for entry in entries {
+        let full_path = path.join(target_dir, entry)
+        if fs.is_dir(full_path) {
+            dirs += 1
+        } else {
+            files += 1
+            if fs.exists(full_path) {
+                // approximate size by reading content length if text file
+                let content = fs.read(full_path)
+                size += string.len(content)
+            }
+        }
+    }
+
+    return FileStats {
+        total_files: files,
+        total_dirs: dirs,
+        total_size: size
+    }
+}
+
+fn main() {
+    println("========================================")
+    println("      HKD CLI Directory Analyzer        ")
+    println("========================================")
+
+    let target = "examples/hello"
+
+
+    let resolved_target = path.resolve(target)
+    println("Analyzing target: " + resolved_target)
+    println("Starting scan...")
+
+    let stats = analyze_directory(target)
+
+    println("----------------------------------------")
+    println("Scan complete.")
+    println("  Files found:        " + to_string(stats.total_files))
+    println("  Directories found:  " + to_string(stats.total_dirs))
+    println("  Total read bytes:   " + format_bytes(stats.total_size))
+    println("========================================")
+}
+
+main()

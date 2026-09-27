@@ -1,0 +1,11 @@
+name = "pkg-app"
+version = "1.0.0"
+edition = "2026"
+description = "HKD Real-World Modular Package Application"
+main = "src/main.hkd"
+
+[build]
+profile = "release"
+target = "native"
+
+[dependencies]

@@ -1,0 +1,48 @@
+// Project D: Multi-file App — Business Services
+import { Customer, Item, Order, Invoice } from "./models.hkd"
+import { format_currency, calculate_discount, calculate_sales_tax } from "./utils.hkd"
+import array
+
+export fn create_order(order_id: String, customer: Customer, items: [Item]) -> Order {
+    return Order {
+        order_id: order_id,
+        customer: customer,
+        items: items,
+        status: "created"
+    }
+}
+
+export fn process_checkout(order: Order) -> Invoice {
+    let subtotal = 0.0
+    let line_total = 0.0
+
+    for item in order.items {
+        line_total = item.unit_price * to_float(item.quantity)
+        subtotal += line_total
+    }
+
+    let discount = calculate_discount(subtotal, order.customer.tier)
+    let discounted_subtotal = subtotal - discount
+    let tax = calculate_sales_tax(discounted_subtotal)
+    let total = discounted_subtotal + tax
+
+    return Invoice {
+        invoice_number: "INV-" + order.order_id,
+        order_id: order.order_id,
+        subtotal: subtotal,
+        discount: discount,
+        tax: tax,
+        total: total
+    }
+}
+
+export fn print_invoice_summary(invoice: Invoice, customer: Customer) {
+    println("----------------------------------------")
+    println("INVOICE: " + invoice.invoice_number)
+    println("Customer: " + customer.name + " (" + customer.tier + " Tier)")
+    println("Subtotal:         " + format_currency(invoice.subtotal))
+    println("Tier Discount:   -" + format_currency(invoice.discount))
+    println("Sales Tax (8.5%): " + format_currency(invoice.tax))
+    println("TOTAL DUE:        " + format_currency(invoice.total))
+    println("----------------------------------------")
+}

@@ -1,0 +1,7 @@
+import task
+let i = 0
+while i < 100 {
+    task.sleep(1)
+    i = i + 1
+}
+print(to_string(i))

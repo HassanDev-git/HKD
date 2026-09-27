@@ -1,0 +1,14 @@
+name = "production-server"
+version = "1.0.0"
+edition = "2026"
+description = "HKD Production HTTP Server with Health Probes & Graceful Shutdown"
+main = "src/main.hkd"
+
+[build]
+profile = "release"
+target = "native"
+
+[deploy]
+target = "container"
+port = 8080
+healthcheck = "/health"

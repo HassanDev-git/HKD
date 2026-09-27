@@ -1,0 +1,19 @@
+#feature(traits)
+import { Renderable, Measurable } from "./traits.hkd"
+
+export struct Package {
+  tracking_id: String,
+  grams: Int
+}
+
+impl Renderable for Package {
+  fn render(self) -> String {
+    return "Package[" + self.tracking_id + ", " + to_string(self.grams) + "g]"
+  }
+}
+
+impl Measurable for Package {
+  fn weight(self) -> Int {
+    return self.grams
+  }
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "workload": "Cold Startup",
+    "description": "Process startup and exit with no-op script",
+    "stackVm_ms": 12.12,
+    "jit_ms": 12.82,
+    "aot_ms": 15.49,
+    "node_ms": 88.48
+  },
+  {
+    "workload": "Recursive Fib(28)",
+    "description": "Deep recursion and stack frame transitions",
+    "stackVm_ms": 196.98,
+    "jit_ms": 171.92,
+    "aot_ms": 145.26,
+    "node_ms": 98.78
+  },
+  {
+    "workload": "Integer Arithmetic Loop (1M)",
+    "description": "Tight numeric register operations and loop throughput",
+    "stackVm_ms": 447.99,
+    "jit_ms": 290.83,
+    "aot_ms": 317.64,
+    "node_ms": 146.06
+  },
+  {
+    "workload": "Object Allocations (20k)",
+    "description": "Heap object instantiation and property initialization",
+    "stackVm_ms": 51.57,
+    "jit_ms": 48.93,
+    "aot_ms": 73.53,
+    "node_ms": 122.07
+  },
+  {
+    "workload": "String Concat (20k)",
+    "description": "Dynamic string allocation, buffer resizing & equality",
+    "stackVm_ms": 41,
+    "jit_ms": 41.66,
+    "aot_ms": 38.95,
+    "node_ms": 108.2
+  }
+]

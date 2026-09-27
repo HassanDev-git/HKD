@@ -1,0 +1,27 @@
+fn count_severity(logs, target_level) {
+    let count = 0
+    for entry in logs {
+        if entry == target_level {
+            count = count + 1
+        }
+    }
+    return count
+}
+
+fn compute_percentage(count, total) {
+    if total == 0 {
+        return 0
+    }
+    return (count * 100) / total
+}
+
+test "count_severity counts correctly" {
+    let sample = ["INFO", "ERROR", "INFO", "WARN"]
+    let c = count_severity(sample, "INFO")
+    assert(c == 2)
+}
+
+test "compute_percentage handles division" {
+    let pct = compute_percentage(2, 8)
+    assert(pct == 25)
+}

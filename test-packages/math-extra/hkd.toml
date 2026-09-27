@@ -1,0 +1,6 @@
+name = "math-extra"
+version = "1.0.0"
+edition = "2026"
+description = "Mathematical utility functions for HKD"
+license = "MIT"
+main = "src/main.hkd"

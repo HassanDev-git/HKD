@@ -1,0 +1,71 @@
+{
+  "version": "1.1.0",
+  "generatedAt": "2026-09-04T18:20:13.822Z",
+  "system": {
+    "os": "Windows_NT 10.0.26200 (win32)",
+    "arch": "x64",
+    "cpu": "Intel(R) Core(TM) i7-4900MQ CPU @ 2.80GHz",
+    "cores": 8,
+    "ramBytes": 8381378560,
+    "ramGb": "7.81 GB",
+    "nodeVersion": "v24.19.0",
+    "timestamp": "2026-09-04T18:20:13.614Z"
+  },
+  "workloads": [
+    {
+      "name": "startup_minimal",
+      "iterations": 50,
+      "medianMs": 0.236,
+      "p95Ms": 0.68,
+      "minMs": 0.121,
+      "maxMs": 5.161,
+      "initialRssBytes": 78835712,
+      "peakRssBytes": 80637952,
+      "rssGrowthRatio": 1.023
+    },
+    {
+      "name": "generics_identity_loop",
+      "iterations": 50,
+      "medianMs": 0.724,
+      "p95Ms": 1.321,
+      "minMs": 0.32,
+      "maxMs": 1.551,
+      "initialRssBytes": 83550208,
+      "peakRssBytes": 86695936,
+      "rssGrowthRatio": 1.038
+    },
+    {
+      "name": "pattern_matching_dispatch",
+      "iterations": 50,
+      "medianMs": 0.656,
+      "p95Ms": 1.072,
+      "minMs": 0.311,
+      "maxMs": 1.344,
+      "initialRssBytes": 88911872,
+      "peakRssBytes": 88911872,
+      "rssGrowthRatio": 1
+    },
+    {
+      "name": "array_functional_pipeline",
+      "iterations": 50,
+      "medianMs": 0.465,
+      "p95Ms": 1.025,
+      "minMs": 0.262,
+      "maxMs": 2.373,
+      "initialRssBytes": 84631552,
+      "peakRssBytes": 89931776,
+      "rssGrowthRatio": 1.063
+    },
+    {
+      "name": "result_monadic_chain",
+      "iterations": 50,
+      "medianMs": 0.411,
+      "p95Ms": 0.639,
+      "minMs": 0.213,
+      "maxMs": 1.301,
+      "initialRssBytes": 84795392,
+      "peakRssBytes": 91598848,
+      "rssGrowthRatio": 1.08
+    }
+  ]
+}

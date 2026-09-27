@@ -1,0 +1,6 @@
+name = "logger-lib"
+version = "1.0.0"
+edition = "2026"
+description = "Structured logging library for HKD applications"
+license = "MIT"
+main = "src/main.hkd"

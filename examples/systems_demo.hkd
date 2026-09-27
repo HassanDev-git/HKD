@@ -1,0 +1,42 @@
+// HKD Phase 8 Systems Runtime Demonstration
+import buffer
+import process
+import task
+import http
+import ffi
+
+print("=== HKD Phase 8 Systems Runtime Demo ===")
+
+// 1. Buffer Operations
+let message = "High-Performance Systems Programming in HKD"
+let buf = buffer.from_string(message)
+print("Buffer created with length:")
+print(buf.len)
+
+let arena = buffer.alloc(64)
+print("Allocated buffer of size:")
+print(arena.len)
+
+// 2. Safe Subprocess Execution
+print("Executing subprocess (node -v)...")
+let proc = process.run(["node", "-v"])
+print("Process Exit Code:")
+print(proc.exit_code)
+
+// 3. Task Cooperative Sleep
+print("Sleeping for 50ms...")
+task.sleep(50)
+print("Woke up from sleep!")
+
+// 4. HTTP Client
+print("Making HTTP health check...")
+let resp = http.get("127.0.0.1", 8080, "/health")
+print("HTTP Response Status:")
+print(resp.status)
+
+// 5. FFI Boundary Check
+let ffi_res = ffi.open("kernel32.dll")
+print("FFI kernel32 check:")
+print(ffi_res != null)
+
+print("=== Phase 8 Demo Complete ===")

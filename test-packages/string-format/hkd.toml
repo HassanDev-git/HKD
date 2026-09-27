@@ -1,0 +1,6 @@
+name = "string-format"
+version = "1.0.0"
+edition = "2026"
+description = "String formatting, padding and casing helpers"
+license = "MIT"
+main = "src/main.hkd"

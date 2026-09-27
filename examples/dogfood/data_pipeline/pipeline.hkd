@@ -1,0 +1,126 @@
+// Project C: Data Processing Pipeline (CSV/JSON ETL & Collections)
+import string
+import array
+import json
+import math
+
+struct Transaction {
+    id: String
+    customer: String
+    amount: Float
+    category: String
+    status: String
+}
+
+struct ProcessedTx {
+    id: String
+    customer: String
+    amount: Float
+    tax: Float
+    total: Float
+    category: String
+}
+
+struct SummaryReport {
+    total_processed: Int
+    completed_count: Int
+    gross_volume: Float
+    tax_collected: Float
+    net_revenue: Float
+}
+
+fn parse_csv_line(line: String) -> Any {
+    let parts = string.split(line, ",")
+    if array.len(parts) < 5 {
+        return null
+    }
+
+    let id = string.trim(parts[0])
+    let customer = string.trim(parts[1])
+    let raw_amount = string.trim(parts[2])
+    let category = string.trim(parts[3])
+    let status = string.trim(parts[4])
+
+    let amount = to_float(raw_amount)
+
+    return Transaction {
+        id: id,
+        customer: customer,
+        amount: amount,
+        category: category,
+        status: status
+    }
+}
+
+fn main() {
+    println("==========================================")
+    println("       HKD Data Processing Pipeline       ")
+    println("==========================================")
+
+    let raw_csv = "TX101,Acme Corp,1250,Hardware,completed\nTX102,Beta LLC,450,Software,pending\nTX103,Gamma Inc,3200,Hardware,completed\nTX104,Delta Co,150,Software,completed\nTX105,Epsilon Ltd,890,Services,refunded\nTX106,Zeta Global,2100,Services,completed"
+
+    println("Raw Input Data:")
+    println(raw_csv)
+    println("------------------------------------------")
+
+    let lines = string.split(raw_csv, "\n")
+    println("Total rows to parse: " + to_string(array.len(lines)))
+
+    // Step 1: Parse rows
+    let transactions = array.map(lines, fn(line) {
+        return parse_csv_line(line)
+    })
+
+    // Step 2: Filter only completed transactions
+    let completed = array.filter(transactions, fn(tx) {
+        if tx == null {
+            return false
+        }
+        return tx.status == "completed"
+    })
+
+    println("Completed transactions count: " + to_string(array.len(completed)))
+
+    // Step 3: Map to processed transactions with tax computation (8%)
+    let processed = array.map(completed, fn(tx) {
+        let tax = math.round(tx.amount * 0.08)
+        let total = tx.amount + tax
+        return ProcessedTx {
+            id: tx.id,
+            customer: tx.customer,
+            amount: tx.amount,
+            tax: tax,
+            total: total,
+            category: tx.category
+        }
+    })
+
+    // Step 4: Reduce to compute summary aggregates
+    let initial_stats = {
+        "count": 0,
+        "gross": 0.0,
+        "tax": 0.0,
+        "net": 0.0
+    }
+
+    let stats = array.reduce(processed, fn(acc, tx) {
+        let new_count = acc.count + 1
+        let new_gross = acc.gross + tx.amount
+        let new_tax = acc.tax + tx.tax
+        let new_net = acc.net + tx.total
+        return {
+            "count": new_count,
+            "gross": new_gross,
+            "tax": new_tax,
+            "net": new_net
+        }
+    }, initial_stats)
+
+    println("------------------------------------------")
+    println("Pipeline ETL Summary Report (JSON):")
+    let report_json = json.stringify_pretty(stats)
+    println(report_json)
+    println("==========================================")
+}
+
+main()

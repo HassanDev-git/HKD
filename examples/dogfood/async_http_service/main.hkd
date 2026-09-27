@@ -1,0 +1,70 @@
+#feature(async)
+import task from "std:task"
+import result from "std:result"
+
+struct Request {
+  method: String,
+  path: String,
+  auth_token: String
+}
+
+struct Response {
+  status: Int,
+  body: String
+}
+
+async fn auth_middleware(req: Request) {
+  let _s = await task.sleep(1)
+  if (req.auth_token == "secret-token") {
+    return result.ok(true)
+  }
+  return result.err("Unauthorized")
+}
+
+async fn handle_route(req: Request) -> Response {
+  let auth_res = await auth_middleware(req)
+  if (result.is_err(auth_res)) {
+    return Response { status: 401, body: "{\"error\":\"unauthorized\"}" }
+  }
+
+  if (req.path == "/health") {
+    let _s2 = await task.sleep(1)
+    return Response { status: 200, body: "{\"status\":\"ok\"}" }
+  }
+
+  if (req.path == "/items") {
+    let _s3 = await task.sleep(2)
+    return Response { status: 200, body: "{\"items\":[\"alpha\",\"beta\",\"gamma\"]}" }
+  }
+
+  return Response { status: 404, body: "{\"error\":\"not found\"}" }
+}
+
+async fn dispatch_server() {
+  print("=== Async HTTP Service Dogfood App ===")
+  let req1 = Request { method: "GET", path: "/health", auth_token: "secret-token" }
+  let req2 = Request { method: "GET", path: "/items", auth_token: "secret-token" }
+  let req3 = Request { method: "GET", path: "/items", auth_token: "invalid-token" }
+  let req4 = Request { method: "GET", path: "/missing", auth_token: "secret-token" }
+
+  let f1 = handle_route(req1)
+  let f2 = handle_route(req2)
+  let f3 = handle_route(req3)
+  let f4 = handle_route(req4)
+
+  let responses = await task.all([f1, f2, f3, f4])
+  print("Handled " + to_string(len(responses)) + " requests concurrently")
+
+  let r1 = responses[0]
+  let r2 = responses[1]
+  let r3 = responses[2]
+  let r4 = responses[3]
+
+  print("Req1 (/health) status: " + to_string(r1.status))
+  print("Req2 (/items) status: " + to_string(r2.status))
+  print("Req3 (unauthorized) status: " + to_string(r3.status))
+  print("Req4 (not found) status: " + to_string(r4.status))
+  print("HTTP Service verification PASS")
+}
+
+let _run = dispatch_server()

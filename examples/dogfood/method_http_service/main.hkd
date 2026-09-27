@@ -1,0 +1,91 @@
+struct HttpRequest {
+  method: String
+  path: String
+  body: String
+}
+
+struct HttpResponse {
+  status_code: Int
+  content_type: String
+  body: String
+}
+
+struct User {
+  id: Int
+  username: String
+  email: String
+}
+
+impl HttpRequest {
+  fn is_get(self) -> Bool {
+    return self.method == "GET"
+  }
+
+  fn is_post(self) -> Bool {
+    return self.method == "POST"
+  }
+
+  fn route_key(self) -> String {
+    return self.method + " " + self.path
+  }
+}
+
+impl HttpResponse {
+  fn is_success(self) -> Bool {
+    return self.status_code >= 200 && self.status_code < 300
+  }
+
+  fn render(self) -> String {
+    let header = "HTTP/1.1 " + to_string(self.status_code)
+    let ct = "Content-Type: " + self.content_type
+    return header + " | " + ct + " | " + self.body
+  }
+}
+
+impl User {
+  fn to_json(self) -> String {
+    let id_str = to_string(self.id)
+    return "{\"id\":" + id_str + ",\"username\":\"" + self.username + "\",\"email\":\"" + self.email + "\"}"
+  }
+}
+
+fn handle_request(req: HttpRequest, u: User) -> HttpResponse {
+  let route = req.route_key()
+  if route == "GET /api/v1/user" {
+    return HttpResponse {
+      status_code: 200,
+      content_type: "application/json",
+      body: u.to_json()
+    }
+  }
+
+  if route == "POST /api/v1/user" {
+    return HttpResponse {
+      status_code: 201,
+      content_type: "application/json",
+      body: "{\"status\":\"created\"}"
+    }
+  }
+
+  return HttpResponse {
+    status_code: 404,
+    content_type: "text/plain",
+    body: "Not Found: " + req.path
+  }
+}
+
+let user = User { id: 42, username: "dev_hassan", email: "hassan@example.com" }
+println("User JSON: " + user.to_json())
+
+let req1 = HttpRequest { method: "GET", path: "/api/v1/user", body: "" }
+println("Req 1 route: " + req1.route_key() + " (is_get=" + to_string(req1.is_get()) + ")")
+let res1 = handle_request(req1, user)
+println("Res 1: " + res1.render() + " (success=" + to_string(res1.is_success()) + ")")
+
+let req2 = HttpRequest { method: "POST", path: "/api/v1/user", body: "{}" }
+let res2 = handle_request(req2, user)
+println("Res 2: " + res2.render())
+
+let req3 = HttpRequest { method: "GET", path: "/unknown", body: "" }
+let res3 = handle_request(req3, user)
+println("Res 3: " + res3.render())

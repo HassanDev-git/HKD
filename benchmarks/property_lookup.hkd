@@ -1,0 +1,8 @@
+let obj = { x: 10, y: 20, z: 30 }
+let i = 0
+let sum = 0
+while i < 500000 {
+    sum = sum + obj.x + obj.y + obj.z
+    i = i + 1
+}
+print(to_string(sum))

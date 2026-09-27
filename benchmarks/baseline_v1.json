@@ -1,0 +1,182 @@
+{
+  "timestamp": "2026-09-02T19:37:50.953Z",
+  "version": "0.1.0-phase9a-baseline",
+  "system": {
+    "platform": "win32",
+    "arch": "x64",
+    "nodeVersion": "v24.19.0"
+  },
+  "nativeBinarySizeBytes": 2739712,
+  "workloads": [
+    {
+      "workload": "startup",
+      "file": "benchmarks/minimal.hkd",
+      "iterations": 5,
+      "refMedianMs": 134.11,
+      "refP95Ms": 156.43,
+      "nativeMedianMs": 14.75,
+      "nativeP95Ms": 17.52,
+      "nativeSpeedup": "9.09x"
+    },
+    {
+      "workload": "fib(30)",
+      "file": "benchmarks/fib.hkd",
+      "iterations": 5,
+      "refMedianMs": 2598.91,
+      "refP95Ms": 2680.49,
+      "nativeMedianMs": 2656.12,
+      "nativeP95Ms": 2792.64,
+      "nativeSpeedup": "0.98x"
+    },
+    {
+      "workload": "loop (1M)",
+      "file": "benchmarks/loop.hkd",
+      "iterations": 5,
+      "refMedianMs": 1943.07,
+      "refP95Ms": 2521.36,
+      "nativeMedianMs": 1855.45,
+      "nativeP95Ms": 2133.63,
+      "nativeSpeedup": "1.05x"
+    },
+    {
+      "workload": "function_calls",
+      "file": "benchmarks/function_calls.hkd",
+      "iterations": 5,
+      "refMedianMs": 4279.28,
+      "refP95Ms": 5577.56,
+      "nativeMedianMs": 4031.33,
+      "nativeP95Ms": 4994.44,
+      "nativeSpeedup": "1.06x"
+    },
+    {
+      "workload": "closures",
+      "file": "benchmarks/closures.hkd",
+      "iterations": 5,
+      "refMedianMs": 489.23,
+      "refP95Ms": 706.54,
+      "nativeMedianMs": 496.42,
+      "nativeP95Ms": 566.36,
+      "nativeSpeedup": "0.99x"
+    },
+    {
+      "workload": "arrays",
+      "file": "benchmarks/array.hkd",
+      "iterations": 5,
+      "refMedianMs": 713.76,
+      "refP95Ms": 759.87,
+      "nativeMedianMs": 525.57,
+      "nativeP95Ms": 635.36,
+      "nativeSpeedup": "1.36x"
+    },
+    {
+      "workload": "objects",
+      "file": "benchmarks/object.hkd",
+      "iterations": 5,
+      "refMedianMs": 3096.14,
+      "refP95Ms": 3945.1,
+      "nativeMedianMs": 2497.84,
+      "nativeP95Ms": 3006.43,
+      "nativeSpeedup": "1.24x"
+    },
+    {
+      "workload": "strings",
+      "file": "benchmarks/string.hkd",
+      "iterations": 5,
+      "refMedianMs": 261.78,
+      "refP95Ms": 407.22,
+      "nativeMedianMs": 125.87,
+      "nativeP95Ms": 141.7,
+      "nativeSpeedup": "2.08x"
+    },
+    {
+      "workload": "modules",
+      "file": "benchmarks/module_import.hkd",
+      "iterations": 5,
+      "refMedianMs": 218.48,
+      "refP95Ms": 418.99,
+      "nativeMedianMs": 34.33,
+      "nativeP95Ms": 40.53,
+      "nativeSpeedup": "6.36x"
+    },
+    {
+      "workload": "async_tasks",
+      "file": "benchmarks/async_tasks.hkd",
+      "iterations": 5,
+      "refMedianMs": 160.09,
+      "refP95Ms": 164.42,
+      "nativeMedianMs": 20.01,
+      "nativeP95Ms": 21.73,
+      "nativeSpeedup": "8.00x"
+    },
+    {
+      "workload": "timers",
+      "file": "benchmarks/timers.hkd",
+      "iterations": 5,
+      "refMedianMs": 1734.28,
+      "refP95Ms": 1827.83,
+      "nativeMedianMs": 1583.61,
+      "nativeP95Ms": 1644.41,
+      "nativeSpeedup": "1.10x"
+    },
+    {
+      "workload": "tcp_buffers",
+      "file": "benchmarks/tcp.hkd",
+      "iterations": 5,
+      "refMedianMs": 168.01,
+      "refP95Ms": 251.61,
+      "nativeMedianMs": 43.36,
+      "nativeP95Ms": 55.37,
+      "nativeSpeedup": "3.88x"
+    },
+    {
+      "workload": "http_client",
+      "file": "benchmarks/http_client.hkd",
+      "iterations": 5,
+      "refMedianMs": 205.54,
+      "refP95Ms": 274.56,
+      "nativeMedianMs": 22.04,
+      "nativeP95Ms": 27.17,
+      "nativeSpeedup": "9.33x"
+    },
+    {
+      "workload": "http_server",
+      "file": "benchmarks/http_server.hkd",
+      "iterations": 5,
+      "refMedianMs": 174.84,
+      "refP95Ms": 190.11,
+      "nativeMedianMs": 19.19,
+      "nativeP95Ms": 23.61,
+      "nativeSpeedup": "9.11x"
+    },
+    {
+      "workload": "filesystem",
+      "file": "benchmarks/filesystem.hkd",
+      "iterations": 5,
+      "refMedianMs": 206.38,
+      "refP95Ms": 215.39,
+      "nativeMedianMs": 96.01,
+      "nativeP95Ms": 249.36,
+      "nativeSpeedup": "2.15x"
+    },
+    {
+      "workload": "subprocess",
+      "file": "benchmarks/subprocess.hkd",
+      "iterations": 5,
+      "refMedianMs": 165.71,
+      "refP95Ms": 176.09,
+      "nativeMedianMs": 19.61,
+      "nativeP95Ms": 20.49,
+      "nativeSpeedup": "8.45x"
+    },
+    {
+      "workload": "memory_stress",
+      "file": "benchmarks/memory_stress.hkd",
+      "iterations": 5,
+      "refMedianMs": 259.89,
+      "refP95Ms": 389.34,
+      "nativeMedianMs": 159.69,
+      "nativeP95Ms": 243.83,
+      "nativeSpeedup": "1.63x"
+    }
+  ]
+}

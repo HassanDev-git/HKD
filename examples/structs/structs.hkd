@@ -1,0 +1,55 @@
+// HKD Structs Example
+
+struct Point {
+    x: Float
+    y: Float
+}
+
+struct Rectangle {
+    x: Float
+    y: Float
+    width: Float
+    height: Float
+}
+
+fn make_point(x: Float, y: Float) -> Point {
+    return Point { x: x, y: y }
+}
+
+fn distance(a: Point, b: Point) -> Float {
+    let dx = a.x - b.x
+    let dy = a.y - b.y
+    return (dx * dx + dy * dy) ** 0.5
+}
+
+fn rect_area(r: Rectangle) -> Float {
+    return r.width * r.height
+}
+
+fn rect_perimeter(r: Rectangle) -> Float {
+    return 2 * (r.width + r.height)
+}
+
+fn rect_contains(r: Rectangle, p: Point) -> Bool {
+    return p.x >= r.x && p.x <= r.x + r.width && p.y >= r.y && p.y <= r.y + r.height
+}
+
+// Demo
+let origin = make_point(0, 0)
+let p1 = Point { x: 3, y: 4 }
+let p2 = Point { x: 6, y: 8 }
+
+print("=== HKD Structs ===")
+print("")
+print("p1 = (" + to_string(p1.x) + ", " + to_string(p1.y) + ")")
+print("p2 = (" + to_string(p2.x) + ", " + to_string(p2.y) + ")")
+print("distance(origin, p1) = " + to_string(distance(origin, p1)))
+print("distance(p1, p2) = " + to_string(distance(p1, p2)))
+
+let rect = Rectangle { x: 0, y: 0, width: 10, height: 5 }
+print("")
+print("Rectangle: 10x5")
+print("  area = " + to_string(rect_area(rect)))
+print("  perimeter = " + to_string(rect_perimeter(rect)))
+print("  contains (3,2)? " + to_string(rect_contains(rect, Point { x: 3, y: 2 })))
+print("  contains (15,2)? " + to_string(rect_contains(rect, Point { x: 15, y: 2 })))

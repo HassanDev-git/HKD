@@ -1,0 +1,4 @@
+[package]
+name = "async_data_pipeline"
+version = "1.0.0"
+edition = "2027"

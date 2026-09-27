@@ -1,0 +1,42 @@
+fn check_quota(used_mb, limit_mb) {
+    if used_mb > limit_mb {
+        return "EXCEEDED"
+    }
+    if used_mb * 100 / limit_mb >= 80 {
+        return "WARNING"
+    }
+    return "OK"
+}
+
+fn aggregate_batch_sizes(sizes) {
+    let total = 0
+    let max_item = 0
+    for s in sizes {
+        total = total + s
+        if s > max_item {
+            max_item = s
+        }
+    }
+    return [total, max_item]
+}
+
+fn main() {
+    print("=== HKD System Utility & Batch Monitor ===")
+    let batch_items = [12, 45, 8, 92, 34, 110, 5, 29]
+    let stats = aggregate_batch_sizes(batch_items)
+    let total_size = stats[0]
+    let peak_size = stats[1]
+
+    let quota_status = check_quota(total_size, 500)
+
+    print("Batch Items Count: ")
+    print(len(batch_items))
+    print("Total Batch Size (MB): ")
+    print(total_size)
+    print("Peak Item Size (MB): ")
+    print(peak_size)
+    print("Disk Quota Status: ")
+    print(quota_status)
+}
+
+main()

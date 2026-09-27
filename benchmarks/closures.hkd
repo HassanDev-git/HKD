@@ -1,0 +1,13 @@
+fn makeAdder(x: Int) -> fn(Int) -> Int {
+    return fn(y: Int) -> Int {
+        return x + y
+    }
+}
+let addTen = makeAdder(10)
+let i = 0
+let sum = 0
+while i < 100000 {
+    sum = addTen(sum)
+    i = i + 1
+}
+print(to_string(sum))

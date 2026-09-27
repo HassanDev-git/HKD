@@ -1,0 +1,9 @@
+#feature(traits)
+
+export trait Renderable {
+  fn render(self) -> String
+}
+
+export trait Measurable {
+  fn weight(self) -> Int
+}

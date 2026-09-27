@@ -1,0 +1,31 @@
+// Project D: Multi-file App — Domain Models
+
+export struct Customer {
+    id: Int
+    name: String
+    email: String
+    tier: String
+}
+
+export struct Item {
+    sku: String
+    name: String
+    unit_price: Float
+    quantity: Int
+}
+
+export struct Order {
+    order_id: String
+    customer: Customer
+    items: [Item]
+    status: String
+}
+
+export struct Invoice {
+    invoice_number: String
+    order_id: String
+    subtotal: Float
+    discount: Float
+    tax: Float
+    total: Float
+}

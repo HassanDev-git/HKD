@@ -1,0 +1,7 @@
+let i = 0
+let last = null
+while i < 100000 {
+    last = { a: i, b: i + 1, c: i + 2 }
+    i = i + 1
+}
+print(to_string(last.c))

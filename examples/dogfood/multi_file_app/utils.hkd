@@ -1,0 +1,25 @@
+// Project D: Multi-file App — Helper Utilities
+import math
+
+export fn format_currency(amount: Float) -> String {
+    let rounded = math.round(amount * 100.0) / 100.0
+    return "$" + to_string(rounded)
+}
+
+export fn calculate_discount(subtotal: Float, tier: String) -> Float {
+    if tier == "VIP" {
+        return math.round(subtotal * 0.15 * 100.0) / 100.0
+    }
+    if tier == "GOLD" {
+        return math.round(subtotal * 0.10 * 100.0) / 100.0
+    }
+    if tier == "SILVER" {
+        return math.round(subtotal * 0.05 * 100.0) / 100.0
+    }
+    return 0.0
+}
+
+export fn calculate_sales_tax(taxable_amount: Float) -> Float {
+    // 8.5% standard tax
+    return math.round(taxable_amount * 0.085 * 100.0) / 100.0
+}

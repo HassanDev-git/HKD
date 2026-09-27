@@ -1,0 +1,12 @@
+import ops from "../src/math_ops.hkd"
+
+test "clamp within bounds" {
+    assert(ops.clamp(50, 0, 100) == 50)
+    assert(ops.clamp(-10, 0, 100) == 0)
+    assert(ops.clamp(200, 0, 100) == 100)
+}
+
+test "scale multiplies correctly" {
+    assert(ops.scale(25, 4) == 100)
+    assert(ops.scale(0, 10) == 0)
+}

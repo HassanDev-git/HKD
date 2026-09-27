@@ -1,0 +1,50 @@
+// HKD Calculator Example
+
+fn add(a: Float, b: Float) -> Float {
+    return a + b
+}
+
+fn subtract(a: Float, b: Float) -> Float {
+    return a - b
+}
+
+fn multiply(a: Float, b: Float) -> Float {
+    return a * b
+}
+
+fn divide(a: Float, b: Float) -> Float {
+    if b == 0 {
+        panic("Division by zero!")
+    }
+    return a / b
+}
+
+fn power(base: Float, exp: Int) -> Float {
+    if exp == 0 {
+        return 1.0
+    }
+    let result = 1.0
+    let i = 0
+    while i < exp {
+        result = result * base
+        i = i + 1
+    }
+    return result
+}
+
+fn factorial(n: Int) -> Int {
+    if n <= 1 {
+        return 1
+    }
+    return n * factorial(n - 1)
+}
+
+// Demo
+print("=== HKD Calculator ===")
+print("")
+print("10 + 5 = " + to_string(add(10, 5)))
+print("10 - 5 = " + to_string(subtract(10, 5)))
+print("10 * 5 = " + to_string(multiply(10, 5)))
+print("10 / 4 = " + to_string(divide(10, 4)))
+print("2 ^ 10 = " + to_string(power(2, 10)))
+print("10!    = " + to_string(factorial(10)))

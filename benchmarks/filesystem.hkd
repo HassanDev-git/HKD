@@ -1,0 +1,7 @@
+import fs
+let i = 0
+while i < 1000 {
+    let e = fs.exists("benchmarks/minimal.hkd")
+    i = i + 1
+}
+print(to_string(i))

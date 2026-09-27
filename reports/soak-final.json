@@ -1,0 +1,17 @@
+{
+  "report": "HKD 1.0.0 Production Soak & Memory Stability",
+  "timestamp": "2026-09-27T00:18:42.679Z",
+  "iterations": 10000,
+  "durationMs": 69,
+  "iterationsPerSecond": 144928,
+  "memory": {
+    "initialRssBytes": 464240640,
+    "finalRssBytes": 464830464,
+    "rssGrowthBytes": 589824,
+    "rssGrowthRatio": 1.001,
+    "initialHeapUsedBytes": 268478976,
+    "finalHeapUsedBytes": 322263632,
+    "leaksDetected": 0,
+    "status": "STABLE"
+  }
+}

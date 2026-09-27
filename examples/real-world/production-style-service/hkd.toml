@@ -1,0 +1,12 @@
+name = "production-style-service"
+version = "1.1.0"
+edition = "2027"
+description = "HKD 1.1 Production Reference Microservice with Structured Logging & Result Pipeline"
+main = "src/main.hkd"
+
+[build]
+profile = "release"
+target = "native"
+
+[dependencies]
+collections-extra = "1.1.0"

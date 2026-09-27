@@ -1,0 +1,15 @@
+let i = 0
+let arr = []
+while i < 10000 {
+    let obj = { val: i, tag: "tag" + to_string(i) }
+    arr.push(obj)
+    i = i + 1
+}
+let sum = 0
+let j = 0
+while j < arr.len {
+    let item = arr[j]
+    sum = sum + item.val
+    j = j + 1
+}
+print(to_string(sum))

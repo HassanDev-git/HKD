@@ -1,0 +1,7 @@
+let name = "World"
+
+fn main() {
+    print("Hello, " + name)
+}
+
+main()

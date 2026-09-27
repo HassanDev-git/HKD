@@ -1,0 +1,55 @@
+#feature(async)
+import task from "std:task"
+import result from "std:result"
+import json from "std:json"
+
+struct HttpResponse {
+  status: Int,
+  body: String
+}
+
+async fn fetch_endpoint(url: String, simulate_delay: Int) -> HttpResponse {
+  let _s = await task.sleep(simulate_delay)
+  if (url == "/api/v1/health") {
+    return HttpResponse { status: 200, body: "{\"status\":\"healthy\",\"uptime\":3600}" }
+  }
+  if (url == "/api/v1/users") {
+    return HttpResponse { status: 200, body: "{\"count\":2,\"users\":[\"alice\",\"bob\"]}" }
+  }
+  return HttpResponse { status: 404, body: "{\"error\":\"not_found\"}" }
+}
+
+async fn request_json(url: String) {
+  let resp = await fetch_endpoint(url, 2)
+  if (resp.status == 200) {
+    let parsed = json.parse(resp.body)
+    return result.ok(parsed)
+  }
+  return result.err("HTTP error status: " + to_string(resp.status))
+}
+
+async fn main() {
+  print("=== Async HTTP Client Dogfood App ===")
+  let health_fut = request_json("/api/v1/health")
+  let health_res = await health_fut
+  if (result.is_ok(health_res)) {
+    let health_data = result.unwrap(health_res)
+    print("Health check OK: status=" + health_data["status"])
+  }
+
+  let users_fut = request_json("/api/v1/users")
+  let users_res = await users_fut
+  if (result.is_ok(users_res)) {
+    let users_data = result.unwrap(users_res)
+    print("Users fetched count: " + to_string(users_data["count"]))
+  }
+
+  let not_found_fut = request_json("/api/v1/unknown")
+  let not_found_res = await not_found_fut
+  if (result.is_err(not_found_res)) {
+    print("Handled expected error: " + result.unwrap_err(not_found_res))
+  }
+  print("HTTP Client verification PASS")
+}
+
+let _run = main()

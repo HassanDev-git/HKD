@@ -1,0 +1,12 @@
+name = "sys-util"
+version = "1.0.0"
+edition = "2026"
+description = "HKD Real-World System Utility & Batch Job Processor"
+main = "src/main.hkd"
+
+[build]
+profile = "release"
+target = "native"
+
+[deploy]
+target = "standalone"

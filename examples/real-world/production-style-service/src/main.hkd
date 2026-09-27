@@ -1,0 +1,176 @@
+// HKD 1.1 Production-Style Service Reference Application
+// Demonstrates Config validation, Structured Logging, Result 2.0, Iterators, and Graceful Lifecycle
+
+import result;
+import array;
+
+struct ServiceConfig {
+    host: String
+    port: Int
+    environment: String
+    max_payload_bytes: Int
+}
+
+struct MetricCounter {
+    total_requests: Int
+    successful_requests: Int
+    failed_requests: Int
+}
+
+struct ServiceResponse {
+    status_code: Int
+    content_type: String
+    payload: String
+}
+
+// ── 1. Structured Logging Helper ─────────────────────────────────────────────
+
+fn log_event(level: String, message: String, context: String) -> void {
+    print("{\"level\":\"" + level + "\",\"service\":\"prod-api\",\"msg\":\"" + message + "\",\"ctx\":\"" + context + "\"}");
+}
+
+fn log_info(msg: String) -> void {
+    log_event("INFO", msg, "system");
+}
+
+fn log_error(msg: String, err: String) -> void {
+    log_event("ERROR", msg, err);
+}
+
+// ── 2. Configuration & Validation ───────────────────────────────────────────
+
+fn load_configuration() -> Result {
+    let host = "127.0.0.1";
+    let port = 8080;
+    let env = "production";
+    let max_bytes = 1048576; // 1MB
+
+    if (port <= 0 || port > 65535) {
+        return result.err("Invalid port configuration: " + to_string(port));
+    }
+
+    let cfg = ServiceConfig {
+        host: host,
+        port: port,
+        environment: env,
+        max_payload_bytes: max_bytes
+    };
+    return result.ok(cfg);
+}
+
+// ── 3. Business Logic & Request Pipeline ─────────────────────────────────────
+
+fn process_data_items(raw_items: [Int]) -> Result {
+    if (array.len(raw_items) == 0) {
+        return result.err("empty_batch");
+    }
+
+    fn is_valid(n: Int) -> Bool {
+        return n > 0;
+    }
+
+    fn double_val(n: Int) -> Int {
+        return n * 2;
+    }
+
+    fn sum_acc(acc: Int, n: Int) -> Int {
+        return acc + n;
+    }
+
+    let valid_items = array.filter(raw_items, is_valid);
+    let transformed = array.map(valid_items, double_val);
+    let total = array.reduce(transformed, sum_acc, 0);
+
+    return result.ok("items_processed=" + to_string(array.len(transformed)) + ",total=" + to_string(total));
+}
+
+fn route_request(method: String, path: String, _body: String, metrics: MetricCounter) -> Result {
+    if (method == "GET") {
+        let res = match path {
+            "/health" => ServiceResponse {
+                status_code: 200,
+                content_type: "application/json",
+                payload: "{\"status\":\"healthy\",\"uptime\":\"ok\"}"
+            },
+            "/metrics" => ServiceResponse {
+                status_code: 200,
+                content_type: "application/json",
+                payload: "{\"total\":" + to_string(metrics.total_requests) + ",\"success\":" + to_string(metrics.successful_requests) + "}"
+            },
+            _ => ServiceResponse {
+                status_code: 404,
+                content_type: "application/json",
+                payload: "{\"error\":\"not_found\"}"
+            }
+        };
+        return result.ok(res);
+    }
+
+    if (method == "POST") {
+        if (path == "/data") {
+            let processed = process_data_items([10, 20, 30, -5, 40]);
+            if (result.is_ok(processed)) {
+                let p = result.unwrap(processed);
+                return result.ok(ServiceResponse {
+                    status_code: 200,
+                    content_type: "application/json",
+                    payload: "{\"result\":\"" + p + "\"}"
+                });
+            } else {
+                return result.err("processing_failed: " + to_string(result.unwrap_err(processed)));
+            }
+        }
+        return result.ok(ServiceResponse {
+            status_code: 404,
+            content_type: "application/json",
+            payload: "{\"error\":\"route_not_found\"}"
+        });
+    }
+
+    return result.err("unsupported_method: " + method);
+}
+
+// ── 4. Main Service Lifecycle ────────────────────────────────────────────────
+
+fn run_service() -> Int {
+    log_info("Initializing production-style service...");
+
+    let cfg_res = load_configuration();
+    if (result.is_err(cfg_res)) {
+        log_error("Startup aborted due to config error", to_string(result.unwrap_err(cfg_res)));
+        return 1;
+    }
+    let config = result.unwrap(cfg_res);
+    log_info("Configuration verified: listening on " + config.host + ":" + to_string(config.port));
+
+    let metrics = MetricCounter {
+        total_requests: 0,
+        successful_requests: 0,
+        failed_requests: 0
+    };
+
+    // Simulate requests
+    fn dispatch(m: String, p: String, b: String, metrics: MetricCounter) -> void {
+        metrics.total_requests = metrics.total_requests + 1;
+        let outcome = route_request(m, p, b, metrics);
+        if (result.is_ok(outcome)) {
+            let resp = result.unwrap(outcome);
+            metrics.successful_requests = metrics.successful_requests + 1;
+            log_info(m + " " + p + " -> HTTP " + to_string(resp.status_code));
+        } else {
+            metrics.failed_requests = metrics.failed_requests + 1;
+            log_error("Request failed: " + m + " " + p, to_string(result.unwrap_err(outcome)));
+        }
+    }
+
+    dispatch("GET", "/health", "", metrics);
+    dispatch("POST", "/data", "", metrics);
+    dispatch("GET", "/metrics", "", metrics);
+    dispatch("PUT", "/unknown", "", metrics);
+
+    log_info("Gracefully draining connections and shutting down service.");
+    log_info("Shutdown complete. Final status: 0");
+    return 0;
+}
+
+run_service();

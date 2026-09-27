@@ -1,0 +1,11 @@
+import http
+
+test "server metrics initialization" {
+    let m = http.metrics()
+    assert(m.status == "ok")
+}
+
+test "health endpoint responds with 200" {
+    let resp = http.get("127.0.0.1", 8080, "/health")
+    assert(resp.status == 200)
+}

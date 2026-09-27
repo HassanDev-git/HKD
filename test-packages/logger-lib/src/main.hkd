@@ -1,0 +1,3 @@
+export fn format_log(level, tag, msg) {
+    return "[" + level + "] [" + tag + "] " + msg
+}

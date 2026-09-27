@@ -1,0 +1,48 @@
+{
+  "timestamp": "2026-09-04T07:01:30.000Z",
+  "version": "1.0.0",
+  "edition": "2026",
+  "status": "HEALTHY",
+  "maintenanceBranch": "release/1.0",
+  "zeroBreakingChangesContract": true,
+  "subsystems": [
+    { "id": 1, "name": "HKD Bytecode Compiler & Stack VM", "category": "compiler", "status": "OK" },
+    { "id": 2, "name": "Native Zig Runtime & JIT Engine", "category": "runtime", "status": "OK" },
+    { "id": 3, "name": "Host Target Architecture", "category": "target", "status": "OK", "details": "x86_64-windows (Tier 1)" },
+    { "id": 4, "name": "Language Server Protocol 2.0 (LSP)", "category": "lsp", "status": "OK" },
+    { "id": 5, "name": "Debug Adapter Protocol (DAP)", "category": "debugger", "status": "OK" },
+    { "id": 6, "name": "Package Manager & Cache Subsystem", "category": "package", "status": "OK" },
+    { "id": 7, "name": "Container & Multi-Stage Deployment", "category": "container", "status": "OK" },
+    { "id": 8, "name": "VS Code Extension Manifest", "category": "vscode", "status": "OK" },
+    { "id": 9, "name": "Security, Fuzzing & Audit Engine", "category": "security", "status": "OK" }
+  ],
+  "verificationMetrics": {
+    "testPassRate": "100%",
+    "failingTests": 0,
+    "memoryLeaks": 0,
+    "differentialMismatches": 0,
+    "fuzzRegressions": 5,
+    "fuzzCrashes": 0,
+    "performanceVarianceAllowedPercent": 5.0,
+    "realWorldApplications": [
+      "examples/real-world/cli-tool",
+      "examples/real-world/http-service",
+      "examples/real-world/pkg-app",
+      "examples/real-world/sys-util"
+    ],
+    "realWorldPackages": [
+      "test-packages/math-extra",
+      "test-packages/string-format",
+      "test-packages/logger-lib"
+    ]
+  },
+  "governance": {
+    "license": "MIT",
+    "codeOfConduct": "Contributor Covenant 2.1",
+    "contributingGuidelines": true,
+    "rfcProcess": "rfcs/",
+    "roadmap": "docs/roadmap.md",
+    "issuePipeline": "docs/operations/issue-pipeline.md",
+    "maintenancePolicy": "docs/maintenance-policy.md"
+  }
+}

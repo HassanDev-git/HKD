@@ -1,0 +1,14 @@
+// Golden Edition 2026 Math and Logic Corpus
+fn fib(n: Int) -> Int {
+    if (n <= 1) {
+        return n;
+    }
+    return fib(n - 1) + fib(n - 2);
+}
+
+let res = fib(10);
+print("fib_10=" + to_string(res));
+
+let flags = [true, false, true];
+let passed = flags[0] && !flags[1] && flags[2];
+print("logic_valid=" + to_string(passed));

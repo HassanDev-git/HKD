@@ -1,0 +1,32 @@
+fn calculate_total(subtotal, tax_rate) {
+    let tax = subtotal * tax_rate
+    return subtotal + tax
+}
+
+fn sum_array(items) {
+    let total = 0
+    for item in items {
+        total = total + item
+    }
+    return total
+}
+
+fn process_order(id, items) {
+    let subtotal = sum_array(items)
+    let total = calculate_total(subtotal, 0.15)
+    print("Order ID: ")
+    print(id)
+    print("Total: ")
+    print(total)
+    return total
+}
+
+fn main() {
+    let order_id = 1001
+    let items = [25, 50, 75, 100]
+    let total = process_order(order_id, items)
+    print("Processing complete with total: ")
+    print(total)
+}
+
+main()

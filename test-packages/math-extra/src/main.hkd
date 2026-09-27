@@ -1,0 +1,15 @@
+export fn gcd(a, b) {
+    while b != 0 {
+        let t = b
+        b = a % b
+        a = t
+    }
+    return a
+}
+
+export fn lcm(a, b) {
+    if a == 0 {
+        return 0
+    }
+    return (a * b) / gcd(a, b)
+}

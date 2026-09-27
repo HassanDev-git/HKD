@@ -1,0 +1,7 @@
+import process
+let i = 0
+while i < 5 {
+    let p = process.run(["node", "-v"])
+    i = i + 1
+}
+print(to_string(i))

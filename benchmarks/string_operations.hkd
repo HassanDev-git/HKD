@@ -1,0 +1,11 @@
+let s = "  HelloWorldFromHKD  "
+let i = 0
+let last = ""
+while i < 50000 {
+    last = s.trim().lower()
+    if last.starts_with("hello") {
+        last = last.replace("hello", "hola")
+    }
+    i = i + 1
+}
+print(last)

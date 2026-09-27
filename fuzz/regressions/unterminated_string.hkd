@@ -1,0 +1,2 @@
+let s = "unterminated string with newline
+and more text without closing quote;

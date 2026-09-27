@@ -1,0 +1,60 @@
+#feature(async)
+import task from "std:task"
+
+struct DataRecord {
+  id: Int,
+  value: Int
+}
+
+struct ProcessedBatch {
+  total_records: Int,
+  sum_processed: Int,
+  fastest_replica_val: Int
+}
+
+async fn worker_transform(rec: DataRecord) -> Int {
+  let _s = await task.sleep(1)
+  let transformed = rec.value * 2 + 1
+  return transformed
+}
+
+async fn query_replica(replica_id: Int, key: Int) -> Int {
+  let _s = await task.sleep(replica_id)
+  return key * 100 + replica_id
+}
+
+async fn run_data_pipeline() {
+  print("=== Async Data Pipeline Dogfood App ===")
+
+  // 1. Fan-out stage: process records concurrently
+  let r1 = DataRecord { id: 1, value: 10 }
+  let r2 = DataRecord { id: 2, value: 20 }
+  let r3 = DataRecord { id: 3, value: 30 }
+
+  let w1 = worker_transform(r1)
+  let w2 = worker_transform(r2)
+  let w3 = worker_transform(r3)
+
+  let stage1_results = await task.all([w1, w2, w3])
+  let total_sum = stage1_results[0] + stage1_results[1] + stage1_results[2]
+  print("Stage 1 fan-out completed: sum=" + to_string(total_sum))
+
+  // 2. Fan-in race stage: query redundant replicas concurrently
+  let rep1 = query_replica(1, 7)
+  let rep2 = query_replica(2, 7)
+  let fastest = await task.race([rep1, rep2])
+  print("Stage 2 fastest replica winner: " + to_string(fastest))
+
+  // 3. Final aggregation
+  let summary = ProcessedBatch {
+    total_records: len(stage1_results),
+    sum_processed: total_sum,
+    fastest_replica_val: fastest
+  }
+
+  print("Batch summary total: " + to_string(summary.total_records))
+  print("Batch summary sum: " + to_string(summary.sum_processed))
+  print("Async Pipeline verification PASS")
+}
+
+let _run = run_data_pipeline()

@@ -1,0 +1,43 @@
+{
+  "report": "HKD 1.0.0 Reproducible Build Certification",
+  "version": "1.0.0",
+  "edition": "2026",
+  "timestamp": "2026-09-04T01:23:00.000Z",
+  "status": "CERTIFIED_BITWISE_IDENTICAL",
+  "compiler": {
+    "version": "1.0.0",
+    "target": "x86_64-windows",
+    "host": "Windows_NT x64"
+  },
+  "invariants": {
+    "bytecodeFormat": "HKDB_V2",
+    "timestampIsolation": "ENFORCED",
+    "filePathNormalization": "ENFORCED",
+    "mapIterationOrder": "DETERMINISTIC_SORTED",
+    "contentAddressedCache": "ACTIVE"
+  },
+  "targets": [
+    {
+      "name": "production-validation-app",
+      "source": "production-validation-app/src/main.hkd",
+      "sizeBytes": 1048,
+      "runA_sha256": "sha256:cdc62a0a6a3b6d6aa040418b6c165677e449f576da5e44396d76a9ab7576fa6a",
+      "runB_sha256": "sha256:cdc62a0a6a3b6d6aa040418b6c165677e449f576da5e44396d76a9ab7576fa6a",
+      "identical": true
+    },
+    {
+      "name": "production-server",
+      "source": "examples/production-server/src/main.hkd",
+      "sizeBytes": 533,
+      "runA_sha256": "sha256:cbf8dff26736181693a91137feee550cddfe87fca9ffcfb8d581e57c1b17486b",
+      "runB_sha256": "sha256:cbf8dff26736181693a91137feee550cddfe87fca9ffcfb8d581e57c1b17486b",
+      "identical": true
+    }
+  ],
+  "verification": {
+    "totalTested": 2,
+    "totalReproducible": 2,
+    "mismatches": 0,
+    "reproducibilityRate": "100.0%"
+  }
+}

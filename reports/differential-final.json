@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-09-27T00:18:47.826Z",
+  "totalTested": 2,
+  "totalEquivalent": 2,
+  "allEquivalent": true,
+  "results": [
+    {
+      "programName": "prog1",
+      "source": "print(100 * 2)",
+      "vmOutput": "200",
+      "vmStatus": 0,
+      "nativeOutput": "200",
+      "nativeStatus": 0,
+      "equivalent": true
+    },
+    {
+      "programName": "prog2",
+      "source": "print(10 > 5)",
+      "vmOutput": "true",
+      "vmStatus": 0,
+      "nativeOutput": "true",
+      "nativeStatus": 0,
+      "equivalent": true
+    }
+  ]
+}

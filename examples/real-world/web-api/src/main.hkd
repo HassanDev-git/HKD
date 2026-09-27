@@ -1,0 +1,75 @@
+// HKD 1.1 Web API Microservice
+// Demonstrates RFC-001 Generics, RFC-002 Pattern Matching, and std.result
+
+import result;
+
+struct ApiResponse {
+    status: Int
+    message: String
+    body: String
+}
+
+// Generic payload formatter (RFC-001)
+fn format_payload<T>(val: T) -> String {
+    return to_string(val);
+}
+
+// Response constructor with pattern matching (RFC-002)
+fn create_response<T>(status: Int, data: T) -> ApiResponse {
+    let msg = match status {
+        200 => "OK",
+        201 => "Created",
+        400 => "Bad Request",
+        404 => "Not Found",
+        500 => "Internal Server Error",
+        _ => "Status"
+    };
+    return ApiResponse {
+        status: status,
+        message: msg,
+        body: format_payload(data)
+    };
+}
+
+// Route dispatcher utilizing pattern matching (RFC-002)
+fn route(method: String, endpoint: String) -> Any {
+    if (method == "GET") {
+        let res = match endpoint {
+            "/health" => create_response(200, "Service Healthy"),
+            "/version" => create_response(200, "HKD 1.1.0 (Edition 2027)"),
+            "/users" => create_response(200, "alice, bob, charlie"),
+            _ => create_response(404, "Endpoint Not Found")
+        };
+        return result.ok(res);
+    }
+
+    if (method == "POST") {
+        let postRes = match endpoint {
+            "/users" => create_response(201, "User Created Successfully"),
+            _ => create_response(404, "Endpoint Not Found")
+        };
+        return result.ok(postRes);
+    }
+
+    return result.err("Method Not Allowed: " + method);
+}
+
+fn handle_request(method: String, endpoint: String) -> void {
+    let r = route(method, endpoint);
+    if (result.is_ok(r)) {
+        let resp = result.unwrap(r);
+        print(method + " " + endpoint + " -> [" + to_string(resp.status) + " " + resp.message + "] " + resp.body);
+    } else {
+        print("ERROR: " + to_string(r.error));
+    }
+}
+
+// Execute sample API workflow
+print("=== Starting HKD 1.1 Web API Service ===");
+handle_request("GET", "/health");
+handle_request("GET", "/version");
+handle_request("GET", "/users");
+handle_request("POST", "/users");
+handle_request("GET", "/missing");
+handle_request("PATCH", "/users");
+print("=== Web API Finished ===");
