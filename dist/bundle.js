@@ -390,6 +390,10 @@ var require_token = __commonJS({
       TokenKind2["Type"] = "type";
       TokenKind2["As"] = "as";
       TokenKind2["Match"] = "match";
+      TokenKind2["Impl"] = "impl";
+      TokenKind2["Trait"] = "trait";
+      TokenKind2["Async"] = "async";
+      TokenKind2["Await"] = "await";
       TokenKind2["Hash"] = "#";
       TokenKind2["Plus"] = "+";
       TokenKind2["Minus"] = "-";
@@ -463,7 +467,11 @@ var require_token = __commonJS({
       ["assert", TokenKind.Assert],
       ["type", TokenKind.Type],
       ["as", TokenKind.As],
-      ["match", TokenKind.Match]
+      ["match", TokenKind.Match],
+      ["impl", TokenKind.Impl],
+      ["trait", TokenKind.Trait],
+      ["async", TokenKind.Async],
+      ["await", TokenKind.Await]
     ]);
     function isKeyword(kind) {
       return [
@@ -491,7 +499,11 @@ var require_token = __commonJS({
         TokenKind.Assert,
         TokenKind.Type,
         TokenKind.As,
-        TokenKind.Match
+        TokenKind.Match,
+        TokenKind.Impl,
+        TokenKind.Trait,
+        TokenKind.Async,
+        TokenKind.Await
       ].includes(kind);
     }
     function tokenKindName(kind) {
@@ -965,6 +977,7 @@ var require_parser = __commonJS({
           this.enabledFeatures.add("pattern_matching");
           this.enabledFeatures.add("traits");
           this.enabledFeatures.add("result");
+          this.enabledFeatures.add("async");
         }
       }
       isFeatureEnabled(name) {
@@ -1039,6 +1052,10 @@ var require_parser = __commonJS({
             return this.parseFunctionDecl(false);
           case token_js_1.TokenKind.Struct:
             return this.parseStructDecl(false);
+          case token_js_1.TokenKind.Impl:
+            return this.parseImpl();
+          case token_js_1.TokenKind.Trait:
+            return this.parseTraitDecl(false);
           case token_js_1.TokenKind.Type:
             return this.parseTypeAlias(false);
           case token_js_1.TokenKind.Return:
@@ -1063,6 +1080,12 @@ var require_parser = __commonJS({
             return this.parseTest();
           case token_js_1.TokenKind.Assert:
             return this.parseAssertStmt();
+          case token_js_1.TokenKind.Async: {
+            if (this.peekAt(1)?.kind === token_js_1.TokenKind.Fn) {
+              return this.parseFunctionDecl(false, true);
+            }
+            return this.parseExprStmt();
+          }
           default:
             return this.parseExprStmt();
         }
@@ -1105,14 +1128,23 @@ var require_parser = __commonJS({
           };
         }
       }
-      // fn name<T, U>(params) -> ReturnType { body }
-      parseFunctionDecl(exported) {
+      // async? fn name<T, U>(params) -> ReturnType { body }
+      parseFunctionDecl(exported, isAsync = false) {
         const start = this.startSpan();
+        if (isAsync) {
+          const asyncTok = this.expect(token_js_1.TokenKind.Async, "`async`");
+          if (!this.isFeatureEnabled("async")) {
+            this.error(index_js_12.ErrorCode.E201, 'Async/await is an experimental feature in HKD. Enable with `#feature(async)` or set `edition = "2027"` in `hkd.toml`', asyncTok.span.start, { help: ['Add `#feature(async)` at top of file, or specify `edition = "2027"` in `hkd.toml`'] });
+          }
+        }
         this.expect(token_js_1.TokenKind.Fn, "`fn`");
         const name = this.expectIdent("function name");
         let typeParams;
+        let typeParamBounds;
         if (this.check(token_js_1.TokenKind.Lt)) {
-          typeParams = this.parseTypeParams();
+          const tp = this.parseTypeParams();
+          typeParams = tp.typeParams;
+          typeParamBounds = tp.typeParamBounds;
         }
         const params = this.parseParams();
         let returnType = null;
@@ -1125,7 +1157,9 @@ var require_parser = __commonJS({
         return {
           kind: "FunctionDeclStmt",
           name,
+          isAsync,
           typeParams,
+          typeParamBounds,
           params,
           returnType,
           body,
@@ -1139,21 +1173,41 @@ var require_parser = __commonJS({
           this.reporter.error(index_js_12.ErrorCode.E201, 'Generic functions are an experimental feature in HKD. Enable with `#feature(generics)` or set `edition = "2027"` in hkd.toml', startTok.span, { help: ['Add `#feature(generics)` at top of file, or specify `edition = "2027"` in `hkd.toml`'] });
         }
         const typeParams = [];
+        const typeParamBounds = {};
+        let hasBounds = false;
         while (!this.check(token_js_1.TokenKind.Gt) && !this.isAtEnd()) {
-          typeParams.push(this.expectIdent("type parameter name"));
+          const name = this.expectIdent("type parameter name");
+          typeParams.push(name);
+          if (this.check(token_js_1.TokenKind.Colon)) {
+            this.advance();
+            if (!this.isFeatureEnabled("traits")) {
+              this.reporter.error(index_js_12.ErrorCode.E201, 'Traits are an experimental feature in HKD. Enable with `#feature(traits)` or set `edition = "2027"` in hkd.toml', this.peek().span, { help: ['Add `#feature(traits)` at top of file, or specify `edition = "2027"` in `hkd.toml`'] });
+            }
+            const bound = this.expectIdent("trait constraint name");
+            typeParamBounds[name] = bound;
+            hasBounds = true;
+          }
           if (!this.check(token_js_1.TokenKind.Gt)) {
             this.expect(token_js_1.TokenKind.Comma, "`,` or `>`");
           }
         }
         this.expect(token_js_1.TokenKind.Gt, "`>`");
-        return typeParams;
+        return {
+          typeParams,
+          typeParamBounds: hasBounds ? typeParamBounds : void 0
+        };
       }
       parseParams() {
         this.expect(token_js_1.TokenKind.LParen, "`(`");
         const params = [];
         while (!this.check(token_js_1.TokenKind.RParen) && !this.isAtEnd()) {
           const pStart = this.startSpan();
-          const name = this.expectIdent("parameter name");
+          let name;
+          if (this.check(token_js_1.TokenKind.Self)) {
+            name = this.advance().value;
+          } else {
+            name = this.expectIdent("parameter name");
+          }
           let typeAnnotation = null;
           if (this.check(token_js_1.TokenKind.Colon)) {
             this.advance();
@@ -1202,6 +1256,9 @@ var require_parser = __commonJS({
             defaultValue,
             span: this.endSpan(fStart)
           });
+          if (this.check(token_js_1.TokenKind.Comma)) {
+            this.advance();
+          }
           this.skipStatementTerminators();
         }
         this.expect(token_js_1.TokenKind.RBrace, "`}`");
@@ -1209,6 +1266,92 @@ var require_parser = __commonJS({
           kind: "StructDeclStmt",
           name,
           fields,
+          exported,
+          span: this.endSpan(start)
+        };
+      }
+      // impl StructName { ... } or impl TraitName for StructName { ... }
+      parseImpl() {
+        const start = this.startSpan();
+        const implTok = this.expect(token_js_1.TokenKind.Impl, "`impl`");
+        const firstName = this.expectIdent("struct or trait name");
+        let traitName = void 0;
+        let structName = firstName;
+        this.skipNewlines();
+        if (this.check(token_js_1.TokenKind.For)) {
+          this.advance();
+          if (!this.isFeatureEnabled("traits")) {
+            this.reporter.error(index_js_12.ErrorCode.E201, 'Traits are an experimental feature in HKD. Enable with `#feature(traits)` or set `edition = "2027"` in hkd.toml', implTok.span, { help: ['Add `#feature(traits)` at top of file, or specify `edition = "2027"` in `hkd.toml`'] });
+          }
+          traitName = firstName;
+          structName = this.expectIdent("struct name");
+        }
+        this.skipNewlines();
+        this.expect(token_js_1.TokenKind.LBrace, "`{`");
+        this.skipNewlines();
+        const methods = [];
+        while (!this.check(token_js_1.TokenKind.RBrace) && !this.isAtEnd()) {
+          this.skipNewlines();
+          if (this.check(token_js_1.TokenKind.RBrace))
+            break;
+          if (this.check(token_js_1.TokenKind.Fn)) {
+            methods.push(this.parseFunctionDecl(false, false));
+          } else if (this.check(token_js_1.TokenKind.Async)) {
+            methods.push(this.parseFunctionDecl(false, true));
+          } else {
+            this.error(index_js_12.ErrorCode.E201, `Expected method declaration inside impl block, got \`${this.peek().value}\``, this.peek().span);
+            this.advance();
+          }
+          this.skipStatementTerminators();
+        }
+        this.expect(token_js_1.TokenKind.RBrace, "`}`");
+        return {
+          kind: "ImplBlockStmt",
+          traitName,
+          structName,
+          methods,
+          span: this.endSpan(start)
+        };
+      }
+      // trait TraitName { fn method(self, ...) -> ReturnType; ... }
+      parseTraitDecl(exported) {
+        const start = this.startSpan();
+        const traitTok = this.expect(token_js_1.TokenKind.Trait, "`trait`");
+        if (!this.isFeatureEnabled("traits")) {
+          this.reporter.error(index_js_12.ErrorCode.E201, 'Traits are an experimental feature in HKD. Enable with `#feature(traits)` or set `edition = "2027"` in hkd.toml', traitTok.span, { help: ['Add `#feature(traits)` at top of file, or specify `edition = "2027"` in `hkd.toml`'] });
+        }
+        const name = this.expectIdent("trait name");
+        this.skipNewlines();
+        this.expect(token_js_1.TokenKind.LBrace, "`{`");
+        this.skipNewlines();
+        const methods = [];
+        while (!this.check(token_js_1.TokenKind.RBrace) && !this.isAtEnd()) {
+          this.skipNewlines();
+          if (this.check(token_js_1.TokenKind.RBrace))
+            break;
+          const mStart = this.startSpan();
+          this.expect(token_js_1.TokenKind.Fn, "`fn`");
+          const methodName = this.expectIdent("method name");
+          const params = this.parseParams();
+          let returnType = null;
+          if (this.check(token_js_1.TokenKind.Arrow)) {
+            this.advance();
+            returnType = this.parseTypeExpr();
+          }
+          this.skipStatementTerminators();
+          methods.push({
+            kind: "TraitMethodDecl",
+            name: methodName,
+            params,
+            returnType,
+            span: this.endSpan(mStart)
+          });
+        }
+        this.expect(token_js_1.TokenKind.RBrace, "`}`");
+        return {
+          kind: "TraitDeclStmt",
+          name,
+          methods,
           exported,
           span: this.endSpan(start)
         };
@@ -1384,6 +1527,9 @@ var require_parser = __commonJS({
           case token_js_1.TokenKind.Fn:
             decl = this.parseFunctionDecl(true);
             break;
+          case token_js_1.TokenKind.Async:
+            decl = this.parseFunctionDecl(true, true);
+            break;
           case token_js_1.TokenKind.Let:
             decl = this.parseVarDecl(true);
             decl;
@@ -1393,6 +1539,9 @@ var require_parser = __commonJS({
             break;
           case token_js_1.TokenKind.Struct:
             decl = this.parseStructDecl(true);
+            break;
+          case token_js_1.TokenKind.Trait:
+            decl = this.parseTraitDecl(true);
             break;
           case token_js_1.TokenKind.Type:
             decl = this.parseTypeAlias(true);
@@ -1500,6 +1649,18 @@ var require_parser = __commonJS({
       parseUnary() {
         const start = this.startSpan();
         const tok = this.peek();
+        if (tok.kind === token_js_1.TokenKind.Await) {
+          if (!this.isFeatureEnabled("async")) {
+            this.error(index_js_12.ErrorCode.E201, 'Async/await is an experimental feature in HKD. Enable with `#feature(async)` or set `edition = "2027"` in `hkd.toml`', start, { help: ['Add `#feature(async)` at top of file, or specify `edition = "2027"` in `hkd.toml`'] });
+          }
+          this.advance();
+          const operand = this.parseUnary();
+          return {
+            kind: "AwaitExpr",
+            expr: operand,
+            span: this.endSpan(start)
+          };
+        }
         if (tok.kind === token_js_1.TokenKind.Minus || tok.kind === token_js_1.TokenKind.Bang || tok.kind === token_js_1.TokenKind.Tilde) {
           this.advance();
           const operand = this.parseUnary();
@@ -1657,6 +1818,10 @@ var require_parser = __commonJS({
             this.advance();
             return { kind: "NullLiteral", span: this.endSpan(start) };
           }
+          case token_js_1.TokenKind.Self: {
+            this.advance();
+            return { kind: "IdentExpr", name: "self", span: this.endSpan(start) };
+          }
           case token_js_1.TokenKind.Ident: {
             this.advance();
             const name = tok.value;
@@ -1708,7 +1873,7 @@ var require_parser = __commonJS({
             this.advance();
             let typeParams;
             if (this.check(token_js_1.TokenKind.Lt)) {
-              typeParams = this.parseTypeParams();
+              typeParams = this.parseTypeParams().typeParams;
             }
             const params = this.parseParams();
             let returnType = null;
@@ -1726,6 +1891,50 @@ var require_parser = __commonJS({
               body,
               span: this.endSpan(start)
             };
+          }
+          case token_js_1.TokenKind.Async: {
+            if (this.peekAt(1)?.kind === token_js_1.TokenKind.Fn) {
+              const asyncTok2 = this.advance();
+              if (!this.isFeatureEnabled("async")) {
+                this.error(index_js_12.ErrorCode.E201, 'Async/await is an experimental feature in HKD. Enable with `#feature(async)` or set `edition = "2027"` in `hkd.toml`', asyncTok2.span.start, { help: ['Add `#feature(async)` at top of file, or specify `edition = "2027"` in `hkd.toml`'] });
+              }
+              this.advance();
+              let typeParams;
+              if (this.check(token_js_1.TokenKind.Lt)) {
+                typeParams = this.parseTypeParams().typeParams;
+              }
+              const params = this.parseParams();
+              let returnType = null;
+              if (this.check(token_js_1.TokenKind.Arrow)) {
+                this.advance();
+                returnType = this.parseTypeExpr();
+              }
+              this.skipNewlines();
+              const body = this.parseBlock();
+              return {
+                kind: "FunctionExpr",
+                isAsync: true,
+                typeParams,
+                params,
+                returnType,
+                body,
+                span: this.endSpan(start)
+              };
+            }
+            if (!this.isFeatureEnabled("async")) {
+              return { kind: "IdentExpr", name: this.advance().value, span: this.endSpan(start) };
+            }
+            const asyncTok = this.advance();
+            this.error(index_js_12.ErrorCode.E204, `Unexpected token \`${asyncTok.value}\` in expression`, start, { help: ["Expected `async fn`"] });
+            return { kind: "NullLiteral", span: this.endSpan(start) };
+          }
+          case token_js_1.TokenKind.Await: {
+            if (!this.isFeatureEnabled("async")) {
+              return { kind: "IdentExpr", name: this.advance().value, span: this.endSpan(start) };
+            }
+            const awaitTok = this.advance();
+            this.error(index_js_12.ErrorCode.E204, `Unexpected token \`${awaitTok.value}\` in expression`, start);
+            return { kind: "NullLiteral", span: this.endSpan(start) };
           }
           case token_js_1.TokenKind.If: {
             const ifStmt = this.parseIfStmt();
@@ -2043,6 +2252,9 @@ var require_parser = __commonJS({
       expectIdent(what) {
         if (this.check(token_js_1.TokenKind.Ident))
           return this.advance().value;
+        if (this.check(token_js_1.TokenKind.Async) || this.check(token_js_1.TokenKind.Await)) {
+          return this.advance().value;
+        }
         const tok = this.peek();
         this.error(index_js_12.ErrorCode.E202, `Expected ${what}, found \`${tok.value}\``, tok.span.start);
         return "_error_";
@@ -2126,6 +2338,7 @@ var require_types = __commonJS({
     exports2.makeNullable = makeNullable;
     exports2.makeTypeParam = makeTypeParam;
     exports2.makeResult = makeResult;
+    exports2.makeFuture = makeFuture;
     exports2.typeToString = typeToString;
     exports2.typesEqual = typesEqual;
     exports2.isAssignable = isAssignable;
@@ -2146,11 +2359,14 @@ var require_types = __commonJS({
     function makeNullable(inner) {
       return { kind: "Nullable", inner };
     }
-    function makeTypeParam(name) {
-      return { kind: "TypeParam", name };
+    function makeTypeParam(name, bound) {
+      return { kind: "TypeParam", name, bound };
     }
     function makeResult(okType, errType) {
       return { kind: "Result", okType, errType };
+    }
+    function makeFuture(valueType) {
+      return { kind: "Future", valueType };
     }
     function typeToString(t) {
       switch (t.kind) {
@@ -2180,6 +2396,8 @@ var require_types = __commonJS({
           return t.name;
         case "Result":
           return `Result<${typeToString(t.okType)}, ${typeToString(t.errType)}>`;
+        case "Future":
+          return `Future<${typeToString(t.valueType)}>`;
         case "Function": {
           const params = t.params.map(typeToString).join(", ");
           return `fn(${params}) -> ${typeToString(t.returnType)}`;
@@ -2210,6 +2428,10 @@ var require_types = __commonJS({
           const br = b;
           return typesEqual(a.okType, br.okType) && typesEqual(a.errType, br.errType);
         }
+        case "Future": {
+          const bf = b;
+          return typesEqual(a.valueType, bf.valueType);
+        }
         default:
           return true;
       }
@@ -2228,6 +2450,9 @@ var require_types = __commonJS({
         return true;
       if (target.kind === "Result" && sub.kind === "Result") {
         return isAssignable(target.okType, sub.okType) && isAssignable(target.errType, sub.errType);
+      }
+      if (target.kind === "Future" && sub.kind === "Future") {
+        return isAssignable(target.valueType, sub.valueType);
       }
       return typesEqual(target, sub);
     }
@@ -2328,7 +2553,13 @@ var require_scope = __commonJS({
         ["exit", [types_js_1.T_INT], types_js_1.T_NULL],
         ["assert", [types_js_1.T_BOOL, types_js_1.T_STRING], types_js_1.T_NULL],
         ["panic", [types_js_1.T_STRING], types_js_1.T_NULL],
-        ["range", [types_js_1.T_INT, types_js_1.T_INT], { kind: "Array", elementType: types_js_1.T_INT }]
+        ["range", [types_js_1.T_INT, types_js_1.T_INT], { kind: "Array", elementType: types_js_1.T_INT }],
+        ["__hkd_future", [types_js_1.T_ANY], (0, types_js_1.makeFuture)(types_js_1.T_ANY)],
+        ["__hkd_resolve", [types_js_1.T_ANY, types_js_1.T_ANY], types_js_1.T_ANY],
+        ["__hkd_reject", [types_js_1.T_ANY, types_js_1.T_ANY], types_js_1.T_ANY],
+        ["__hkd_is_pending", [types_js_1.T_ANY], types_js_1.T_BOOL],
+        ["__hkd_unwrap", [types_js_1.T_ANY], types_js_1.T_ANY],
+        ["__hkd_on_complete", [types_js_1.T_ANY, types_js_1.T_ANY], types_js_1.T_ANY]
       ];
       const dummySpan = {
         start: { file: "<builtin>", line: 0, column: 0, offset: 0 },
@@ -2356,18 +2587,50 @@ var require_scope = __commonJS({
 var require_analyser = __commonJS({
   "dist/semantic/analyser.js"(exports2) {
     "use strict";
+    var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
+      if (k2 === void 0) k2 = k;
+      var desc = Object.getOwnPropertyDescriptor(m, k);
+      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+        desc = { enumerable: true, get: function() {
+          return m[k];
+        } };
+      }
+      Object.defineProperty(o, k2, desc);
+    }) : (function(o, m, k, k2) {
+      if (k2 === void 0) k2 = k;
+      o[k2] = m[k];
+    }));
+    var __setModuleDefault2 = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
+      Object.defineProperty(o, "default", { enumerable: true, value: v });
+    }) : function(o, v) {
+      o["default"] = v;
+    });
+    var __importStar2 = exports2 && exports2.__importStar || function(mod) {
+      if (mod && mod.__esModule) return mod;
+      var result = {};
+      if (mod != null) {
+        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding2(result, mod, k);
+      }
+      __setModuleDefault2(result, mod);
+      return result;
+    };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SemanticAnalyser = exports2.AMBIGUOUS_STDLIB_SYMBOLS = exports2.UNIQUE_STDLIB_SYMBOLS = void 0;
     exports2.analyse = analyse;
+    var fs2 = __importStar2(require("node:fs"));
+    var path2 = __importStar2(require("node:path"));
     var index_js_12 = require_errors();
     var index_js_22 = require_utils();
     var scope_js_1 = require_scope();
+    var lexer_js_12 = require_lexer();
+    var parser_js_12 = require_parser();
     var types_js_1 = require_types();
-    function resolveTypeExpr(te, structs, typeParams) {
+    function resolveTypeExpr(te, structs, typeParams, typeParamBounds) {
       switch (te.kind) {
         case "NamedType": {
           if (typeParams && typeParams.has(te.name)) {
-            return (0, types_js_1.makeTypeParam)(te.name);
+            const bound = typeParamBounds ? typeParamBounds[te.name] : void 0;
+            return (0, types_js_1.makeTypeParam)(te.name, bound);
           }
           switch (te.name) {
             case "Int":
@@ -2388,6 +2651,12 @@ var require_analyser = __commonJS({
             case "Any":
             case "any":
               return types_js_1.T_ANY;
+            case "Future":
+            case "future":
+              return (0, types_js_1.makeFuture)(types_js_1.T_ANY);
+            case "Result":
+            case "result":
+              return (0, types_js_1.makeResult)(types_js_1.T_ANY, types_js_1.T_ANY);
             default: {
               const st = structs.get(te.name);
               return st ?? types_js_1.T_UNKNOWN;
@@ -2395,14 +2664,14 @@ var require_analyser = __commonJS({
           }
         }
         case "ArrayType":
-          return (0, types_js_1.makeArray)(resolveTypeExpr(te.elementType, structs, typeParams));
+          return (0, types_js_1.makeArray)(resolveTypeExpr(te.elementType, structs, typeParams, typeParamBounds));
         case "FunctionType": {
-          const params = te.params.map((p) => resolveTypeExpr(p, structs, typeParams));
-          const ret = te.returnType ? resolveTypeExpr(te.returnType, structs, typeParams) : types_js_1.T_NULL;
+          const params = te.params.map((p) => resolveTypeExpr(p, structs, typeParams, typeParamBounds));
+          const ret = te.returnType ? resolveTypeExpr(te.returnType, structs, typeParams, typeParamBounds) : types_js_1.T_NULL;
           return (0, types_js_1.makeFunction)(params, ret);
         }
         case "NullableType":
-          return (0, types_js_1.makeNullable)(resolveTypeExpr(te.inner, structs, typeParams));
+          return (0, types_js_1.makeNullable)(resolveTypeExpr(te.inner, structs, typeParams, typeParamBounds));
       }
     }
     exports2.UNIQUE_STDLIB_SYMBOLS = {
@@ -2546,12 +2815,83 @@ var require_analyser = __commonJS({
       source;
       scope;
       structs = /* @__PURE__ */ new Map();
+      structMethods = /* @__PURE__ */ new Map();
+      traits = /* @__PURE__ */ new Map();
+      structTraits = /* @__PURE__ */ new Map();
+      traitImpls = /* @__PURE__ */ new Set();
       currentFunctionReturn = null;
+      currentFunctionIsAsync = false;
       importedModules = /* @__PURE__ */ new Set();
+      loadedImportPaths = /* @__PURE__ */ new Set();
       constructor(reporter, source) {
         this.reporter = reporter;
         this.source = source;
         this.scope = (0, scope_js_1.createGlobalScope)();
+      }
+      scanImportedAst(sourcePath, currentDir) {
+        const defaultBase = this.reporter.fileName ? path2.dirname(this.reporter.fileName) : process.cwd();
+        const baseDir = currentDir ?? defaultBase;
+        let resolved = path2.resolve(baseDir, sourcePath);
+        if (!fs2.existsSync(resolved) && !resolved.endsWith(".hkd")) {
+          resolved = resolved + ".hkd";
+        }
+        if (!fs2.existsSync(resolved) || this.loadedImportPaths.has(resolved))
+          return;
+        this.loadedImportPaths.add(resolved);
+        let ast;
+        try {
+          const fileContent = fs2.readFileSync(resolved, "utf-8");
+          const subReporter = new index_js_12.ErrorReporter(fileContent, resolved);
+          const lexer = new lexer_js_12.Lexer(fileContent, resolved, subReporter);
+          const tokens = lexer.tokenize();
+          const parser = new parser_js_12.Parser(tokens, fileContent, resolved, subReporter, "2027");
+          ast = parser.parse();
+        } catch {
+          return;
+        }
+        const nextBase = path2.dirname(resolved);
+        for (const s of ast.statements) {
+          if (s.kind === "ImportStmt") {
+            this.scanImportedAst(s.source, nextBase);
+          }
+          const decl = s.kind === "ExportStmt" ? s.declaration : s;
+          if (decl.kind === "TraitDeclStmt") {
+            if (!this.traits.has(decl.name)) {
+              this.hoistTraitDecl(decl);
+            }
+          } else if (decl.kind === "StructDeclStmt") {
+            if (!this.structs.has(decl.name)) {
+              const fields = /* @__PURE__ */ new Map();
+              for (const f of decl.fields) {
+                fields.set(f.name, resolveTypeExpr(f.typeAnnotation, this.structs));
+              }
+              const st = { kind: "Struct", name: decl.name, fields };
+              this.structs.set(decl.name, st);
+            }
+          } else if (decl.kind === "ImplBlockStmt") {
+            this.hoistImplBlock(decl);
+          } else if (decl.kind === "FunctionDeclStmt" && decl.typeParams && decl.typeParams.length > 0) {
+            const typeParams = new Set(decl.typeParams);
+            const params = decl.params.map((p) => p.typeAnnotation ? resolveTypeExpr(p.typeAnnotation, this.structs, typeParams, decl.typeParamBounds) : types_js_1.T_ANY);
+            const ret = decl.returnType ? resolveTypeExpr(decl.returnType, this.structs, typeParams, decl.typeParamBounds) : types_js_1.T_ANY;
+            const fnType = (0, types_js_1.makeFunction)(params, ret);
+            const sym = this.scope.lookup(decl.name);
+            if (sym) {
+              sym.type = fnType;
+            } else {
+              this.scope.define({
+                name: decl.name,
+                type: fnType,
+                mutable: false,
+                defined: true,
+                used: false,
+                declSpan: decl.span,
+                isFunction: true,
+                isStruct: false
+              });
+            }
+          }
+        }
       }
       // ── Public API ─────────────────────────────────────────────────────────────
       analyse(program) {
@@ -2563,6 +2903,17 @@ var require_analyser = __commonJS({
       }
       // ── Hoisting ──────────────────────────────────────────────────────────────
       hoistDeclarations(stmts) {
+        for (const stmt of stmts) {
+          if (stmt.kind === "ImportStmt") {
+            this.analyseImport(stmt);
+          }
+        }
+        for (const stmt of stmts) {
+          const decl = stmt.kind === "ExportStmt" ? stmt.declaration : stmt;
+          if (decl.kind === "TraitDeclStmt") {
+            this.hoistTraitDecl(decl);
+          }
+        }
         for (const stmt of stmts) {
           const decl = stmt.kind === "ExportStmt" ? stmt.declaration : stmt;
           if (decl.kind === "StructDeclStmt") {
@@ -2582,10 +2933,21 @@ var require_analyser = __commonJS({
               isFunction: false,
               isStruct: true
             });
-          } else if (decl.kind === "FunctionDeclStmt") {
+          }
+        }
+        for (const stmt of stmts) {
+          const decl = stmt.kind === "ExportStmt" ? stmt.declaration : stmt;
+          if (decl.kind === "ImplBlockStmt") {
+            this.hoistImplBlock(decl);
+          }
+        }
+        for (const stmt of stmts) {
+          const decl = stmt.kind === "ExportStmt" ? stmt.declaration : stmt;
+          if (decl.kind === "FunctionDeclStmt") {
             const typeParams = decl.typeParams ? new Set(decl.typeParams) : void 0;
-            const params = decl.params.map((p) => p.typeAnnotation ? resolveTypeExpr(p.typeAnnotation, this.structs, typeParams) : types_js_1.T_ANY);
-            const ret = decl.returnType ? resolveTypeExpr(decl.returnType, this.structs, typeParams) : types_js_1.T_ANY;
+            const params = decl.params.map((p) => p.typeAnnotation ? resolveTypeExpr(p.typeAnnotation, this.structs, typeParams, decl.typeParamBounds) : types_js_1.T_ANY);
+            const rawRet = decl.returnType ? resolveTypeExpr(decl.returnType, this.structs, typeParams, decl.typeParamBounds) : types_js_1.T_ANY;
+            const ret = decl.isAsync ? (0, types_js_1.makeFuture)(rawRet) : rawRet;
             this.scope.define({
               name: decl.name,
               type: (0, types_js_1.makeFunction)(params, ret),
@@ -2597,6 +2959,126 @@ var require_analyser = __commonJS({
               isStruct: false
             });
           }
+        }
+      }
+      hoistTraitDecl(stmt) {
+        if (this.traits.has(stmt.name)) {
+          this.reporter.error(index_js_12.ErrorCode.E304, `Trait \`${stmt.name}\` is already declared in this scope`, stmt.span);
+          return;
+        }
+        const methods = /* @__PURE__ */ new Map();
+        for (const m of stmt.methods) {
+          if (methods.has(m.name)) {
+            this.reporter.error(index_js_12.ErrorCode.E304, `Method \`${m.name}\` is declared more than once in trait \`${stmt.name}\``, m.span);
+            continue;
+          }
+          if (m.params.length === 0 || m.params[0].name !== "self") {
+            this.reporter.error(index_js_12.ErrorCode.E307, `First parameter of trait method \`${m.name}\` must be \`self\``, m.span);
+          }
+          const params = [];
+          for (let i = 1; i < m.params.length; i++) {
+            const p = m.params[i];
+            params.push(p.typeAnnotation ? resolveTypeExpr(p.typeAnnotation, this.structs) : types_js_1.T_ANY);
+          }
+          const ret = m.returnType ? resolveTypeExpr(m.returnType, this.structs) : types_js_1.T_ANY;
+          methods.set(m.name, {
+            params,
+            returnType: ret,
+            paramNames: m.params.map((p) => p.name),
+            span: m.span
+          });
+        }
+        this.traits.set(stmt.name, {
+          name: stmt.name,
+          methods,
+          span: stmt.span
+        });
+      }
+      hoistImplBlock(stmt) {
+        const st = this.structs.get(stmt.structName);
+        if (!st) {
+          this.reporter.error(index_js_12.ErrorCode.E301, `Cannot find struct \`${stmt.structName}\` in scope`, stmt.span);
+          return;
+        }
+        if (!this.structMethods.has(stmt.structName)) {
+          this.structMethods.set(stmt.structName, /* @__PURE__ */ new Map());
+        }
+        const methods = this.structMethods.get(stmt.structName);
+        let trait = null;
+        if (stmt.traitName) {
+          trait = this.traits.get(stmt.traitName) ?? null;
+          if (!trait) {
+            this.reporter.error(index_js_12.ErrorCode.E301, `Cannot find trait \`${stmt.traitName}\` in scope`, stmt.span);
+            return;
+          }
+          const implKey = `${stmt.traitName}#${stmt.structName}`;
+          if (this.traitImpls.has(implKey)) {
+            this.reporter.error(index_js_12.ErrorCode.E304, `Duplicate implementation of trait \`${stmt.traitName}\` for struct \`${stmt.structName}\``, stmt.span);
+            return;
+          }
+          this.traitImpls.add(implKey);
+          if (!this.structTraits.has(stmt.structName)) {
+            this.structTraits.set(stmt.structName, /* @__PURE__ */ new Set());
+          }
+          this.structTraits.get(stmt.structName).add(stmt.traitName);
+          const implMethodNames = new Set(stmt.methods.map((m) => m.name));
+          for (const [reqName, reqMethod] of trait.methods) {
+            if (!implMethodNames.has(reqName)) {
+              this.reporter.error(index_js_12.ErrorCode.E308, `Struct \`${stmt.structName}\` does not implement required method \`${reqName}\` of trait \`${stmt.traitName}\``, stmt.span, { help: [`Implement method \`fn ${reqName}(self, ...)\` in \`impl ${stmt.traitName} for ${stmt.structName}\``] });
+            }
+          }
+        }
+        for (const method of stmt.methods) {
+          if (st.fields.has(method.name)) {
+            this.reporter.error(index_js_12.ErrorCode.E304, `Method \`${method.name}\` conflicts with existing field \`${method.name}\` on struct \`${stmt.structName}\``, method.span);
+            continue;
+          }
+          if (methods.has(method.name)) {
+            this.reporter.error(index_js_12.ErrorCode.E304, `Method \`${method.name}\` is already defined for struct \`${stmt.structName}\``, method.span);
+            continue;
+          }
+          if (method.params.length === 0 || method.params[0].name !== "self") {
+            this.reporter.error(index_js_12.ErrorCode.E307, `First parameter of method \`${method.name}\` must be \`self\``, method.span);
+            continue;
+          }
+          if (trait) {
+            const reqMethod = trait.methods.get(method.name);
+            if (reqMethod) {
+              if (method.params.length !== reqMethod.params.length + 1) {
+                this.reporter.error(index_js_12.ErrorCode.E307, `Expected ${reqMethod.params.length + 1} parameter(s) for method \`${method.name}\`, got ${method.params.length}`, method.span);
+              }
+              for (let i = 1; i < method.params.length && i - 1 < reqMethod.params.length; i++) {
+                const actualParam = method.params[i].typeAnnotation ? resolveTypeExpr(method.params[i].typeAnnotation, this.structs) : types_js_1.T_ANY;
+                const expectedParam = reqMethod.params[i - 1];
+                if (actualParam.kind !== "Any" && expectedParam.kind !== "Any" && !(0, types_js_1.typesEqual)(actualParam, expectedParam)) {
+                  this.reporter.error(index_js_12.ErrorCode.E303, `Type mismatch in parameter \`${method.params[i].name}\` of method \`${method.name}\`: expected \`${(0, types_js_1.typeToString)(expectedParam)}\`, got \`${(0, types_js_1.typeToString)(actualParam)}\``, method.params[i].span);
+                }
+              }
+              const actualRet = method.returnType ? resolveTypeExpr(method.returnType, this.structs) : types_js_1.T_ANY;
+              if (actualRet.kind !== "Any" && reqMethod.returnType.kind !== "Any" && !(0, types_js_1.typesEqual)(actualRet, reqMethod.returnType)) {
+                this.reporter.error(index_js_12.ErrorCode.E303, `Type mismatch in return type of method \`${method.name}\`: expected \`${(0, types_js_1.typeToString)(reqMethod.returnType)}\`, got \`${(0, types_js_1.typeToString)(actualRet)}\``, method.span);
+              }
+            }
+          }
+          const params = [st];
+          for (let i = 1; i < method.params.length; i++) {
+            const p = method.params[i];
+            params.push(p.typeAnnotation ? resolveTypeExpr(p.typeAnnotation, this.structs) : types_js_1.T_ANY);
+          }
+          const ret = method.returnType ? resolveTypeExpr(method.returnType, this.structs) : types_js_1.T_ANY;
+          const fnType = (0, types_js_1.makeFunction)(params, ret);
+          methods.set(method.name, fnType);
+          const mangled = `${stmt.structName}__${method.name}`;
+          this.scope.define({
+            name: mangled,
+            type: fnType,
+            mutable: false,
+            defined: true,
+            used: false,
+            declSpan: method.span,
+            isFunction: true,
+            isStruct: false
+          });
         }
       }
       // ── Statement analysis ────────────────────────────────────────────────────
@@ -2612,6 +3094,11 @@ var require_analyser = __commonJS({
             this.analyseFunctionDecl(stmt);
             break;
           case "StructDeclStmt":
+            break;
+          case "ImplBlockStmt":
+            this.analyseImplBlock(stmt);
+            break;
+          case "TraitDeclStmt":
             break;
           case "TypeAliasStmt":
             break;
@@ -2653,6 +3140,54 @@ var require_analyser = __commonJS({
             break;
         }
       }
+      analyseImplBlock(stmt) {
+        const st = this.structs.get(stmt.structName);
+        if (!st)
+          return;
+        for (const method of stmt.methods) {
+          this.analyseMethod(st, method);
+        }
+      }
+      analyseMethod(st, method) {
+        const prevReturn = this.currentFunctionReturn;
+        const retType = method.returnType ? resolveTypeExpr(method.returnType, this.structs) : types_js_1.T_ANY;
+        this.currentFunctionReturn = retType;
+        const fnScope = new scope_js_1.Scope(this.scope, true, false);
+        const prevScope = this.scope;
+        this.scope = fnScope;
+        if (method.params.length > 0 && method.params[0].name === "self") {
+          this.scope.define({
+            name: "self",
+            type: st,
+            mutable: false,
+            defined: true,
+            used: false,
+            declSpan: method.params[0].span,
+            isFunction: false,
+            isStruct: false
+          });
+        }
+        for (let i = 1; i < method.params.length; i++) {
+          const p = method.params[i];
+          const pType = p.typeAnnotation ? resolveTypeExpr(p.typeAnnotation, this.structs) : types_js_1.T_ANY;
+          this.scope.define({
+            name: p.name,
+            type: pType,
+            mutable: true,
+            defined: true,
+            used: false,
+            declSpan: p.span,
+            isFunction: false,
+            isStruct: false
+          });
+        }
+        for (const s of method.body.body) {
+          this.analyseStmt(s);
+        }
+        this.warnUnused(fnScope);
+        this.scope = prevScope;
+        this.currentFunctionReturn = prevReturn;
+      }
       /**
          * Register an imported module in the current scope so that its members can be
          * referenced. Bare imports bound the whole module to `defaultName` (the only
@@ -2663,26 +3198,44 @@ var require_analyser = __commonJS({
         const base = raw.startsWith("std.") ? raw.slice(4) : raw;
         this.importedModules.add(raw);
         this.importedModules.add(base);
+        if (stmt.source.startsWith("./") || stmt.source.startsWith("../") || stmt.source.endsWith(".hkd")) {
+          this.scanImportedAst(stmt.source);
+        }
         if (stmt.specifiers && stmt.specifiers.length > 0) {
           for (const spec of stmt.specifiers) {
             const importName = spec.alias ?? spec.name;
+            const resolvedGlobal = this.scope.lookup(spec.name);
             if (this.scope.lookupLocal(importName) === null) {
               this.scope.define({
                 name: importName,
-                type: types_js_1.T_ANY,
+                type: resolvedGlobal?.type ?? types_js_1.T_ANY,
                 mutable: false,
                 defined: true,
                 used: false,
                 declSpan: spec.span,
-                isFunction: true,
-                isStruct: true
+                isFunction: resolvedGlobal?.isFunction ?? true,
+                isStruct: resolvedGlobal?.isStruct ?? true
               });
+            } else if (resolvedGlobal && resolvedGlobal.type && resolvedGlobal.type.kind !== "Any") {
+              const sym = this.scope.lookupLocal(importName);
+              if (sym) {
+                sym.type = resolvedGlobal.type;
+                sym.isFunction = resolvedGlobal.isFunction;
+                sym.isStruct = resolvedGlobal.isStruct;
+              }
             }
             if (!this.structs.has(importName)) {
               this.structs.set(importName, {
                 kind: "Struct",
                 name: importName,
                 fields: /* @__PURE__ */ new Map()
+              });
+            }
+            if (!this.traits.has(importName)) {
+              this.traits.set(importName, {
+                name: importName,
+                methods: /* @__PURE__ */ new Map(),
+                span: spec.span
               });
             }
           }
@@ -2753,9 +3306,12 @@ var require_analyser = __commonJS({
       }
       analyseFunctionDecl(stmt) {
         const prevReturn = this.currentFunctionReturn;
+        const prevAsync = this.currentFunctionIsAsync;
+        this.currentFunctionIsAsync = Boolean(stmt.isAsync);
         const typeParams = stmt.typeParams ? new Set(stmt.typeParams) : void 0;
-        const retType = stmt.returnType ? resolveTypeExpr(stmt.returnType, this.structs, typeParams) : types_js_1.T_ANY;
-        const fnType = (0, types_js_1.makeFunction)(stmt.params.map((p) => p.typeAnnotation ? resolveTypeExpr(p.typeAnnotation, this.structs, typeParams) : types_js_1.T_ANY), retType);
+        const retType = stmt.returnType ? resolveTypeExpr(stmt.returnType, this.structs, typeParams, stmt.typeParamBounds) : types_js_1.T_ANY;
+        const effectiveRet = stmt.isAsync ? (0, types_js_1.makeFuture)(retType) : retType;
+        const fnType = (0, types_js_1.makeFunction)(stmt.params.map((p) => p.typeAnnotation ? resolveTypeExpr(p.typeAnnotation, this.structs, typeParams, stmt.typeParamBounds) : types_js_1.T_ANY), effectiveRet);
         if (this.scope.lookupLocal(stmt.name) === null) {
           this.scope.define({
             name: stmt.name,
@@ -2773,7 +3329,7 @@ var require_analyser = __commonJS({
         const prevScope = this.scope;
         this.scope = child;
         for (const param of stmt.params) {
-          const paramType = param.typeAnnotation ? resolveTypeExpr(param.typeAnnotation, this.structs, typeParams) : types_js_1.T_ANY;
+          const paramType = param.typeAnnotation ? resolveTypeExpr(param.typeAnnotation, this.structs, typeParams, stmt.typeParamBounds) : types_js_1.T_ANY;
           child.define({
             name: param.name,
             type: paramType,
@@ -2794,6 +3350,7 @@ var require_analyser = __commonJS({
         this.warnUnused(child);
         this.scope = prevScope;
         this.currentFunctionReturn = prevReturn;
+        this.currentFunctionIsAsync = prevAsync;
       }
       analyseReturn(stmt) {
         if (!this.scope.isInsideFunction()) {
@@ -2882,6 +3439,11 @@ var require_analyser = __commonJS({
       }
       // ── Expression analysis ───────────────────────────────────────────────────
       analyseExpr(expr) {
+        const type = this.analyseExprInternal(expr);
+        expr.inferredType = type;
+        return type;
+      }
+      analyseExprInternal(expr) {
         switch (expr.kind) {
           case "IntLiteral":
             return types_js_1.T_INT;
@@ -2959,7 +3521,19 @@ var require_analyser = __commonJS({
             return resolveTypeExpr(expr.targetType, this.structs);
           case "MatchExpr":
             return this.analyseMatchExpr(expr);
+          case "AwaitExpr":
+            return this.analyseAwaitExpr(expr);
         }
+      }
+      analyseAwaitExpr(expr) {
+        if (!this.currentFunctionIsAsync) {
+          this.reporter.error(index_js_12.ErrorCode.E305, "`await` is only allowed inside async functions", expr.span, { help: ["Add `async` keyword to the enclosing function declaration"] });
+        }
+        const t = this.analyseExpr(expr.expr);
+        if (t.kind === "Future") {
+          return t.valueType;
+        }
+        return t;
       }
       analyseBinary(expr) {
         const left = this.analyseExpr(expr.left);
@@ -3011,9 +3585,96 @@ var require_analyser = __commonJS({
         }
       }
       analyseCall(expr) {
+        if (expr.callee.kind === "MemberExpr") {
+          const objType = this.analyseExpr(expr.callee.object);
+          if (objType.kind === "Struct") {
+            const method = this.structMethods.get(objType.name)?.get(expr.callee.property);
+            if (method) {
+              expr.callee.isMethodCall = true;
+              expr.callee.structName = objType.name;
+              expr.callee.methodName = expr.callee.property;
+              const expectedParams = method.params.slice(1);
+              const argTypes2 = expr.args.map((a) => this.analyseExpr(a));
+              if (expr.args.length !== expectedParams.length) {
+                this.reporter.error(index_js_12.ErrorCode.E307, `Method \`${expr.callee.property}\` expects ${expectedParams.length} argument(s), got ${expr.args.length}`, expr.span);
+              } else {
+                for (let i = 0; i < expr.args.length; i++) {
+                  const expected = expectedParams[i];
+                  const actual = argTypes2[i];
+                  if (expected && actual && expected.kind !== "Any" && expected.kind !== "Unknown" && actual.kind !== "Any" && actual.kind !== "Unknown" && !(0, types_js_1.isAssignable)(expected, actual)) {
+                    this.typeMismatch(expected, actual, expr.args[i].span, `Argument ${i + 1} of method \`${expr.callee.property}\` expects \`${(0, types_js_1.typeToString)(expected)}\`, got \`${(0, types_js_1.typeToString)(actual)}\``);
+                  }
+                }
+              }
+              return method.returnType;
+            }
+          } else if (objType.kind === "TypeParam") {
+            if (!objType.bound) {
+              this.reporter.error(index_js_12.ErrorCode.E309, `Cannot call method \`${expr.callee.property}\` on unconstrained type parameter \`${objType.name}\``, expr.callee.span, { help: [`Add trait bound: \`<${objType.name}: TraitName>\``] });
+              return types_js_1.T_UNKNOWN;
+            }
+            const trait = this.traits.get(objType.bound);
+            if (trait) {
+              if (trait.methods.size === 0) {
+                expr.callee.isTraitCall = true;
+                expr.callee.traitName = objType.bound;
+                expr.callee.methodName = expr.callee.property;
+                for (const a of expr.args)
+                  this.analyseExpr(a);
+                return types_js_1.T_ANY;
+              }
+              const reqMethod = trait.methods.get(expr.callee.property);
+              if (reqMethod) {
+                expr.callee.isTraitCall = true;
+                expr.callee.traitName = objType.bound;
+                expr.callee.methodName = expr.callee.property;
+                const expectedParams = reqMethod.params;
+                const argTypes2 = expr.args.map((a) => this.analyseExpr(a));
+                if (expr.args.length !== expectedParams.length) {
+                  this.reporter.error(index_js_12.ErrorCode.E307, `Method \`${expr.callee.property}\` of trait \`${objType.bound}\` expects ${expectedParams.length} argument(s), got ${expr.args.length}`, expr.span);
+                }
+                return reqMethod.returnType;
+              } else {
+                this.reporter.error(index_js_12.ErrorCode.E309, `Trait \`${objType.bound}\` has no method \`${expr.callee.property}\``, expr.callee.span);
+                return types_js_1.T_UNKNOWN;
+              }
+            }
+          }
+        }
         const calleeType = this.analyseExpr(expr.callee);
         const argTypes = expr.args.map((a) => this.analyseExpr(a));
         if (calleeType.kind === "Function") {
+          for (let i = 0; i < calleeType.params.length && i < argTypes.length; i++) {
+            const param = calleeType.params[i];
+            if (param.kind === "TypeParam" && param.bound) {
+              const argType = argTypes[i];
+              if (argType && argType.kind === "Struct") {
+                const hasTrait = this.structTraits.get(argType.name)?.has(param.bound);
+                if (!hasTrait) {
+                  this.reporter.error(index_js_12.ErrorCode.E308, `Type \`${argType.name}\` does not implement trait \`${param.bound}\``, expr.args[i].span, { help: [`Implement \`impl ${param.bound} for ${argType.name} { ... }\``] });
+                }
+              } else if (argType && argType.kind !== "Any" && argType.kind !== "Unknown" && argType.kind !== "TypeParam") {
+                this.reporter.error(index_js_12.ErrorCode.E308, `Type \`${(0, types_js_1.typeToString)(argType)}\` does not implement trait \`${param.bound}\``, expr.args[i].span);
+              }
+            }
+          }
+          if (calleeType.params.some((p) => p.kind === "TypeParam" && p.bound)) {
+            const concreteNames = [];
+            for (let i = 0; i < calleeType.params.length && i < argTypes.length; i++) {
+              const p = calleeType.params[i];
+              if (p.kind === "TypeParam" && p.bound && argTypes[i]) {
+                const at = argTypes[i];
+                if (at.kind === "Struct") {
+                  concreteNames.push(at.name);
+                }
+              }
+            }
+            if (concreteNames.length > 0 && expr.callee.kind === "IdentExpr") {
+              const monoName = `${expr.callee.name}__${concreteNames.join("__")}`;
+              expr.monomorphizedName = monoName;
+              expr.monoArgTypes = argTypes;
+            }
+          }
           if (expr.args.length !== calleeType.params.length && calleeType.params[calleeType.params.length - 1]?.kind !== "Any") {
             if (!calleeType.params.some((p) => p.kind === "Any")) {
               this.reporter.error(index_js_12.ErrorCode.E307, `Expected ${calleeType.params.length} argument(s), got ${expr.args.length}`, expr.span);
@@ -3051,23 +3712,72 @@ var require_analyser = __commonJS({
       analyseMember(expr) {
         const objType = this.analyseExpr(expr.object);
         if (objType.kind === "Struct") {
-          if (objType.fields.size === 0) {
+          if (objType.fields.size === 0 && !this.structMethods.has(objType.name)) {
             return types_js_1.T_ANY;
           }
           const fieldType = objType.fields.get(expr.property);
           if (!fieldType) {
-            this.reporter.error(index_js_12.ErrorCode.E309, `Struct \`${objType.name}\` has no field \`${expr.property}\``, expr.span, {
+            const method = this.structMethods.get(objType.name)?.get(expr.property);
+            if (method) {
+              return method;
+            }
+            const available = [
+              ...Array.from(objType.fields.keys()),
+              ...this.structMethods.get(objType.name) ? Array.from(this.structMethods.get(objType.name).keys()) : []
+            ];
+            this.reporter.error(index_js_12.ErrorCode.E309, `Struct \`${objType.name}\` has no field or method \`${expr.property}\``, expr.span, {
               help: [
-                `Available fields: ${Array.from(objType.fields.keys()).join(", ")}`
+                `Available: ${available.join(", ")}`
               ]
             });
             return types_js_1.T_UNKNOWN;
           }
           return fieldType;
         }
+        if (objType.kind === "TypeParam") {
+          if (!objType.bound) {
+            this.reporter.error(index_js_12.ErrorCode.E309, `Cannot access member \`${expr.property}\` on unconstrained type parameter \`${objType.name}\``, expr.span, { help: [`Add trait bound: \`<${objType.name}: TraitName>\``] });
+            return types_js_1.T_UNKNOWN;
+          }
+          const trait = this.traits.get(objType.bound);
+          if (trait) {
+            if (trait.methods.size === 0) {
+              return types_js_1.T_ANY;
+            }
+            const m = trait.methods.get(expr.property);
+            if (m) {
+              return (0, types_js_1.makeFunction)([objType, ...m.params], m.returnType);
+            }
+            this.reporter.error(index_js_12.ErrorCode.E309, `Trait \`${objType.bound}\` has no method \`${expr.property}\``, expr.span, { help: [`Available methods on \`${objType.bound}\`: ${Array.from(trait.methods.keys()).join(", ")}`] });
+            return types_js_1.T_UNKNOWN;
+          }
+        }
         return types_js_1.T_ANY;
       }
       analyseAssign(expr) {
+        const targetType = this.analyseExpr(expr.target);
+        const valueType = this.analyseExpr(expr.value);
+        if (expr.target.kind === "IdentExpr") {
+          if (expr.target.name === "self") {
+            this.reporter.error(index_js_12.ErrorCode.E405, "Cannot assign to `self` \u2014 method receiver is immutable", expr.span);
+          }
+          const sym = this.scope.lookup(expr.target.name);
+          if (sym && !sym.mutable) {
+            this.reporter.error(index_js_12.ErrorCode.E405, `Cannot assign to \`${expr.target.name}\` \u2014 it is declared \`const\``, expr.span, { help: ["Change `const` to `let` if you need to reassign"] });
+          }
+          if (sym && (sym.type.kind === "Unknown" || sym.type.kind === "Null")) {
+            sym.type = valueType;
+          }
+        }
+        if (targetType.kind !== "Unknown" && targetType.kind !== "Any" && targetType.kind !== "Null" && valueType.kind !== "Unknown" && valueType.kind !== "Any" && !(0, types_js_1.isAssignable)(targetType, valueType)) {
+          this.typeMismatch(targetType, valueType, expr.value.span, `Cannot assign \`${(0, types_js_1.typeToString)(valueType)}\` to \`${(0, types_js_1.typeToString)(targetType)}\``);
+        }
+        return valueType;
+      }
+      analyseCompoundAssign(expr) {
+        if (expr.target.kind === "IdentExpr" && expr.target.name === "self") {
+          this.reporter.error(index_js_12.ErrorCode.E405, "Cannot assign to `self` \u2014 method receiver is immutable", expr.span);
+        }
         const targetType = this.analyseExpr(expr.target);
         const valueType = this.analyseExpr(expr.value);
         if (expr.target.kind === "IdentExpr") {
@@ -3076,12 +3786,10 @@ var require_analyser = __commonJS({
             this.reporter.error(index_js_12.ErrorCode.E405, `Cannot assign to \`${expr.target.name}\` \u2014 it is declared \`const\``, expr.span, { help: ["Change `const` to `let` if you need to reassign"] });
           }
         }
-        return valueType;
-      }
-      analyseCompoundAssign(expr) {
-        this.analyseExpr(expr.target);
-        this.analyseExpr(expr.value);
-        return types_js_1.T_ANY;
+        if (targetType.kind !== "Unknown" && targetType.kind !== "Any" && valueType.kind !== "Unknown" && valueType.kind !== "Any" && !(0, types_js_1.isAssignable)(targetType, valueType)) {
+          this.typeMismatch(targetType, valueType, expr.value.span, `Cannot apply compound assignment \`${expr.op}\` with \`${(0, types_js_1.typeToString)(valueType)}\` to \`${(0, types_js_1.typeToString)(targetType)}\``);
+        }
+        return targetType;
       }
       analyseArray(expr) {
         if (expr.elements.length === 0)
@@ -3103,6 +3811,8 @@ var require_analyser = __commonJS({
         const params = expr.params.map((p) => p.typeAnnotation ? resolveTypeExpr(p.typeAnnotation, this.structs, typeParams) : types_js_1.T_ANY);
         const ret = expr.returnType ? resolveTypeExpr(expr.returnType, this.structs, typeParams) : types_js_1.T_ANY;
         const prev = this.currentFunctionReturn;
+        const prevAsync = this.currentFunctionIsAsync;
+        this.currentFunctionIsAsync = Boolean(expr.isAsync);
         this.currentFunctionReturn = ret;
         const child = new scope_js_1.Scope(this.scope, true, false);
         const prevScope = this.scope;
@@ -3124,7 +3834,9 @@ var require_analyser = __commonJS({
         this.warnUnused(child);
         this.scope = prevScope;
         this.currentFunctionReturn = prev;
-        return (0, types_js_1.makeFunction)(params, ret);
+        this.currentFunctionIsAsync = prevAsync;
+        const effectiveRet = expr.isAsync ? (0, types_js_1.makeFuture)(ret) : ret;
+        return (0, types_js_1.makeFunction)(params, effectiveRet);
       }
       analyseIfExpr(expr) {
         this.analyseExpr(expr.condition);
@@ -3750,15 +4462,697 @@ var require_chunk = __commonJS({
   }
 });
 
+// dist/bytecode/async_lowering.js
+var require_async_lowering = __commonJS({
+  "dist/bytecode/async_lowering.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.hasAwait = hasAwait;
+    exports2.desugarAsyncFunction = desugarAsyncFunction;
+    exports2.desugarAsyncFunctionExpr = desugarAsyncFunctionExpr;
+    function makeIdent(name, span) {
+      return { kind: "IdentExpr", name, span };
+    }
+    function makeNull(span) {
+      return { kind: "NullLiteral", span };
+    }
+    function makeInt(value, span) {
+      return { kind: "IntLiteral", value, raw: String(value), span };
+    }
+    function makeParam(name, span) {
+      return { name, typeAnnotation: null, defaultValue: null, span };
+    }
+    function makeCall(calleeName, args, span) {
+      return {
+        kind: "CallExpr",
+        callee: makeIdent(calleeName, span),
+        args,
+        span
+      };
+    }
+    function makeVarDecl(name, init, span) {
+      return {
+        kind: "VarDeclStmt",
+        name,
+        typeAnnotation: null,
+        initializer: init,
+        mutable: true,
+        span
+      };
+    }
+    function makeAssign(targetName, value, span) {
+      return {
+        kind: "ExprStmt",
+        expr: {
+          kind: "AssignExpr",
+          target: makeIdent(targetName, span),
+          value,
+          span
+        },
+        span
+      };
+    }
+    function makeReturnFuture(span) {
+      return {
+        kind: "ReturnStmt",
+        value: makeIdent("__future__", span),
+        span
+      };
+    }
+    function hasAwait(node) {
+      if (!node)
+        return false;
+      const anyNode = node;
+      if (anyNode.kind === "AwaitExpr")
+        return true;
+      for (const key of Object.keys(anyNode)) {
+        if (key === "span")
+          continue;
+        const val = anyNode[key];
+        if (Array.isArray(val)) {
+          for (const item of val) {
+            if (item && typeof item === "object" && hasAwait(item))
+              return true;
+          }
+        } else if (val && typeof val === "object" && val.kind) {
+          if (hasAwait(val))
+            return true;
+        }
+      }
+      return false;
+    }
+    var liftCounter = 0;
+    function liftAwaitsFromExpr(expr, liftedStmts) {
+      if (!expr || !hasAwait(expr))
+        return expr;
+      if (expr.kind === "AwaitExpr") {
+        const operand = liftAwaitsFromExpr(expr.expr, liftedStmts);
+        const tmpName = `__await_lift_${liftCounter++}__`;
+        const span = expr.span;
+        liftedStmts.push(makeVarDecl(tmpName, { kind: "AwaitExpr", expr: operand, span }, span));
+        return makeIdent(tmpName, span);
+      }
+      const anyExpr = { ...expr };
+      for (const key of Object.keys(anyExpr)) {
+        if (key === "span")
+          continue;
+        const val = anyExpr[key];
+        if (Array.isArray(val)) {
+          anyExpr[key] = val.map((item) => item && typeof item === "object" && item.kind ? liftAwaitsFromExpr(item, liftedStmts) : item);
+        } else if (val && typeof val === "object" && val.kind) {
+          anyExpr[key] = liftAwaitsFromExpr(val, liftedStmts);
+        }
+      }
+      return anyExpr;
+    }
+    function flattenAndLiftStmts(stmts) {
+      const result = [];
+      for (const s of stmts) {
+        if (s.kind === "BlockStmt") {
+          result.push(...flattenAndLiftStmts(s.body));
+          continue;
+        }
+        if (!hasAwait(s)) {
+          result.push(s);
+          continue;
+        }
+        if (s.kind === "VarDeclStmt" && s.initializer) {
+          if (s.initializer.kind === "AwaitExpr" && !hasAwait(s.initializer.expr)) {
+            result.push(s);
+          } else {
+            const lifted = [];
+            const newInit = liftAwaitsFromExpr(s.initializer, lifted);
+            result.push(...flattenAndLiftStmts(lifted));
+            result.push({ ...s, initializer: newInit });
+          }
+        } else if (s.kind === "ExprStmt") {
+          if (s.expr.kind === "AwaitExpr" && !hasAwait(s.expr.expr)) {
+            result.push(s);
+          } else if (s.expr.kind === "AssignExpr" && s.expr.value.kind === "AwaitExpr" && !hasAwait(s.expr.value.expr)) {
+            result.push(s);
+          } else {
+            const lifted = [];
+            const newExpr = liftAwaitsFromExpr(s.expr, lifted);
+            result.push(...flattenAndLiftStmts(lifted));
+            result.push({ ...s, expr: newExpr });
+          }
+        } else if (s.kind === "ReturnStmt") {
+          if (s.value && s.value.kind === "AwaitExpr" && !hasAwait(s.value.expr)) {
+            result.push(s);
+          } else if (s.value) {
+            const lifted = [];
+            const newVal = liftAwaitsFromExpr(s.value, lifted);
+            result.push(...flattenAndLiftStmts(lifted));
+            result.push({ ...s, value: newVal });
+          } else {
+            result.push(s);
+          }
+        } else if (s.kind === "IfStmt") {
+          if (hasAwait(s.condition)) {
+            const lifted = [];
+            const newCond = liftAwaitsFromExpr(s.condition, lifted);
+            result.push(...flattenAndLiftStmts(lifted));
+            result.push({ ...s, condition: newCond });
+          } else {
+            result.push(s);
+          }
+        } else if (s.kind === "WhileStmt") {
+          if (hasAwait(s.condition)) {
+            const condAwait = s.condition;
+            const tmpCond = `__await_cond_${liftCounter++}__`;
+            const span = s.span;
+            const breakStmt = { kind: "BreakStmt", span };
+            const ifNotBreak = {
+              kind: "IfStmt",
+              condition: {
+                kind: "UnaryExpr",
+                op: "!",
+                operand: makeIdent(tmpCond, span),
+                span
+              },
+              then: {
+                kind: "BlockStmt",
+                body: [breakStmt],
+                span
+              },
+              else_: null,
+              span
+            };
+            const newBodyStmts = [
+              makeVarDecl(tmpCond, condAwait, span),
+              ifNotBreak,
+              ...s.body.body
+            ];
+            const infiniteWhile = {
+              kind: "WhileStmt",
+              condition: { kind: "BoolLiteral", value: true, span },
+              body: {
+                kind: "BlockStmt",
+                body: flattenAndLiftStmts(newBodyStmts),
+                span
+              },
+              span
+            };
+            result.push(infiniteWhile);
+          } else {
+            result.push(s);
+          }
+        } else {
+          result.push(s);
+        }
+      }
+      return result;
+    }
+    function collectDeclaredVariables(stmts) {
+      const vars = [];
+      function walk(node) {
+        if (!node || typeof node !== "object")
+          return;
+        if (node.kind === "VarDeclStmt" && typeof node.name === "string") {
+          vars.push(node.name);
+        }
+        for (const key of Object.keys(node)) {
+          if (key === "span")
+            continue;
+          const child = node[key];
+          if (Array.isArray(child)) {
+            for (const item of child)
+              walk(item);
+          } else if (child && typeof child === "object" && child.kind) {
+            walk(child);
+          }
+        }
+      }
+      for (const s of stmts) {
+        walk(s);
+      }
+      return Array.from(new Set(vars));
+    }
+    function rewriteReturnsInStmt(stmt) {
+      if (stmt.kind === "FunctionDeclStmt")
+        return stmt;
+      if (stmt.kind === "ReturnStmt") {
+        const val = stmt.value ?? makeNull(stmt.span);
+        return {
+          kind: "BlockStmt",
+          body: [
+            {
+              kind: "ExprStmt",
+              expr: makeCall("__hkd_resolve", [makeIdent("__future__", stmt.span), val], stmt.span),
+              span: stmt.span
+            },
+            makeReturnFuture(stmt.span)
+          ],
+          span: stmt.span
+        };
+      }
+      if (stmt.kind === "IfStmt") {
+        return {
+          ...stmt,
+          then: rewriteReturnsInStmt(stmt.then),
+          else_: stmt.else_ ? rewriteReturnsInStmt(stmt.else_) : null
+        };
+      }
+      if (stmt.kind === "WhileStmt") {
+        return {
+          ...stmt,
+          body: rewriteReturnsInStmt(stmt.body)
+        };
+      }
+      if (stmt.kind === "ForStmt") {
+        return {
+          ...stmt,
+          body: rewriteReturnsInStmt(stmt.body)
+        };
+      }
+      if (stmt.kind === "BlockStmt") {
+        return {
+          ...stmt,
+          body: stmt.body.map(rewriteReturnsInStmt)
+        };
+      }
+      return stmt;
+    }
+    function desugarAsyncFunction(stmt) {
+      const span = stmt.span;
+      const canonicalStmts = flattenAndLiftStmts(stmt.body.body);
+      const declaredVars = collectDeclaredVariables(canonicalStmts);
+      const states = [[]];
+      let currentStateIdx = 0;
+      let awaitCounter = 0;
+      for (let i = 0; i < canonicalStmts.length; i++) {
+        const s = canonicalStmts[i];
+        if (s.kind === "VarDeclStmt" && s.initializer && s.initializer.kind === "AwaitExpr") {
+          const operand = s.initializer.expr;
+          const futName = `__fut_${awaitCounter++}__`;
+          const nextState = currentStateIdx + 1;
+          states[currentStateIdx].push(makeVarDecl(futName, operand, s.span));
+          const onCompleteCallback = {
+            kind: "FunctionExpr",
+            params: [makeParam("__val__", s.span)],
+            returnType: null,
+            body: {
+              kind: "BlockStmt",
+              body: [
+                makeAssign("__resume_val__", makeIdent("__val__", s.span), s.span),
+                { kind: "ExprStmt", expr: makeCall("__step__", [], s.span), span: s.span }
+              ],
+              span: s.span
+            },
+            span: s.span
+          };
+          const ifPendingStmt = {
+            kind: "IfStmt",
+            condition: makeCall("__hkd_is_pending", [makeIdent(futName, s.span)], s.span),
+            then: {
+              kind: "BlockStmt",
+              body: [
+                makeAssign("__state__", makeInt(nextState, s.span), s.span),
+                {
+                  kind: "ExprStmt",
+                  expr: makeCall("__hkd_on_complete", [makeIdent(futName, s.span), onCompleteCallback], s.span),
+                  span: s.span
+                },
+                makeReturnFuture(s.span)
+              ],
+              span: s.span
+            },
+            else_: null,
+            span: s.span
+          };
+          states[currentStateIdx].push(ifPendingStmt);
+          states[currentStateIdx].push({
+            kind: "IfStmt",
+            condition: makeCall("__hkd_is_rejected", [makeIdent(futName, s.span)], s.span),
+            then: {
+              kind: "BlockStmt",
+              body: [
+                {
+                  kind: "ExprStmt",
+                  expr: makeCall("__hkd_reject", [makeIdent("__future__", s.span), makeCall("__hkd_error", [makeIdent(futName, s.span)], s.span)], s.span),
+                  span: s.span
+                },
+                makeReturnFuture(s.span)
+              ],
+              span: s.span
+            },
+            else_: null,
+            span: s.span
+          });
+          states[currentStateIdx].push(makeAssign("__resume_val__", makeCall("__hkd_unwrap", [makeIdent(futName, s.span)], s.span), s.span));
+          states[currentStateIdx].push(makeAssign("__state__", makeInt(nextState, s.span), s.span));
+          states.push([]);
+          currentStateIdx = nextState;
+          states[currentStateIdx].push(makeAssign(s.name, makeIdent("__resume_val__", s.span), s.span));
+        } else if (s.kind === "ExprStmt" && s.expr.kind === "AssignExpr" && s.expr.value.kind === "AwaitExpr") {
+          const targetName = s.expr.target.name ?? "__tmp__";
+          const operand = s.expr.value.expr;
+          const futName = `__fut_${awaitCounter++}__`;
+          const nextState = currentStateIdx + 1;
+          states[currentStateIdx].push(makeVarDecl(futName, operand, s.span));
+          const onCompleteCallback = {
+            kind: "FunctionExpr",
+            params: [makeParam("__val__", s.span)],
+            returnType: null,
+            body: {
+              kind: "BlockStmt",
+              body: [
+                makeAssign("__resume_val__", makeIdent("__val__", s.span), s.span),
+                { kind: "ExprStmt", expr: makeCall("__step__", [], s.span), span: s.span }
+              ],
+              span: s.span
+            },
+            span: s.span
+          };
+          states[currentStateIdx].push({
+            kind: "IfStmt",
+            condition: makeCall("__hkd_is_pending", [makeIdent(futName, s.span)], s.span),
+            then: {
+              kind: "BlockStmt",
+              body: [
+                makeAssign("__state__", makeInt(nextState, s.span), s.span),
+                {
+                  kind: "ExprStmt",
+                  expr: makeCall("__hkd_on_complete", [makeIdent(futName, s.span), onCompleteCallback], s.span),
+                  span: s.span
+                },
+                makeReturnFuture(s.span)
+              ],
+              span: s.span
+            },
+            else_: null,
+            span: s.span
+          });
+          states[currentStateIdx].push({
+            kind: "IfStmt",
+            condition: makeCall("__hkd_is_rejected", [makeIdent(futName, s.span)], s.span),
+            then: {
+              kind: "BlockStmt",
+              body: [
+                {
+                  kind: "ExprStmt",
+                  expr: makeCall("__hkd_reject", [makeIdent("__future__", s.span), makeCall("__hkd_error", [makeIdent(futName, s.span)], s.span)], s.span),
+                  span: s.span
+                },
+                makeReturnFuture(s.span)
+              ],
+              span: s.span
+            },
+            else_: null,
+            span: s.span
+          });
+          states[currentStateIdx].push(makeAssign("__resume_val__", makeCall("__hkd_unwrap", [makeIdent(futName, s.span)], s.span), s.span));
+          states[currentStateIdx].push(makeAssign("__state__", makeInt(nextState, s.span), s.span));
+          states.push([]);
+          currentStateIdx = nextState;
+          states[currentStateIdx].push(makeAssign(targetName, makeIdent("__resume_val__", s.span), s.span));
+        } else if (s.kind === "ExprStmt" && s.expr.kind === "AwaitExpr") {
+          const operand = s.expr.expr;
+          const futName = `__fut_${awaitCounter++}__`;
+          const nextState = currentStateIdx + 1;
+          states[currentStateIdx].push(makeVarDecl(futName, operand, s.span));
+          const onCompleteCallback = {
+            kind: "FunctionExpr",
+            params: [makeParam("__val__", s.span)],
+            returnType: null,
+            body: {
+              kind: "BlockStmt",
+              body: [
+                makeAssign("__resume_val__", makeIdent("__val__", s.span), s.span),
+                { kind: "ExprStmt", expr: makeCall("__step__", [], s.span), span: s.span }
+              ],
+              span: s.span
+            },
+            span: s.span
+          };
+          states[currentStateIdx].push({
+            kind: "IfStmt",
+            condition: makeCall("__hkd_is_pending", [makeIdent(futName, s.span)], s.span),
+            then: {
+              kind: "BlockStmt",
+              body: [
+                makeAssign("__state__", makeInt(nextState, s.span), s.span),
+                {
+                  kind: "ExprStmt",
+                  expr: makeCall("__hkd_on_complete", [makeIdent(futName, s.span), onCompleteCallback], s.span),
+                  span: s.span
+                },
+                makeReturnFuture(s.span)
+              ],
+              span: s.span
+            },
+            else_: null,
+            span: s.span
+          });
+          states[currentStateIdx].push({
+            kind: "IfStmt",
+            condition: makeCall("__hkd_is_rejected", [makeIdent(futName, s.span)], s.span),
+            then: {
+              kind: "BlockStmt",
+              body: [
+                {
+                  kind: "ExprStmt",
+                  expr: makeCall("__hkd_reject", [makeIdent("__future__", s.span), makeCall("__hkd_error", [makeIdent(futName, s.span)], s.span)], s.span),
+                  span: s.span
+                },
+                makeReturnFuture(s.span)
+              ],
+              span: s.span
+            },
+            else_: null,
+            span: s.span
+          });
+          states[currentStateIdx].push(makeAssign("__resume_val__", makeCall("__hkd_unwrap", [makeIdent(futName, s.span)], s.span), s.span));
+          states[currentStateIdx].push(makeAssign("__state__", makeInt(nextState, s.span), s.span));
+          states.push([]);
+          currentStateIdx = nextState;
+        } else if (s.kind === "ReturnStmt" && s.value && s.value.kind === "AwaitExpr") {
+          const operand = s.value.expr;
+          const futName = `__fut_${awaitCounter++}__`;
+          const nextState = currentStateIdx + 1;
+          states[currentStateIdx].push(makeVarDecl(futName, operand, s.span));
+          const onCompleteCallback = {
+            kind: "FunctionExpr",
+            params: [makeParam("__val__", s.span)],
+            returnType: null,
+            body: {
+              kind: "BlockStmt",
+              body: [
+                makeAssign("__resume_val__", makeIdent("__val__", s.span), s.span),
+                { kind: "ExprStmt", expr: makeCall("__step__", [], s.span), span: s.span }
+              ],
+              span: s.span
+            },
+            span: s.span
+          };
+          states[currentStateIdx].push({
+            kind: "IfStmt",
+            condition: makeCall("__hkd_is_pending", [makeIdent(futName, s.span)], s.span),
+            then: {
+              kind: "BlockStmt",
+              body: [
+                makeAssign("__state__", makeInt(nextState, s.span), s.span),
+                {
+                  kind: "ExprStmt",
+                  expr: makeCall("__hkd_on_complete", [makeIdent(futName, s.span), onCompleteCallback], s.span),
+                  span: s.span
+                },
+                makeReturnFuture(s.span)
+              ],
+              span: s.span
+            },
+            else_: null,
+            span: s.span
+          });
+          states[currentStateIdx].push({
+            kind: "IfStmt",
+            condition: makeCall("__hkd_is_rejected", [makeIdent(futName, s.span)], s.span),
+            then: {
+              kind: "BlockStmt",
+              body: [
+                {
+                  kind: "ExprStmt",
+                  expr: makeCall("__hkd_reject", [makeIdent("__future__", s.span), makeCall("__hkd_error", [makeIdent(futName, s.span)], s.span)], s.span),
+                  span: s.span
+                },
+                makeReturnFuture(s.span)
+              ],
+              span: s.span
+            },
+            else_: null,
+            span: s.span
+          });
+          states[currentStateIdx].push(makeAssign("__resume_val__", makeCall("__hkd_unwrap", [makeIdent(futName, s.span)], s.span), s.span));
+          states[currentStateIdx].push(makeAssign("__state__", makeInt(nextState, s.span), s.span));
+          states.push([]);
+          currentStateIdx = nextState;
+          states[currentStateIdx].push({
+            kind: "ExprStmt",
+            expr: makeCall("__hkd_resolve", [makeIdent("__future__", s.span), makeIdent("__resume_val__", s.span)], s.span),
+            span: s.span
+          });
+          states[currentStateIdx].push(makeReturnFuture(s.span));
+        } else if (s.kind === "ReturnStmt") {
+          const val = s.value ?? makeNull(s.span);
+          states[currentStateIdx].push({
+            kind: "ExprStmt",
+            expr: makeCall("__hkd_resolve", [makeIdent("__future__", s.span), val], s.span),
+            span: s.span
+          });
+          states[currentStateIdx].push(makeReturnFuture(s.span));
+        } else if (s.kind === "VarDeclStmt") {
+          if (s.initializer) {
+            states[currentStateIdx].push(makeAssign(s.name, s.initializer, s.span));
+          }
+        } else {
+          states[currentStateIdx].push(rewriteReturnsInStmt(s));
+        }
+      }
+      const lastState = states[states.length - 1];
+      const lastStmt = lastState[lastState.length - 1];
+      if (!lastStmt || lastStmt.kind !== "ReturnStmt") {
+        lastState.push({
+          kind: "ExprStmt",
+          expr: makeCall("__hkd_resolve", [makeIdent("__future__", span), makeNull(span)], span),
+          span
+        });
+        lastState.push(makeReturnFuture(span));
+      }
+      const stepBody = [];
+      for (let sIdx = 0; sIdx < states.length; sIdx++) {
+        const cond = {
+          kind: "BinaryExpr",
+          op: "==",
+          left: makeIdent("__state__", span),
+          right: makeInt(sIdx, span),
+          span
+        };
+        stepBody.push({
+          kind: "IfStmt",
+          condition: cond,
+          then: {
+            kind: "BlockStmt",
+            body: states[sIdx],
+            span
+          },
+          else_: null,
+          span
+        });
+      }
+      stepBody.push(makeReturnFuture(span));
+      const outerBody = [];
+      outerBody.push(makeVarDecl("__future__", makeCall("__hkd_future", [makeNull(span)], span), span));
+      outerBody.push(makeVarDecl("__state__", makeInt(0, span), span));
+      outerBody.push(makeVarDecl("__resume_val__", makeNull(span), span));
+      for (const vName of declaredVars) {
+        outerBody.push(makeVarDecl(vName, makeNull(span), span));
+      }
+      const stepFnDecl = {
+        kind: "FunctionDeclStmt",
+        name: "__step__",
+        isAsync: false,
+        params: [],
+        returnType: null,
+        body: {
+          kind: "BlockStmt",
+          body: stepBody,
+          span
+        },
+        exported: false,
+        span
+      };
+      outerBody.push(stepFnDecl);
+      outerBody.push({
+        kind: "ExprStmt",
+        expr: makeCall("__step__", [], span),
+        span
+      });
+      outerBody.push(makeReturnFuture(span));
+      return {
+        kind: "FunctionDeclStmt",
+        name: stmt.name,
+        isAsync: false,
+        // lowered to synchronous closure
+        typeParams: stmt.typeParams,
+        typeParamBounds: stmt.typeParamBounds,
+        params: stmt.params,
+        returnType: stmt.returnType,
+        body: {
+          kind: "BlockStmt",
+          body: outerBody,
+          span
+        },
+        exported: stmt.exported,
+        span: stmt.span
+      };
+    }
+    function desugarAsyncFunctionExpr(expr) {
+      const dummyDecl = {
+        kind: "FunctionDeclStmt",
+        name: "<anonymous_async>",
+        isAsync: true,
+        typeParams: expr.typeParams,
+        params: expr.params,
+        returnType: expr.returnType,
+        body: expr.body,
+        exported: false,
+        span: expr.span
+      };
+      const desugared = desugarAsyncFunction(dummyDecl);
+      return {
+        kind: "FunctionExpr",
+        isAsync: false,
+        typeParams: desugared.typeParams,
+        params: desugared.params,
+        returnType: desugared.returnType,
+        body: desugared.body,
+        span: expr.span
+      };
+    }
+  }
+});
+
 // dist/bytecode/compiler.js
 var require_compiler = __commonJS({
   "dist/bytecode/compiler.js"(exports2) {
     "use strict";
+    var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
+      if (k2 === void 0) k2 = k;
+      var desc = Object.getOwnPropertyDescriptor(m, k);
+      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+        desc = { enumerable: true, get: function() {
+          return m[k];
+        } };
+      }
+      Object.defineProperty(o, k2, desc);
+    }) : (function(o, m, k, k2) {
+      if (k2 === void 0) k2 = k;
+      o[k2] = m[k];
+    }));
+    var __setModuleDefault2 = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
+      Object.defineProperty(o, "default", { enumerable: true, value: v });
+    }) : function(o, v) {
+      o["default"] = v;
+    });
+    var __importStar2 = exports2 && exports2.__importStar || function(mod) {
+      if (mod && mod.__esModule) return mod;
+      var result = {};
+      if (mod != null) {
+        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding2(result, mod, k);
+      }
+      __setModuleDefault2(result, mod);
+      return result;
+    };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Compiler = void 0;
     exports2.compile = compile;
+    var fs2 = __importStar2(require("node:fs"));
+    var path2 = __importStar2(require("node:path"));
     var chunk_js_1 = require_chunk();
     var index_js_12 = require_errors();
+    var lexer_js_12 = require_lexer();
+    var parser_js_12 = require_parser();
+    var async_lowering_js_1 = require_async_lowering();
     var CompilerFrame = class {
       chunk;
       locals = [];
@@ -3831,12 +5225,98 @@ var require_compiler = __commonJS({
       frames = [];
       reporter;
       isModule;
+      methodToStruct = /* @__PURE__ */ new Map();
+      genericFunctions = /* @__PURE__ */ new Map();
+      compiledSpecializations = /* @__PURE__ */ new Set();
+      currentSpecializedReceiverStruct = null;
+      currentStruct = null;
+      loadedImportPaths = /* @__PURE__ */ new Set();
       constructor(reporter, isModule = false) {
         this.reporter = reporter;
         this.isModule = isModule;
       }
+      loadImportedAst(sourcePath) {
+        try {
+          const currentFile = this.reporter.fileName;
+          const baseDir = currentFile ? path2.dirname(currentFile) : process.cwd();
+          let resolved = path2.resolve(baseDir, sourcePath);
+          if (!fs2.existsSync(resolved) && !resolved.endsWith(".hkd")) {
+            resolved = resolved + ".hkd";
+          }
+          if (!fs2.existsSync(resolved) || this.loadedImportPaths.has(resolved))
+            return null;
+          this.loadedImportPaths.add(resolved);
+          const fileContent = fs2.readFileSync(resolved, "utf-8");
+          const subReporter = new index_js_12.ErrorReporter(fileContent, resolved);
+          const lexer = new lexer_js_12.Lexer(fileContent, resolved, subReporter);
+          const tokens = lexer.tokenize();
+          const parser = new parser_js_12.Parser(tokens, fileContent, resolved, subReporter, "2027");
+          return parser.parse();
+        } catch {
+          return null;
+        }
+      }
+      scanImportedAst(sourcePath, currentDir) {
+        const defaultBase = this.reporter.fileName ? path2.dirname(this.reporter.fileName) : process.cwd();
+        const baseDir = currentDir ?? defaultBase;
+        let resolved = path2.resolve(baseDir, sourcePath);
+        if (!fs2.existsSync(resolved) && !resolved.endsWith(".hkd")) {
+          resolved = resolved + ".hkd";
+        }
+        if (!fs2.existsSync(resolved) || this.loadedImportPaths.has(resolved))
+          return;
+        this.loadedImportPaths.add(resolved);
+        let ast;
+        try {
+          const fileContent = fs2.readFileSync(resolved, "utf-8");
+          const subReporter = new index_js_12.ErrorReporter(fileContent, resolved);
+          const lexer = new lexer_js_12.Lexer(fileContent, resolved, subReporter);
+          const tokens = lexer.tokenize();
+          const parser = new parser_js_12.Parser(tokens, fileContent, resolved, subReporter, "2027");
+          ast = parser.parse();
+        } catch {
+          return;
+        }
+        const nextBase = path2.dirname(resolved);
+        for (const stmt of ast.statements) {
+          if (stmt.kind === "ImportStmt") {
+            this.scanImportedAst(stmt.source, nextBase);
+          }
+          const decl = stmt.kind === "ExportStmt" ? stmt.declaration : stmt;
+          if (decl.kind === "ImplBlockStmt") {
+            for (const m of decl.methods) {
+              if (!this.methodToStruct.has(m.name)) {
+                this.methodToStruct.set(m.name, /* @__PURE__ */ new Set());
+              }
+              this.methodToStruct.get(m.name).add(decl.structName);
+            }
+          } else if (decl.kind === "FunctionDeclStmt") {
+            if (decl.typeParams && decl.typeParams.length > 0) {
+              this.genericFunctions.set(decl.name, decl);
+            }
+          }
+        }
+      }
       // ── Public API ─────────────────────────────────────────────────────────────
       compile(program) {
+        for (const stmt of program.statements) {
+          if (stmt.kind === "ImportStmt") {
+            this.scanImportedAst(stmt.source);
+          }
+          const decl = stmt.kind === "ExportStmt" ? stmt.declaration : stmt;
+          if (decl.kind === "ImplBlockStmt") {
+            for (const m of decl.methods) {
+              if (!this.methodToStruct.has(m.name)) {
+                this.methodToStruct.set(m.name, /* @__PURE__ */ new Set());
+              }
+              this.methodToStruct.get(m.name).add(decl.structName);
+            }
+          } else if (decl.kind === "FunctionDeclStmt") {
+            if (decl.typeParams && decl.typeParams.length > 0) {
+              this.genericFunctions.set(decl.name, decl);
+            }
+          }
+        }
         const frame = new CompilerFrame("<script>", 0);
         this.frames.push(frame);
         for (const stmt of program.statements) {
@@ -3892,6 +5372,12 @@ var require_compiler = __commonJS({
           case "StructDeclStmt":
             this.compileStructDecl(stmt);
             break;
+          case "ImplBlockStmt":
+            this.compileImplBlock(stmt);
+            break;
+          case "TraitDeclStmt":
+            break;
+          // compile-time only
           case "TypeAliasStmt":
             break;
           // compile-time only
@@ -3948,6 +5434,11 @@ var require_compiler = __commonJS({
         this.declareVariable(stmt.name, l, false);
       }
       compileFunctionDecl(stmt) {
+        if (stmt.isAsync) {
+          const lowered = (0, async_lowering_js_1.desugarAsyncFunction)(stmt);
+          this.compileFunctionDecl(lowered);
+          return;
+        }
         const l = this.line(stmt);
         const { fn, upvalues } = this.compileFunction(stmt.name, stmt.params, stmt.body, l);
         this.emitClosure(fn, upvalues, l);
@@ -3999,6 +5490,19 @@ var require_compiler = __commonJS({
         }
       }
       compileStructDecl(_stmt) {
+      }
+      compileImplBlock(stmt) {
+        const l = this.line(stmt);
+        const prevStruct = this.currentStruct;
+        this.currentStruct = stmt.structName;
+        for (const method of stmt.methods) {
+          const effectiveMethod = method.isAsync ? (0, async_lowering_js_1.desugarAsyncFunction)(method) : method;
+          const mangledName = `${stmt.structName}__${effectiveMethod.name}`;
+          const { fn, upvalues } = this.compileFunction(mangledName, effectiveMethod.params, effectiveMethod.body, l);
+          this.emitClosure(fn, upvalues, l);
+          this.declareVariable(mangledName, l, false);
+        }
+        this.currentStruct = prevStruct;
       }
       compileReturn(stmt) {
         const l = this.line(stmt);
@@ -4211,6 +5715,11 @@ var require_compiler = __commonJS({
             this.emitU16(128, expr.fields.length, l);
             break;
           case "FunctionExpr": {
+            if (expr.isAsync) {
+              const lowered = (0, async_lowering_js_1.desugarAsyncFunctionExpr)(expr);
+              this.compileExpr(lowered);
+              break;
+            }
             const { fn, upvalues } = this.compileFunction("<anonymous>", expr.params, expr.body, l);
             this.emitClosure(fn, upvalues, l);
             break;
@@ -4266,6 +5775,14 @@ var require_compiler = __commonJS({
           case "MatchExpr":
             this.compileMatchExpr(expr);
             break;
+          case "AwaitExpr": {
+            const unwrapIdx = this.nameConst("__hkd_unwrap");
+            this.emitU16(19, unwrapIdx, l);
+            this.compileExpr(expr.expr);
+            this.emit(96, l);
+            this.chunk.writeByte(1, l);
+            break;
+          }
         }
       }
       compileIdentLoad(name, line) {
@@ -4346,6 +5863,61 @@ var require_compiler = __commonJS({
       }
       compileCall(expr) {
         const l = this.line(expr);
+        const monoName = expr.monomorphizedName;
+        if (monoName && expr.callee.kind === "IdentExpr") {
+          if (!this.compiledSpecializations.has(monoName)) {
+            this.compiledSpecializations.add(monoName);
+            const origFunc = this.genericFunctions.get(expr.callee.name);
+            if (origFunc) {
+              const parts = monoName.split("__");
+              const structName = parts.slice(1).join("__");
+              const prevSpec = this.currentSpecializedReceiverStruct;
+              this.currentSpecializedReceiverStruct = structName;
+              const effectiveFunc = origFunc.isAsync ? (0, async_lowering_js_1.desugarAsyncFunction)(origFunc) : origFunc;
+              const { fn, upvalues } = this.compileFunction(monoName, effectiveFunc.params, effectiveFunc.body, l);
+              this.currentSpecializedReceiverStruct = prevSpec;
+              this.emitClosure(fn, upvalues, l);
+              this.declareVariable(monoName, l, false);
+            }
+          }
+          this.compileIdentLoad(monoName, l);
+          for (const arg of expr.args)
+            this.compileExpr(arg);
+          this.emit(96, l);
+          this.chunk.writeByte(expr.args.length, l);
+          return;
+        }
+        if (expr.callee.kind === "MemberExpr") {
+          let structName = null;
+          const receiver = expr.callee.object;
+          const receiverType = receiver.inferredType;
+          if (receiverType && receiverType.kind === "Struct") {
+            structName = receiverType.name;
+          } else if (expr.callee.structName) {
+            structName = expr.callee.structName;
+          } else if (receiver.kind === "IdentExpr" && receiver.name === "self" && this.currentStruct) {
+            structName = this.currentStruct;
+          } else if (receiver.kind === "StructInitExpr") {
+            structName = receiver.name;
+          } else if (this.currentSpecializedReceiverStruct) {
+            structName = this.currentSpecializedReceiverStruct;
+          } else if (this.methodToStruct.has(expr.callee.property)) {
+            const candidates = this.methodToStruct.get(expr.callee.property);
+            if (candidates.size === 1) {
+              structName = Array.from(candidates)[0];
+            }
+          }
+          if (structName) {
+            const mangledName = `${structName}__${expr.callee.property}`;
+            this.compileIdentLoad(mangledName, l);
+            this.compileExpr(receiver);
+            for (const arg of expr.args)
+              this.compileExpr(arg);
+            this.emit(96, l);
+            this.chunk.writeByte(expr.args.length + 1, l);
+            return;
+          }
+        }
         this.compileExpr(expr.callee);
         for (const arg of expr.args)
           this.compileExpr(arg);
@@ -4360,7 +5932,20 @@ var require_compiler = __commonJS({
           if (slot >= 0) {
             this.emitU16(17, slot, l);
           } else {
-            this.emitU16(20, this.nameConst(expr.target.name), l);
+            let foundUpvalue = false;
+            for (let i = this.frames.length - 2; i >= 0; i--) {
+              const enclosing = this.frames[i];
+              const s = enclosing.resolveLocal(expr.target.name);
+              if (s >= 0) {
+                const uvIdx = this.frame.addUpvalue(true, s);
+                this.emitU16(23, uvIdx, l);
+                foundUpvalue = true;
+                break;
+              }
+            }
+            if (!foundUpvalue) {
+              this.emitU16(20, this.nameConst(expr.target.name), l);
+            }
           }
         } else if (expr.target.kind === "IndexExpr") {
           this.compileExpr(expr.target.object);
@@ -4388,7 +5973,20 @@ var require_compiler = __commonJS({
           if (slot >= 0) {
             this.emitU16(17, slot, l);
           } else {
-            this.emitU16(20, this.nameConst(expr.target.name), l);
+            let foundUpvalue = false;
+            for (let i = this.frames.length - 2; i >= 0; i--) {
+              const enclosing = this.frames[i];
+              const s = enclosing.resolveLocal(expr.target.name);
+              if (s >= 0) {
+                const uvIdx = this.frame.addUpvalue(true, s);
+                this.emitU16(23, uvIdx, l);
+                foundUpvalue = true;
+                break;
+              }
+            }
+            if (!foundUpvalue) {
+              this.emitU16(20, this.nameConst(expr.target.name), l);
+            }
           }
         }
       }
@@ -4598,6 +6196,23 @@ var require_vm = __commonJS({
       output;
       dbg = null;
       isPaused = false;
+      futureCallbacks = /* @__PURE__ */ new WeakMap();
+      callbackQueue = [];
+      isDispatchingCallbacks = false;
+      dispatchCallback(cb, args) {
+        this.callbackQueue.push([cb, args]);
+        if (this.isDispatchingCallbacks)
+          return;
+        this.isDispatchingCallbacks = true;
+        try {
+          while (this.callbackQueue.length > 0) {
+            const [nextCb, nextArgs] = this.callbackQueue.shift();
+            this.runCallable(nextCb, nextArgs);
+          }
+        } finally {
+          this.isDispatchingCallbacks = false;
+        }
+      }
       constructor(output = (s) => process.stdout.write(s + "\n")) {
         this.output = output;
         this.registerBuiltins();
@@ -4623,18 +6238,16 @@ var require_vm = __commonJS({
         try {
           return this.execute();
         } catch (e) {
-          if (e instanceof VmError) {
-            const backtrace = [];
-            for (let i = this.frames.length - 1; i >= 0; i--) {
-              const frame = this.frames[i];
-              const ip = frame.ip;
-              const line = ip > 0 && ip - 1 < frame.chunk.lines.length ? frame.chunk.lines[ip - 1] : 0;
-              backtrace.push(`  at ${frame.closure?.fn.name ?? "<unknown>"} (line: ${line})`);
-            }
-            const fullMessage = e.message + (backtrace.length > 0 ? "\n" + backtrace.join("\n") : "");
-            return { ok: false, error: fullMessage, code: e.code };
+          const code = e instanceof VmError ? e.code : index_js_12.ErrorCode.E405;
+          const backtrace = [];
+          for (let i = this.frames.length - 1; i >= 0; i--) {
+            const frame = this.frames[i];
+            const ip = frame.ip;
+            const line = ip > 0 && ip - 1 < frame.chunk.lines.length ? frame.chunk.lines[ip - 1] : 0;
+            backtrace.push(`  at ${frame.closure?.fn.name ?? "<unknown>"} (line: ${line})`);
           }
-          throw e;
+          const fullMessage = (e?.message || String(e)) + (backtrace.length > 0 ? "\n" + backtrace.join("\n") : "");
+          return { ok: false, error: fullMessage, code };
         }
       }
       /** Register a native function in the global scope. */
@@ -5300,7 +6913,24 @@ var require_vm = __commonJS({
       }
       getField(obj, field) {
         if (obj?.type === "object") {
-          return obj.fields.get(field) ?? null;
+          const val = obj.fields.get(field);
+          if (val !== void 0)
+            return val;
+          const typeName = obj.fields.get("__type__");
+          if (typeof typeName === "string") {
+            const methodGlobal = this.globals.get(`${typeName}__${field}`);
+            if (methodGlobal) {
+              return {
+                type: "native",
+                name: `${typeName}.${field}`,
+                arity: -1,
+                call: (args) => {
+                  return this.runCallable(methodGlobal, [obj, ...args]);
+                }
+              };
+            }
+          }
+          return null;
         }
         if (obj?.type === "array") {
           if (field === "length")
@@ -5488,6 +7118,113 @@ var require_vm = __commonJS({
         this.defineNative("__import__", 1, (_args) => {
           return null;
         });
+        this.defineNative("__hkd_future", 1, (args) => {
+          const initVal = args[0] !== void 0 ? args[0] : null;
+          const isResolved = initVal !== null && initVal !== void 0;
+          const fields = /* @__PURE__ */ new Map();
+          fields.set("__type__", "Future");
+          fields.set("state", isResolved ? "resolved" : "pending");
+          fields.set("value", initVal);
+          fields.set("error", null);
+          const fut = { type: "object", fields };
+          this.futureCallbacks.set(fut, []);
+          return fut;
+        });
+        this.defineNative("__hkd_is_pending", 1, (args) => {
+          const v = args[0];
+          if (v && typeof v === "object" && v.type === "object") {
+            return v.fields.get("state") === "pending";
+          }
+          return false;
+        });
+        this.defineNative("__hkd_is_rejected", 1, (args) => {
+          const v = args[0];
+          if (v && typeof v === "object" && v.type === "object") {
+            return v.fields.get("state") === "rejected";
+          }
+          return false;
+        });
+        this.defineNative("__hkd_error", 1, (args) => {
+          const v = args[0];
+          if (v && typeof v === "object" && v.type === "object") {
+            return v.fields.get("error") ?? null;
+          }
+          return null;
+        });
+        this.defineNative("__hkd_unwrap", 1, (args) => {
+          const v = args[0];
+          if (v && typeof v === "object" && v.type === "object" && v.fields.get("__type__") === "Future") {
+            const obj = v;
+            const state = obj.fields.get("state");
+            if (state === "rejected") {
+              const err = obj.fields.get("error");
+              throw new Error(`TaskFailure: Future rejected with error: ${err !== null ? String(err) : "Unknown error"}`);
+            }
+            return obj.fields.get("value") ?? null;
+          }
+          return v;
+        });
+        this.defineNative("__hkd_resolve", 2, (args) => {
+          const fut = args[0];
+          const val = args[1] !== void 0 ? args[1] : null;
+          if (fut && typeof fut === "object" && fut.type === "object") {
+            const obj = fut;
+            if (obj.fields.get("state") !== "pending") {
+              return fut;
+            }
+            obj.fields.set("state", "resolved");
+            obj.fields.set("value", val);
+            const cbs = this.futureCallbacks.get(obj);
+            if (cbs) {
+              this.futureCallbacks.delete(obj);
+              for (const cb of cbs) {
+                this.dispatchCallback(cb, [val]);
+              }
+            }
+          }
+          return fut;
+        });
+        this.defineNative("__hkd_reject", 2, (args) => {
+          const fut = args[0];
+          const err = args[1] !== void 0 ? args[1] : null;
+          if (fut && typeof fut === "object" && fut.type === "object") {
+            const obj = fut;
+            if (obj.fields.get("state") !== "pending") {
+              return fut;
+            }
+            obj.fields.set("state", "rejected");
+            obj.fields.set("error", err);
+            const cbs = this.futureCallbacks.get(obj);
+            if (cbs) {
+              this.futureCallbacks.delete(obj);
+              for (const cb of cbs) {
+                this.dispatchCallback(cb, [null]);
+              }
+            }
+          }
+          return fut;
+        });
+        this.defineNative("__hkd_on_complete", 2, (args) => {
+          const fut = args[0];
+          const cb = args[1];
+          if (fut && typeof fut === "object" && fut.type === "object") {
+            const obj = fut;
+            const state = obj.fields.get("state");
+            if (state === "resolved") {
+              this.dispatchCallback(cb, [obj.fields.get("value") ?? null]);
+            } else if (state === "rejected") {
+              this.dispatchCallback(cb, [null]);
+            } else {
+              let cbs = this.futureCallbacks.get(obj);
+              if (!cbs) {
+                cbs = [];
+                this.futureCallbacks.set(obj, cbs);
+              }
+              cbs.push(cb);
+            }
+          }
+          return null;
+        });
       }
     };
     exports2.VM = VM;
@@ -5612,6 +7349,22 @@ var require_stdlib = __commonJS({
       modules.set("std.task", buildTask());
       modules.set("std.ffi", buildFfi());
       modules.set("std.result", buildResult());
+      modules.set("std:math", buildMath());
+      modules.set("std:string", buildString());
+      modules.set("std:array", buildArray());
+      modules.set("std:io", buildIO());
+      modules.set("std:time", buildTime());
+      modules.set("std:fs", buildFs());
+      modules.set("std:json", buildJson());
+      modules.set("std:path", buildPath());
+      modules.set("std:env", buildEnv());
+      modules.set("std:random", buildRandom());
+      modules.set("std:buffer", buildBuffer());
+      modules.set("std:process", buildProcess());
+      modules.set("std:http", buildHttp());
+      modules.set("std:task", buildTask());
+      modules.set("std:ffi", buildFfi());
+      modules.set("std:result", buildResult());
       return modules;
     }
     function buildMath() {
@@ -6092,11 +7845,365 @@ var require_stdlib = __commonJS({
     function buildTask() {
       const m = /* @__PURE__ */ new Map();
       m.set("sleep", native("sleep", 1, (a) => {
-        const ms = typeof a[0] === "number" ? a[0] : 0;
-        const start = Date.now();
-        while (Date.now() - start < ms) {
+        let ms = typeof a[0] === "number" ? a[0] : 0;
+        if (isNaN(ms) || ms < 0)
+          ms = 0;
+        if (ms > 2147483647)
+          ms = 2147483647;
+        if (ms > 0) {
+          const start = Date.now();
+          const waitTime = Math.min(ms, 100);
+          while (Date.now() - start < waitTime) {
+          }
+        }
+        const fields = /* @__PURE__ */ new Map();
+        fields.set("__type__", "Future");
+        fields.set("state", "resolved");
+        fields.set("value", ms);
+        fields.set("error", null);
+        return { type: "object", fields };
+      }));
+      m.set("future", native("future", -1, (a) => {
+        const val = a[0] !== void 0 ? a[0] : null;
+        const isResolved = val !== null && val !== void 0;
+        const fields = /* @__PURE__ */ new Map();
+        fields.set("__type__", "Future");
+        fields.set("state", isResolved ? "resolved" : "pending");
+        fields.set("value", val);
+        fields.set("error", null);
+        const fut = { type: "object", fields };
+        fut.__callbacks = [];
+        return fut;
+      }));
+      m.set("resolve", native("resolve", 2, (a) => {
+        const fut = a[0];
+        const val = a[1] !== void 0 ? a[1] : null;
+        if (fut && typeof fut === "object" && fut.type === "object") {
+          const state = fut.fields.get("state");
+          if (state !== "pending") {
+            return fut;
+          }
+          fut.fields.set("state", "resolved");
+          fut.fields.set("value", val);
+          const callbacks = fut.__callbacks;
+          if (Array.isArray(callbacks)) {
+            delete fut.__callbacks;
+            for (const cb of callbacks) {
+              invokeCallback(cb, [val]);
+            }
+          }
+        }
+        return fut;
+      }));
+      m.set("reject", native("reject", 2, (a) => {
+        const fut = a[0];
+        const err = a[1] !== void 0 ? a[1] : null;
+        if (fut && typeof fut === "object" && fut.type === "object") {
+          const state = fut.fields.get("state");
+          if (state !== "pending") {
+            return fut;
+          }
+          fut.fields.set("state", "rejected");
+          fut.fields.set("error", err);
+          const callbacks = fut.__callbacks;
+          if (Array.isArray(callbacks)) {
+            delete fut.__callbacks;
+            for (const cb of callbacks) {
+              invokeCallback(cb, [null]);
+            }
+          }
+        }
+        return fut;
+      }));
+      m.set("is_pending", native("is_pending", 1, (a) => {
+        const v = a[0];
+        return Boolean(v && typeof v === "object" && v.type === "object" && v.fields?.get("state") === "pending");
+      }));
+      m.set("is_resolved", native("is_resolved", 1, (a) => {
+        const v = a[0];
+        return Boolean(v && typeof v === "object" && v.type === "object" && v.fields?.get("state") === "resolved");
+      }));
+      m.set("is_rejected", native("is_rejected", 1, (a) => {
+        const v = a[0];
+        return Boolean(v && typeof v === "object" && v.type === "object" && v.fields?.get("state") === "rejected");
+      }));
+      m.set("is_future", native("is_future", 1, (a) => {
+        const v = a[0];
+        return Boolean(v && typeof v === "object" && v.type === "object" && v.fields?.get("__type__") === "Future");
+      }));
+      m.set("unwrap", native("unwrap", 1, (a) => {
+        const v = a[0];
+        if (!v || typeof v !== "object" || v.type !== "object" || v.fields?.get("__type__") !== "Future") {
+          throw new Error(`TaskError: task.unwrap() expects a Future object, got ${v ? typeof v : "null"}`);
+        }
+        const state = v.fields.get("state");
+        if (state === "pending") {
+          throw new Error("TaskError: Cannot unwrap pending Future. Task has not completed.");
+        }
+        if (state === "rejected") {
+          const err = v.fields.get("error");
+          throw new Error(`TaskError: Called task.unwrap() on a rejected Future: ${err !== null ? String(err) : "Unknown error"}`);
+        }
+        return v.fields.get("value") ?? null;
+      }));
+      m.set("unwrap_future", native("unwrap_future", 1, (a) => {
+        const v = a[0];
+        if (!v || typeof v !== "object" || v.type !== "object" || v.fields?.get("__type__") !== "Future") {
+          throw new Error(`TaskError: task.unwrap_future() expects a Future object, got ${v ? typeof v : "null"}`);
+        }
+        const state = v.fields.get("state");
+        if (state === "pending") {
+          throw new Error("TaskError: Cannot unwrap pending Future. Task has not completed.");
+        }
+        if (state === "rejected") {
+          const err = v.fields.get("error");
+          throw new Error(`TaskError: Called task.unwrap_future() on a rejected Future: ${err !== null ? String(err) : "Unknown error"}`);
+        }
+        return v.fields.get("value") ?? null;
+      }));
+      m.set("on_complete", native("on_complete", 2, (a) => {
+        const fut = a[0];
+        const cb = a[1];
+        if (fut && typeof fut === "object" && fut.type === "object") {
+          const state = fut.fields.get("state");
+          if (state === "resolved") {
+            invokeCallback(cb, [fut.fields.get("value") ?? null]);
+          } else if (state === "rejected") {
+            invokeCallback(cb, [null]);
+          } else {
+            if (!fut.__callbacks)
+              fut.__callbacks = [];
+            fut.__callbacks.push(cb);
+          }
         }
         return null;
+      }));
+      m.set("spawn", native("spawn", 1, (a) => {
+        const fn = a[0];
+        const res = invokeCallback(fn, []);
+        if (res && typeof res === "object" && res.type === "object" && res.fields.get("__type__") === "Future") {
+          return res;
+        }
+        const fields = /* @__PURE__ */ new Map();
+        fields.set("__type__", "Future");
+        fields.set("state", "resolved");
+        fields.set("value", res);
+        fields.set("error", null);
+        return { type: "object", fields };
+      }));
+      m.set("all", native("all", 1, (a) => {
+        const arr2 = a[0];
+        const elements = arr2 && arr2.type === "array" ? arr2.elements : [];
+        if (elements.length === 0) {
+          const fields2 = /* @__PURE__ */ new Map();
+          fields2.set("__type__", "Future");
+          fields2.set("state", "resolved");
+          fields2.set("value", { type: "array", elements: [] });
+          fields2.set("error", null);
+          return { type: "object", fields: fields2 };
+        }
+        for (const item of elements) {
+          if (item && typeof item === "object" && item.type === "object" && item.fields.get("__type__") === "Future") {
+            const itemFut = item;
+            if (itemFut.fields.get("state") === "rejected") {
+              const fields2 = /* @__PURE__ */ new Map();
+              fields2.set("__type__", "Future");
+              fields2.set("state", "rejected");
+              fields2.set("value", null);
+              fields2.set("error", itemFut.fields.get("error") ?? null);
+              return { type: "object", fields: fields2 };
+            }
+          }
+        }
+        const pendingItems = elements.filter((item) => item && typeof item === "object" && item.type === "object" && item.fields.get("__type__") === "Future" && item.fields.get("state") === "pending");
+        if (pendingItems.length === 0) {
+          const results2 = elements.map((item) => {
+            if (item && typeof item === "object" && item.type === "object" && item.fields.get("__type__") === "Future") {
+              return item.fields.get("value") ?? null;
+            }
+            return item;
+          });
+          const fields2 = /* @__PURE__ */ new Map();
+          fields2.set("__type__", "Future");
+          fields2.set("state", "resolved");
+          fields2.set("value", { type: "array", elements: results2 });
+          fields2.set("error", null);
+          return { type: "object", fields: fields2 };
+        }
+        const fields = /* @__PURE__ */ new Map();
+        fields.set("__type__", "Future");
+        fields.set("state", "pending");
+        fields.set("value", null);
+        fields.set("error", null);
+        const aggFut = { type: "object", fields };
+        aggFut.__callbacks = [];
+        const results = new Array(elements.length);
+        let remaining = elements.length;
+        let settled = false;
+        elements.forEach((item, idx) => {
+          if (item && typeof item === "object" && item.type === "object" && item.fields.get("__type__") === "Future") {
+            const itemFut = item;
+            const st = itemFut.fields.get("state");
+            if (st === "resolved") {
+              results[idx] = itemFut.fields.get("value") ?? null;
+              remaining--;
+              if (remaining === 0 && !settled) {
+                settled = true;
+                aggFut.fields.set("state", "resolved");
+                aggFut.fields.set("value", { type: "array", elements: results });
+                const cbs = aggFut.__callbacks;
+                if (Array.isArray(cbs)) {
+                  delete aggFut.__callbacks;
+                  for (const cb of cbs)
+                    invokeCallback(cb, [aggFut.fields.get("value") ?? null]);
+                }
+              }
+            } else if (st === "rejected") {
+              if (!settled) {
+                settled = true;
+                aggFut.fields.set("state", "rejected");
+                aggFut.fields.set("error", itemFut.fields.get("error") ?? null);
+                const cbs = aggFut.__callbacks;
+                if (Array.isArray(cbs)) {
+                  delete aggFut.__callbacks;
+                  for (const cb of cbs)
+                    invokeCallback(cb, [null]);
+                }
+              }
+            } else {
+              if (!itemFut.__callbacks)
+                itemFut.__callbacks = [];
+              itemFut.__callbacks.push({
+                type: "native",
+                name: "<all_listener>",
+                arity: 1,
+                call: (listenerArgs) => {
+                  if (settled)
+                    return null;
+                  if (itemFut.fields.get("state") === "rejected") {
+                    settled = true;
+                    aggFut.fields.set("state", "rejected");
+                    aggFut.fields.set("error", itemFut.fields.get("error") ?? null);
+                    const cbs = aggFut.__callbacks;
+                    if (Array.isArray(cbs)) {
+                      delete aggFut.__callbacks;
+                      for (const cb of cbs)
+                        invokeCallback(cb, [null]);
+                    }
+                    return null;
+                  }
+                  results[idx] = listenerArgs[0];
+                  remaining--;
+                  if (remaining === 0 && !settled) {
+                    settled = true;
+                    aggFut.fields.set("state", "resolved");
+                    aggFut.fields.set("value", { type: "array", elements: results });
+                    const cbs = aggFut.__callbacks;
+                    if (Array.isArray(cbs)) {
+                      delete aggFut.__callbacks;
+                      for (const cb of cbs)
+                        invokeCallback(cb, [aggFut.fields.get("value") ?? null]);
+                    }
+                  }
+                  return null;
+                }
+              });
+            }
+          } else {
+            results[idx] = item;
+            remaining--;
+            if (remaining === 0 && !settled) {
+              settled = true;
+              aggFut.fields.set("state", "resolved");
+              aggFut.fields.set("value", { type: "array", elements: results });
+              const cbs = aggFut.__callbacks;
+              if (Array.isArray(cbs)) {
+                delete aggFut.__callbacks;
+                for (const cb of cbs)
+                  invokeCallback(cb, [aggFut.fields.get("value") ?? null]);
+              }
+            }
+          }
+        });
+        return aggFut;
+      }));
+      m.set("race", native("race", 1, (a) => {
+        const arr2 = a[0];
+        const elements = arr2 && arr2.type === "array" ? arr2.elements : [];
+        if (elements.length === 0) {
+          const fields2 = /* @__PURE__ */ new Map();
+          fields2.set("__type__", "Future");
+          fields2.set("state", "pending");
+          fields2.set("value", null);
+          fields2.set("error", null);
+          return { type: "object", fields: fields2 };
+        }
+        for (const item of elements) {
+          if (item && typeof item === "object" && item.type === "object" && item.fields.get("__type__") === "Future") {
+            const itemFut = item;
+            if (itemFut.fields.get("state") === "resolved") {
+              const fields2 = /* @__PURE__ */ new Map();
+              fields2.set("__type__", "Future");
+              fields2.set("state", "resolved");
+              fields2.set("value", itemFut.fields.get("value") ?? null);
+              fields2.set("error", null);
+              return { type: "object", fields: fields2 };
+            }
+            if (itemFut.fields.get("state") === "rejected") {
+              const fields2 = /* @__PURE__ */ new Map();
+              fields2.set("__type__", "Future");
+              fields2.set("state", "rejected");
+              fields2.set("value", null);
+              fields2.set("error", itemFut.fields.get("error") ?? null);
+              return { type: "object", fields: fields2 };
+            }
+          } else {
+            const fields2 = /* @__PURE__ */ new Map();
+            fields2.set("__type__", "Future");
+            fields2.set("state", "resolved");
+            fields2.set("value", item);
+            fields2.set("error", null);
+            return { type: "object", fields: fields2 };
+          }
+        }
+        const fields = /* @__PURE__ */ new Map();
+        fields.set("__type__", "Future");
+        fields.set("state", "pending");
+        fields.set("value", null);
+        fields.set("error", null);
+        const raceFut = { type: "object", fields };
+        raceFut.__callbacks = [];
+        let settled = false;
+        for (const item of elements) {
+          const itemFut = item;
+          if (!itemFut.__callbacks)
+            itemFut.__callbacks = [];
+          itemFut.__callbacks.push({
+            type: "native",
+            name: "<race_listener>",
+            arity: 1,
+            call: (listenerArgs) => {
+              if (settled)
+                return null;
+              settled = true;
+              if (itemFut.fields.get("state") === "rejected") {
+                raceFut.fields.set("state", "rejected");
+                raceFut.fields.set("error", itemFut.fields.get("error") ?? null);
+              } else {
+                raceFut.fields.set("state", "resolved");
+                raceFut.fields.set("value", listenerArgs[0]);
+              }
+              const cbs = raceFut.__callbacks;
+              if (Array.isArray(cbs)) {
+                delete raceFut.__callbacks;
+                for (const cb of cbs)
+                  invokeCallback(cb, [raceFut.fields.get("value") ?? null]);
+              }
+              return null;
+            }
+          });
+        }
+        return raceFut;
       }));
       return m;
     }
@@ -6508,6 +8615,10 @@ var require_formatter = __commonJS({
             return this.fmtFunctionDecl(stmt);
           case "StructDeclStmt":
             return this.fmtStructDecl(stmt);
+          case "ImplBlockStmt":
+            return this.fmtImpl(stmt);
+          case "TraitDeclStmt":
+            return this.fmtTraitDecl(stmt);
           case "TypeAliasStmt":
             return this.fmtTypeAlias(stmt);
           case "ReturnStmt":
@@ -6552,9 +8663,10 @@ var require_formatter = __commonJS({
         return this.ind(result);
       }
       fmtFunctionDecl(s) {
+        const prefix = s.isAsync ? "async " : "";
         const tp = s.typeParams && s.typeParams.length > 0 ? `<${s.typeParams.join(", ")}>` : "";
         const params = s.params.map((p) => this.fmtParam(p)).join(", ");
-        let sig = `fn ${s.name}${tp}(${params})`;
+        let sig = `${prefix}fn ${s.name}${tp}(${params})`;
         if (s.returnType)
           sig += ` -> ${this.fmtType(s.returnType)}`;
         return this.ind(`${sig} ${this.fmtBlock(s.body).trimStart()}`);
@@ -6576,6 +8688,32 @@ var require_formatter = __commonJS({
         });
         const body = fields.length > 0 ? "\n" + fields.join("\n") + "\n" + this.indStr() : "";
         return this.ind(`struct ${s.name} {${body}}`);
+      }
+      fmtImpl(s) {
+        this.indent++;
+        const methods = s.methods.map((m) => this.fmtFunctionDecl(m)).join("\n\n");
+        this.indent--;
+        const body = s.methods.length > 0 ? "\n" + methods + "\n" + this.indStr() : "";
+        const header = s.traitName ? `impl ${s.traitName} for ${s.structName}` : `impl ${s.structName}`;
+        return this.ind(`${header} {${body}}`);
+      }
+      fmtTraitDecl(s) {
+        this.indent++;
+        const methods = s.methods.map((m) => {
+          const params = m.params.map((p) => {
+            let r = p.name;
+            if (p.typeAnnotation)
+              r += `: ${this.fmtType(p.typeAnnotation)}`;
+            return r;
+          }).join(", ");
+          let ret = "";
+          if (m.returnType)
+            ret = ` -> ${this.fmtType(m.returnType)}`;
+          return this.ind(`fn ${m.name}(${params})${ret}`);
+        }).join("\n");
+        this.indent--;
+        const body = s.methods.length > 0 ? "\n" + methods + "\n" + this.indStr() : "";
+        return this.ind(`trait ${s.name} {${body}}`);
       }
       fmtTypeAlias(s) {
         return this.ind(`type ${s.name} = ${this.fmtType(s.typeExpr)}`);
@@ -6672,8 +8810,9 @@ ${this.indStr()}}`);
             return `{ ${fields} }`;
           }
           case "FunctionExpr": {
+            const prefix = expr.isAsync ? "async " : "";
             const params = expr.params.map((p) => this.fmtParam(p)).join(", ");
-            let sig = `fn(${params})`;
+            let sig = `${prefix}fn(${params})`;
             if (expr.returnType)
               sig += ` -> ${this.fmtType(expr.returnType)}`;
             return `${sig} ${this.fmtBlock(expr.body).trimStart()}`;
@@ -6718,6 +8857,8 @@ ${this.indStr()}}`;
 ${arms.join("\n")}
 ${this.indStr()}}`;
           }
+          case "AwaitExpr":
+            return `await ${this.fmtExpr(expr.expr)}`;
         }
       }
       fmtPattern(p) {
@@ -6808,11 +8949,12 @@ ${this.indStr()}}`;
     var lexer_js_12 = require_lexer();
     var parser_js_12 = require_parser();
     var index_js_12 = require_errors();
-    function formatSource(source, fileName = "<source>") {
+    function formatSource(source, fileName = "<source>", edition) {
       const reporter = new index_js_12.ErrorReporter(source, fileName);
       const lexer = new lexer_js_12.Lexer(source, fileName, reporter);
       const tokens = lexer.tokenize();
-      const parser = new parser_js_12.Parser(tokens, source, fileName, reporter);
+      const ed = edition ?? (/edition\s*=\s*"2027"/.test(source) || /#feature\(traits\)/.test(source) || /#feature\(async\)/.test(source) || /\btrait\b/.test(source) || /\basync\b/.test(source) ? "2027" : "2026");
+      const parser = new parser_js_12.Parser(tokens, source, fileName, reporter, ed);
       const ast = parser.parse();
       if (reporter.hasErrors()) {
         return source;
@@ -6921,6 +9063,14 @@ var require_linter = __commonJS({
             return false;
           }
           case "StructDeclStmt":
+            return false;
+          case "ImplBlockStmt": {
+            for (const m of stmt.methods) {
+              this.lintFunction(m.params, m.body, m.returnType !== null);
+            }
+            return false;
+          }
+          case "TraitDeclStmt":
             return false;
           case "TypeAliasStmt":
             return false;
@@ -9202,12 +11352,13 @@ var require_manager = __commonJS({
     exports2.PackageManager2 = void 0;
     var fs2 = __importStar2(require("fs"));
     var path2 = __importStar2(require("path"));
+    var crypto2 = __importStar2(require("crypto"));
     var index_js_12 = require_package_manager();
     var identity_js_1 = require_identity();
     var semver_js_1 = require_semver();
     var archive_js_1 = require_archive();
     var cache_js_12 = require_cache();
-    var lockfile_js_1 = require_lockfile();
+    var lockfile_js_12 = require_lockfile();
     var resolver_js_1 = require_resolver();
     var registry_http_js_1 = require_registry_http();
     var index_js_22 = require_utils();
@@ -9288,6 +11439,12 @@ print("Hello from ${pkgName}!");
           },
           getPackageManifest: (pkgName, version) => {
             if (version === "local") {
+              const rootManifest = (0, index_js_12.readManifest)(dir);
+              const depEntry = rootManifest?.dependencies?.[pkgName] || rootManifest?.devDependencies?.[pkgName];
+              if (typeof depEntry === "object" && depEntry !== null && "path" in depEntry) {
+                const pathDepDir2 = path2.resolve(dir, depEntry.path);
+                return (0, index_js_12.readManifest)(pathDepDir2);
+              }
               const pathDepDir = path2.resolve(dir, pkgName);
               return (0, index_js_12.readManifest)(pathDepDir);
             }
@@ -9301,6 +11458,19 @@ print("Hello from ${pkgName}!");
             return null;
           },
           getPackageIntegrity: (pkgName, version) => {
+            if (version === "local") {
+              const rootManifest = (0, index_js_12.readManifest)(dir);
+              const depEntry = rootManifest?.dependencies?.[pkgName] || rootManifest?.devDependencies?.[pkgName];
+              let targetPath = path2.resolve(dir, pkgName);
+              if (typeof depEntry === "object" && depEntry !== null && "path" in depEntry) {
+                targetPath = path2.resolve(dir, depEntry.path);
+              }
+              const m = (0, index_js_12.readManifest)(targetPath);
+              if (m) {
+                const hash = crypto2.createHash("sha256").update(JSON.stringify(m)).digest("hex");
+                return `sha256:${hash}`;
+              }
+            }
             for (const entry of this.cache.list()) {
               if (entry.name === pkgName && entry.version === version) {
                 return entry.checksum;
@@ -9319,7 +11489,7 @@ print("Hello from ${pkgName}!");
           return { ok: false, message: "No hkd.toml found. Run `hkd init` first." };
         }
         const offline = options.offline || process.env.HKD_OFFLINE === "1";
-        const existingLock = (0, lockfile_js_1.readLockfile)(dir);
+        const existingLock = options.existingLockOverride !== void 0 ? options.existingLockOverride : (0, lockfile_js_12.readLockfile)(dir);
         if (options.locked && !existingLock) {
           return { ok: false, message: "error[PKG010]: --locked specified but no hkd.lock found" };
         }
@@ -9385,7 +11555,7 @@ print("Hello from ${pkgName}!");
             return { ok: false, message: "error[PKG010]: Dependencies in hkd.toml do not match locked hkd.lock in --locked mode" };
           }
         } else {
-          (0, lockfile_js_1.writeLockfile)(dir, resolution.lockfile);
+          (0, lockfile_js_12.writeLockfile)(dir, resolution.lockfile);
         }
         const depsDir = path2.join(dir, ".hkd", "deps");
         if (fs2.existsSync(depsDir)) {
@@ -9428,11 +11598,53 @@ ${messages.join("\n")}`
       }
       /**
        * Adds a new dependency and runs installation.
+       * Supports:
+       * - Registry package: `hkd add http@^1.0.0` or `hkd add http`
+       * - Local path: `hkd add ../my-lib` or `hkd add my-lib --path ../my-lib`
+       * - Archive: `hkd add ./vendor/my-pkg.hkdpack`
        */
       async add(dir, pkgSpec, options = {}) {
         const manifest = (0, index_js_12.readManifest)(dir);
         if (!manifest) {
           return { ok: false, message: "No hkd.toml found. Run `hkd init` first." };
+        }
+        if (options.path) {
+          const targetDir = path2.resolve(dir, options.path);
+          const targetManifest = (0, index_js_12.readManifest)(targetDir);
+          if (!targetManifest) {
+            return { ok: false, message: `No hkd.toml found in path '${options.path}'` };
+          }
+          const pkgName2 = (0, identity_js_1.normalizePackageName)(pkgSpec || targetManifest.name);
+          const relPath = path2.relative(dir, targetDir).replace(/\\/g, "/");
+          manifest.dependencies[pkgName2] = { path: relPath };
+          (0, index_js_12.writeManifest)(dir, manifest);
+          return this.install(dir, options);
+        }
+        if (pkgSpec.endsWith(".hkdpack")) {
+          const archivePath = path2.resolve(dir, pkgSpec);
+          if (!fs2.existsSync(archivePath)) {
+            return { ok: false, message: `Archive file not found: ${pkgSpec}` };
+          }
+          const archiveBuf = fs2.readFileSync(archivePath);
+          const tmpExtract = path2.join(dir, ".hkd", "tmp_pack_add");
+          const unpacked = (0, archive_js_1.unpackArchive)(archiveBuf, tmpExtract);
+          fs2.rmSync(tmpExtract, { recursive: true, force: true });
+          this.cache.store(unpacked.checksum, archiveBuf, unpacked.manifest);
+          manifest.dependencies[unpacked.manifest.name] = unpacked.manifest.version;
+          (0, index_js_12.writeManifest)(dir, manifest);
+          return this.install(dir, options);
+        }
+        const resolvedPath = path2.resolve(dir, pkgSpec);
+        if ((pkgSpec.startsWith(".") || pkgSpec.startsWith("/") || pkgSpec.startsWith("\\") || fs2.existsSync(resolvedPath)) && fs2.existsSync(resolvedPath) && fs2.statSync(resolvedPath).isDirectory()) {
+          const targetManifest = (0, index_js_12.readManifest)(resolvedPath);
+          if (!targetManifest) {
+            return { ok: false, message: `No hkd.toml found in directory '${pkgSpec}'` };
+          }
+          const pkgName2 = (0, identity_js_1.normalizePackageName)(targetManifest.name);
+          const relPath = path2.relative(dir, resolvedPath).replace(/\\/g, "/");
+          manifest.dependencies[pkgName2] = { path: relPath };
+          (0, index_js_12.writeManifest)(dir, manifest);
+          return this.install(dir, options);
         }
         let pkgName = "";
         let range = "*";
@@ -9467,6 +11679,25 @@ ${messages.join("\n")}`
         delete manifest.devDependencies[name];
         (0, index_js_12.writeManifest)(dir, manifest);
         return this.install(dir, options);
+      }
+      /**
+       * Updates dependencies within version ranges.
+       * If pkgName is specified, only that dependency is re-resolved.
+       * Otherwise, all dependencies are re-resolved.
+       */
+      async update(dir, pkgName, options = {}) {
+        const manifest = (0, index_js_12.readManifest)(dir);
+        if (!manifest) {
+          return { ok: false, message: "No hkd.toml found. Run `hkd init` first." };
+        }
+        let existingLock = (0, lockfile_js_12.readLockfile)(dir);
+        if (existingLock && pkgName) {
+          const norm = (0, identity_js_1.normalizePackageName)(pkgName);
+          existingLock.packages = existingLock.packages.filter((p) => p.name !== norm);
+        } else {
+          existingLock = null;
+        }
+        return this.install(dir, { ...options, existingLockOverride: existingLock });
       }
       /**
        * Packs directory into deterministic .hkdpack archive.
@@ -9577,7 +11808,7 @@ var require_audit = __commonJS({
     var fs2 = __importStar2(require("fs"));
     var path2 = __importStar2(require("path"));
     var index_js_12 = require_package_manager();
-    var lockfile_js_1 = require_lockfile();
+    var lockfile_js_12 = require_lockfile();
     var identity_js_1 = require_identity();
     function auditProject(projectDir) {
       const issues = [];
@@ -9597,7 +11828,7 @@ var require_audit = __commonJS({
           ]
         };
       }
-      const lockfile = (0, lockfile_js_1.readLockfile)(projectDir);
+      const lockfile = (0, lockfile_js_12.readLockfile)(projectDir);
       if (!lockfile) {
         issues.push({
           code: "AUD002",
@@ -10258,32 +12489,46 @@ var require_differential = __commonJS({
       let nativeOutput = void 0;
       let nativeStatus = void 0;
       if (fs2.existsSync(nativeBinaryPath)) {
-        try {
-          const tempDir = path2.resolve(".hkd", "tmp");
-          fs2.mkdirSync(tempDir, { recursive: true });
-          const tempHkdb = path2.join(tempDir, `diff_${Date.now()}_${Math.floor(Math.random() * 1e3)}.hkdb`);
-          const rep = new index_js_12.ErrorReporter(source, name);
-          const lex = new lexer_js_12.Lexer(source, name, rep);
-          const tok = lex.tokenize();
-          const par = new parser_js_12.Parser(tok, source, name, rep);
-          const a = par.parse();
-          const sem = new analyser_js_12.SemanticAnalyser(rep, source);
-          sem.analyse(a);
-          const comp = new compiler_js_12.Compiler(rep);
-          const ch = comp.compile(a);
-          const bytes = (0, serializer_js_12.serializeProgram)(ch);
-          fs2.writeFileSync(tempHkdb, Buffer.from(bytes));
-          const run = (0, child_process_12.spawnSync)(nativeBinaryPath, [tempHkdb], { encoding: "utf-8" });
-          nativeOutput = run.stdout + (run.stderr ? `
-${run.stderr}` : "");
-          nativeStatus = run.status ?? 0;
+        if (!isWindows) {
           try {
-            fs2.unlinkSync(tempHkdb);
+            fs2.chmodSync(nativeBinaryPath, 493);
           } catch {
           }
-        } catch (e) {
-          nativeOutput = e.message;
-          nativeStatus = 1;
+        }
+        let canRun = false;
+        try {
+          const probe = (0, child_process_12.spawnSync)(nativeBinaryPath, ["--help"], { encoding: "utf-8" });
+          canRun = probe.status === 0;
+        } catch {
+        }
+        if (canRun) {
+          try {
+            const tempDir = path2.resolve(".hkd", "tmp");
+            fs2.mkdirSync(tempDir, { recursive: true });
+            const tempHkdb = path2.join(tempDir, `diff_${Date.now()}_${Math.floor(Math.random() * 1e3)}.hkdb`);
+            const rep = new index_js_12.ErrorReporter(source, name);
+            const lex = new lexer_js_12.Lexer(source, name, rep);
+            const tok = lex.tokenize();
+            const par = new parser_js_12.Parser(tok, source, name, rep);
+            const a = par.parse();
+            const sem = new analyser_js_12.SemanticAnalyser(rep, source);
+            sem.analyse(a);
+            const comp = new compiler_js_12.Compiler(rep);
+            const ch = comp.compile(a);
+            const bytes = (0, serializer_js_12.serializeProgram)(ch);
+            fs2.writeFileSync(tempHkdb, Buffer.from(bytes));
+            const run = (0, child_process_12.spawnSync)(nativeBinaryPath, [tempHkdb], { encoding: "utf-8" });
+            nativeOutput = run.stdout + (run.stderr ? `
+${run.stderr}` : "");
+            nativeStatus = run.status ?? 0;
+            try {
+              fs2.unlinkSync(tempHkdb);
+            } catch {
+            }
+          } catch (e) {
+            nativeOutput = e.message;
+            nativeStatus = 1;
+          }
         }
       }
       const normVm = vmOutput.replace(/\r\n/g, "\n").trim();
@@ -11246,7 +13491,7 @@ var require_sbom = __commonJS({
     var path2 = __importStar2(require("path"));
     var crypto2 = __importStar2(require("crypto"));
     var index_js_12 = require_package_manager();
-    var lockfile_js_1 = require_lockfile();
+    var lockfile_js_12 = require_lockfile();
     var index_js_22 = require_utils();
     function generateCycloneDxSbom(projectDir) {
       const manifest = (0, index_js_12.readManifest)(projectDir);
@@ -11271,7 +13516,7 @@ var require_sbom = __commonJS({
       if (fs2.existsSync(lockPath)) {
         try {
           const lockContent = fs2.readFileSync(lockPath, "utf-8");
-          const lockData = (0, lockfile_js_1.parseLockfileV2)(lockContent);
+          const lockData = (0, lockfile_js_12.parseLockfileV2)(lockContent);
           for (const pkgEntry of lockData.packages) {
             const hashes = [];
             if (pkgEntry.checksum) {
@@ -12346,7 +14591,7 @@ var require_migrate = __commonJS({
     exports2.runMigration = runMigration;
     var fs2 = __importStar2(require("fs"));
     var path2 = __importStar2(require("path"));
-    var lockfile_js_1 = require_lockfile();
+    var lockfile_js_12 = require_lockfile();
     function runMigration(projectDir, dryRun = false, targetEdition = "2026") {
       const changes = [];
       const warnings = [];
@@ -12379,8 +14624,8 @@ ${manifestContent}`;
         const lockContent = fs2.readFileSync(lockPath, "utf-8");
         if (!lockContent.includes("version = 2")) {
           try {
-            const v2 = (0, lockfile_js_1.migrateLockfileV1)(lockContent);
-            const serialized = (0, lockfile_js_1.serializeLockfileV2)(v2);
+            const v2 = (0, lockfile_js_12.migrateLockfileV1)(lockContent);
+            const serialized = (0, lockfile_js_12.serializeLockfileV2)(v2);
             changes.push("Migrated legacy hkd.lock to Lockfile V2 (Edition 2026)");
             if (!dryRun) {
               fs2.copyFileSync(lockPath, `${lockPath}.bak`);
@@ -13670,7 +15915,8 @@ var require_documents = __commonJS({
         try {
           const lexer = new lexer_js_12.Lexer(doc.text, filePath, reporter);
           const tokens = lexer.tokenize();
-          const parser = new parser_js_12.Parser(tokens, doc.text, filePath, reporter);
+          const edition = /edition\s*=\s*"2027"/.test(doc.text) || /#feature\(traits\)/.test(doc.text) || /#feature\(async\)/.test(doc.text) || /\btrait\b/.test(doc.text) || /\basync\b/.test(doc.text) ? "2027" : void 0;
+          const parser = new parser_js_12.Parser(tokens, doc.text, filePath, reporter, edition);
           doc.ast = parser.parse();
           const analyzer = new analyser_js_12.SemanticAnalyser(reporter, doc.text);
           analyzer.analyse(doc.ast);
@@ -14258,6 +16504,33 @@ var require_features = __commonJS({
           random: [
             { name: "float", detail: "random.float() -> float" },
             { name: "int", detail: "random.int(min: int, max: int) -> int" }
+          ],
+          task: [
+            { name: "sleep", detail: "task.sleep(ms: int) -> Future<null>" },
+            { name: "spawn", detail: "task.spawn(fn: fn() -> T) -> Future<T>" },
+            { name: "all", detail: "task.all(futures: [Future<T>]) -> Future<[T]>" },
+            { name: "race", detail: "task.race(futures: [Future<T>]) -> Future<T>" },
+            { name: "future", detail: "task.future(val?: T) -> Future<T>" },
+            { name: "resolve", detail: "task.resolve(fut: Future<T>, val: T) -> Future<T>" },
+            { name: "reject", detail: "task.reject(fut: Future<T>, err: any) -> Future<T>" },
+            { name: "is_pending", detail: "task.is_pending(fut: Future<any>) -> bool" },
+            { name: "is_resolved", detail: "task.is_resolved(fut: Future<any>) -> bool" },
+            { name: "is_rejected", detail: "task.is_rejected(fut: Future<any>) -> bool" },
+            { name: "is_future", detail: "task.is_future(val: any) -> bool" },
+            { name: "unwrap", detail: "task.unwrap(fut: Future<T>) -> T" },
+            { name: "on_complete", detail: "task.on_complete(fut: Future<T>, cb: fn(T) -> any) -> Future<T>" }
+          ],
+          result: [
+            { name: "ok", detail: "result.ok(val: T) -> Result<T, E>" },
+            { name: "err", detail: "result.err(err: E) -> Result<T, E>" },
+            { name: "is_ok", detail: "result.is_ok(r: Result<T, E>) -> bool" },
+            { name: "is_err", detail: "result.is_err(r: Result<T, E>) -> bool" },
+            { name: "unwrap", detail: "result.unwrap(r: Result<T, E>) -> T" },
+            { name: "unwrap_or", detail: "result.unwrap_or(r: Result<T, E>, default: T) -> T" },
+            { name: "unwrap_err", detail: "result.unwrap_err(r: Result<T, E>) -> E" },
+            { name: "map", detail: "result.map(r: Result<T, E>, f: fn(T) -> U) -> Result<U, E>" },
+            { name: "map_err", detail: "result.map_err(r: Result<T, E>, f: fn(E) -> F) -> Result<T, F>" },
+            { name: "and_then", detail: "result.and_then(r: Result<T, E>, f: fn(T) -> Result<U, E>) -> Result<U, E>" }
           ]
         };
         if (builtins2[receiver]) {
@@ -14275,11 +16548,31 @@ var require_features = __commonJS({
             detail: e.detail
           }));
         }
+        if (doc.ast) {
+          const methodItems = [];
+          for (const stmt of doc.ast.statements) {
+            if (stmt.kind === "ImplBlockStmt") {
+              for (const m of stmt.methods) {
+                const params = m.params.slice(1).map((p) => p.name).join(", ");
+                methodItems.push({
+                  label: m.name,
+                  kind: protocol_js_1.CompletionItemKind.Method,
+                  detail: `fn (${stmt.structName}).${m.name}(${params})`
+                });
+              }
+            }
+          }
+          if (methodItems.length > 0) {
+            return methodItems;
+          }
+        }
       }
       const items = [];
       const keywords = [
         "fn",
         "struct",
+        "impl",
+        "trait",
         "let",
         "const",
         "if",
@@ -14292,7 +16585,9 @@ var require_features = __commonJS({
         "test",
         "assert",
         "break",
-        "continue"
+        "continue",
+        "async",
+        "await"
       ];
       for (const kw of keywords) {
         items.push({
@@ -14323,11 +16618,13 @@ var require_features = __commonJS({
       if (doc.ast) {
         for (const stmt of doc.ast.statements) {
           if (stmt.kind === "FunctionDeclStmt") {
+            const prefix = stmt.isAsync ? "async " : "";
             const params = stmt.params.map((p) => p.name).join(", ");
+            const ret = stmt.isAsync ? stmt.returnType ? ` -> Future<${formatTypeExpr(stmt.returnType)}>` : " -> Future" : stmt.returnType ? ` -> ${formatTypeExpr(stmt.returnType)}` : "";
             items.push({
               label: stmt.name,
               kind: protocol_js_1.CompletionItemKind.Function,
-              detail: `fn ${stmt.name}(${params})`
+              detail: `${prefix}fn ${stmt.name}(${params})${ret}`
             });
           } else if (stmt.kind === "VarDeclStmt") {
             items.push({
@@ -14401,6 +16698,8 @@ var require_features = __commonJS({
       const keywordsDoc = {
         fn: "**fn**: Declares a named function with parameter types and optional return type.",
         struct: "**struct**: Defines a structured data record with named fields.",
+        impl: "**impl**: Defines methods and associated behavior for a struct.",
+        trait: "**trait**: Defines a behavioral contract that structs can implement.",
         let: "**let**: Declares a mutable local or module variable.",
         const: "**const**: Declares an immutable constant.",
         import: "**import**: Imports symbols from another module or package.",
@@ -14410,7 +16709,9 @@ var require_features = __commonJS({
         while: "**while**: Executes statement block while condition remains truthy.",
         for: "**for**: Iterates over elements in a sequence, array, or range.",
         print: "**print**: Writes values to standard output without trailing newline.",
-        println: "**println**: Writes values to standard output followed by newline."
+        println: "**println**: Writes values to standard output followed by newline.",
+        async: "**async**: Marks a function as returning a Future and running asynchronously across suspension points.",
+        await: "**await**: Suspends execution until the operand Future resolves, returning its unwrapped value."
       };
       if (keywordsDoc[word]) {
         return { contents: { kind: "markdown", value: keywordsDoc[word] } };
@@ -14418,15 +16719,18 @@ var require_features = __commonJS({
       if (doc.ast) {
         for (const stmt of doc.ast.statements) {
           if (stmt.kind === "FunctionDeclStmt" && stmt.name === word) {
+            const prefix = stmt.isAsync ? "async " : "";
             const params = stmt.params.map((p) => p.name + (p.typeAnnotation ? `: ${formatTypeExpr(p.typeAnnotation)}` : "")).join(", ");
+            const ret = stmt.isAsync ? stmt.returnType ? ` -> Future<${formatTypeExpr(stmt.returnType)}>` : " -> Future" : stmt.returnType ? ` -> ${formatTypeExpr(stmt.returnType)}` : "";
+            const desc = stmt.isAsync ? "User-defined async function" : "User-defined function";
             return {
               contents: {
                 kind: "markdown",
                 value: `\`\`\`hkd
-fn ${stmt.name}(${params})
+${prefix}fn ${stmt.name}(${params})${ret}
 \`\`\`
 
-User-defined function in \`${path2.basename(doc.getFilePath())}\``
+${desc} in \`${path2.basename(doc.getFilePath())}\``
               }
             };
           }
@@ -14466,6 +16770,48 @@ ${fields}
 \`\`\``
               }
             };
+          }
+          if (stmt.kind === "ImplBlockStmt") {
+            for (const m of stmt.methods) {
+              if (m.name === word) {
+                const params = m.params.map((p) => p.name + (p.typeAnnotation ? `: ${formatTypeExpr(p.typeAnnotation)}` : "")).join(", ");
+                const ret = m.returnType ? ` -> ${formatTypeExpr(m.returnType)}` : "";
+                const header = stmt.traitName ? `impl ${stmt.traitName} for ${stmt.structName}` : `impl ${stmt.structName}`;
+                return {
+                  contents: {
+                    kind: "markdown",
+                    value: `\`\`\`hkd
+${header} {
+  fn ${m.name}(${params})${ret}
+}
+\`\`\`
+
+Method on struct \`${stmt.structName}\``
+                  }
+                };
+              }
+            }
+          }
+          if (stmt.kind === "TraitDeclStmt") {
+            if (stmt.name === word) {
+              const methods = stmt.methods.map((m) => {
+                const params = m.params.map((p) => p.name + (p.typeAnnotation ? `: ${formatTypeExpr(p.typeAnnotation)}` : "")).join(", ");
+                const ret = m.returnType ? ` -> ${formatTypeExpr(m.returnType)}` : "";
+                return `  fn ${m.name}(${params})${ret}`;
+              }).join("\n");
+              return {
+                contents: {
+                  kind: "markdown",
+                  value: `\`\`\`hkd
+trait ${stmt.name} {
+${methods}
+}
+\`\`\`
+
+Trait definition in \`${path2.basename(doc.getFilePath())}\``
+                }
+              };
+            }
           }
         }
       }
@@ -14530,6 +16876,47 @@ Resolved dependency from project manifest.`
                 end: { line, character: col + word.length }
               }
             };
+          }
+          if (stmt.kind === "ImplBlockStmt") {
+            for (const m of stmt.methods) {
+              if (m.name === word) {
+                const line = m.span.start.line - 1;
+                const col = m.span.start.column - 1;
+                return {
+                  uri: doc.uri,
+                  range: {
+                    start: { line, character: col },
+                    end: { line, character: col + word.length }
+                  }
+                };
+              }
+            }
+          }
+          if (stmt.kind === "TraitDeclStmt") {
+            if (stmt.name === word) {
+              const line = stmt.span.start.line - 1;
+              const col = stmt.span.start.column - 1;
+              return {
+                uri: doc.uri,
+                range: {
+                  start: { line, character: col },
+                  end: { line, character: col + word.length }
+                }
+              };
+            }
+            for (const m of stmt.methods) {
+              if (m.name === word) {
+                const line = m.span.start.line - 1;
+                const col = m.span.start.column - 1;
+                return {
+                  uri: doc.uri,
+                  range: {
+                    start: { line, character: col },
+                    end: { line, character: col + word.length }
+                  }
+                };
+              }
+            }
           }
         }
       }
@@ -15249,13 +17636,20 @@ var require_debug_session = __commonJS({
               return;
             }
             const rawFrames = this.vm.getCallFrames();
-            const stackFrames = rawFrames.map((f, i) => ({
-              id: i,
-              name: f.name,
-              source: { path: this.programPath, name: path2.basename(this.programPath) },
-              line: f.line > 0 ? f.line : 1,
-              column: 1
-            }));
+            const stackFrames = rawFrames.map((f, i) => {
+              let displayName = f.name;
+              if (f.name === "__step__") {
+                const parent = rawFrames[i - 1];
+                displayName = parent && parent.name && parent.name !== "<script>" ? `${parent.name} (async)` : "async fn";
+              }
+              return {
+                id: i,
+                name: displayName,
+                source: { path: this.programPath, name: path2.basename(this.programPath) },
+                line: f.line > 0 ? f.line : 1,
+                column: 1
+              };
+            });
             this.transport.sendResponse(req, true, {
               stackFrames: stackFrames.reverse(),
               // Top-of-stack first
@@ -15280,8 +17674,11 @@ var require_debug_session = __commonJS({
                 const frameId = varRef - 1e3;
                 const locals = this.vm.getFrameLocals(frameId);
                 for (const loc of locals) {
+                  if (loc.name.startsWith("__fut_") || loc.name.startsWith("__await_") || loc.name === "__resume_val__" || loc.name === "__state__" || loc.name === "__step__") {
+                    continue;
+                  }
                   variables.push({
-                    name: loc.name,
+                    name: loc.name === "__future__" ? "<future>" : loc.name,
                     value: (0, chunk_js_1.formatValue)(loc.value),
                     variablesReference: 0
                   });
@@ -15530,6 +17927,7 @@ var manager_js_1 = require_manager();
 var audit_js_1 = require_audit();
 var reproducible_js_1 = require_reproducible();
 var cache_js_1 = require_cache();
+var lockfile_js_1 = require_lockfile();
 var repl_js_1 = require_repl();
 var test_runner_js_1 = require_test_runner();
 var analyser_js_1 = require_analyser();
@@ -15647,6 +18045,9 @@ function main() {
       break;
     case "cache":
       cmdCache(args.slice(1));
+      break;
+    case "tree":
+      cmdTree(args.slice(1));
       break;
     case "ci":
       cmdCi(args.slice(1));
@@ -15940,7 +18341,8 @@ function buildStandaloneNative(args) {
     const projectDir = getProjectDir();
     if (projectDir) {
       const manifest = (0, index_js_6.readManifest)(projectDir);
-      entryHkd = manifest ? path.resolve(projectDir, manifest.main ?? "src/main.hkd") : void 0;
+      const manifestMain = manifest?.main && manifest.main.endsWith(".hkd") ? manifest.main : "src/main.hkd";
+      entryHkd = manifest ? path.resolve(projectDir, manifestMain) : void 0;
     }
   }
   if (!entryHkd || !fs.existsSync(entryHkd)) {
@@ -15980,7 +18382,10 @@ function buildStandaloneNative(args) {
   compileFileTo(entryHkd, tempHkdb);
   const hkdbBytes = fs.readFileSync(tempHkdb);
   fs.unlinkSync(tempHkdb);
-  const binName = process.platform === "win32" ? "hkd-runtime.exe" : "hkd-runtime";
+  const targetIdx = args.indexOf("--target");
+  const targetVal = targetIdx !== -1 ? args[targetIdx + 1] : void 0;
+  const isTargetWindows = targetVal ? targetVal.includes("windows") : process.platform === "win32";
+  const binName = isTargetWindows ? "hkd-runtime.exe" : "hkd-runtime";
   const possiblePaths = [
     path.resolve(__dirname, "../../native-runtime/zig-out/bin", binName),
     path.resolve(__dirname, "../../../native-runtime/zig-out/bin", binName),
@@ -16004,6 +18409,7 @@ function buildStandaloneNative(args) {
   payloadLenBuf.writeBigUInt64LE(BigInt(hkdbBytes.length));
   const magicBuf = Buffer.from("HKDSTAND", "ascii");
   const finalBinary = Buffer.concat([runtimeBytes, hkdbBytes, payloadLenBuf, magicBuf]);
+  fs.mkdirSync(path.dirname(outExe), { recursive: true });
   fs.writeFileSync(outExe, finalBinary);
   fs.writeFileSync(cachedBinaryPath, finalBinary);
   if (process.platform !== "win32") {
@@ -16216,17 +18622,26 @@ Examples:
   }
   (0, repl_js_1.startRepl)(edition);
 }
-function cmdFmt(args) {
-  if (args.length === 0) {
-    console.error(RED("hkd fmt: Expected a file path"));
-    process.exit(2);
+function findHkdFiles(dir) {
+  const results = [];
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.name === "node_modules" || entry.name === ".git" || entry.name === "target" || entry.name === ".hkd" || entry.name === "vendor" || entry.name === "tmp_dev_journey") {
+        continue;
+      }
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        results.push(...findHkdFiles(fullPath));
+      } else if (entry.isFile() && entry.name.endsWith(".hkd")) {
+        results.push(fullPath);
+      }
+    }
+  } catch {
   }
-  const filePath = args[0];
-  if (!fs.existsSync(filePath)) {
-    console.error(RED(`File not found: ${filePath}`));
-    process.exit(1);
-  }
-  const source = fs.readFileSync(filePath, "utf-8");
+  return results.sort();
+}
+function formatHkdSource(filePath, source) {
   const fileName = path.resolve(filePath);
   const reporter = new index_js_3.ErrorReporter(source, fileName);
   const lexer = new lexer_js_1.Lexer(source, fileName, reporter);
@@ -16241,13 +18656,72 @@ function cmdFmt(args) {
     console.error(RED(`fmt: ${filePath} has parse errors \u2014 cannot format`));
     process.exit(1);
   }
-  const formatted = (0, index_js_4.format)(ast);
+  return (0, index_js_4.format)(ast);
+}
+function cmdFmt(args) {
   const inPlace = args.includes("--write") || args.includes("-w");
-  if (inPlace) {
-    fs.writeFileSync(filePath, formatted, "utf-8");
-    console.log(GREEN(`\u2713 Formatted ${filePath}`));
+  const checkOnly = args.includes("--check");
+  const cleanArgs = args.filter((a) => !a.startsWith("-"));
+  let targetFiles = [];
+  if (cleanArgs.length === 0) {
+    const projectDir = getProjectDir() || process.cwd();
+    targetFiles = findHkdFiles(projectDir);
+    if (targetFiles.length === 0) {
+      console.log(DIM("No .hkd files found to format."));
+      return;
+    }
   } else {
+    for (const arg of cleanArgs) {
+      if (!fs.existsSync(arg)) {
+        console.error(RED(`File or directory not found: ${arg}`));
+        process.exit(1);
+      }
+      const stat = fs.statSync(arg);
+      if (stat.isDirectory()) {
+        targetFiles.push(...findHkdFiles(arg));
+      } else {
+        targetFiles.push(path.resolve(arg));
+      }
+    }
+  }
+  if (cleanArgs.length === 1 && !inPlace && !checkOnly && fs.existsSync(cleanArgs[0]) && !fs.statSync(cleanArgs[0]).isDirectory()) {
+    const filePath = targetFiles[0];
+    const source = fs.readFileSync(filePath, "utf-8");
+    const formatted = formatHkdSource(filePath, source);
     process.stdout.write(formatted);
+    return;
+  }
+  let formattedCount = 0;
+  const unformattedFiles = [];
+  for (const filePath of targetFiles) {
+    const source = fs.readFileSync(filePath, "utf-8");
+    const formatted = formatHkdSource(filePath, source);
+    if (source !== formatted) {
+      unformattedFiles.push(filePath);
+      if (!checkOnly) {
+        fs.writeFileSync(filePath, formatted, "utf-8");
+        console.log(GREEN(`\u2713 Formatted ${path.relative(process.cwd(), filePath)}`));
+        formattedCount++;
+      }
+    }
+  }
+  if (checkOnly) {
+    if (unformattedFiles.length > 0) {
+      for (const f of unformattedFiles) {
+        console.log(RED(`Would format: ${path.relative(process.cwd(), f)}`));
+      }
+      console.error(RED(`
+${unformattedFiles.length} file(s) need formatting. Run \`hkd fmt\` to fix.`));
+      process.exit(1);
+    } else {
+      console.log(GREEN(`\u2713 All ${targetFiles.length} file(s) are properly formatted.`));
+    }
+  } else if (cleanArgs.length === 0 || inPlace) {
+    if (formattedCount === 0) {
+      console.log(GREEN(`\u2713 All ${targetFiles.length} file(s) already formatted.`));
+    } else {
+      console.log(GREEN(`\u2713 Successfully formatted ${formattedCount} file(s).`));
+    }
   }
 }
 function applyLintFixes(source, issues) {
@@ -16375,33 +18849,50 @@ function cmdTest(args) {
   (0, test_runner_js_1.runTests)(target, { filter, verbose, quiet, conformance, differential });
 }
 function cmdCheck(args) {
-  if (args.length === 0) {
-    console.error(RED("hkd check: Expected a file path"));
-    process.exit(2);
+  const cleanArgs = args.filter((a) => !a.startsWith("-"));
+  let targetFiles = [];
+  if (cleanArgs.length === 0) {
+    const projectDir = getProjectDir();
+    if (!projectDir) {
+      console.error(RED("hkd check: Expected a file path or an HKD project (no hkd.toml found)"));
+      process.exit(2);
+    }
+    const manifest = (0, index_js_6.readManifest)(projectDir);
+    const entryFile = path.resolve(projectDir, manifest?.main ?? "src/main.hkd");
+    if (!fs.existsSync(entryFile)) {
+      console.error(RED(`hkd check: Entry file not found: ${entryFile}`));
+      process.exit(1);
+    }
+    targetFiles = [entryFile];
+  } else {
+    for (const arg of cleanArgs) {
+      if (!fs.existsSync(arg)) {
+        console.error(RED(`File not found: ${arg}`));
+        process.exit(1);
+      }
+      targetFiles.push(path.resolve(arg));
+    }
   }
-  const filePath = args[0];
-  if (!fs.existsSync(filePath)) {
-    console.error(RED(`File not found: ${filePath}`));
-    process.exit(1);
+  for (const filePath of targetFiles) {
+    const source = fs.readFileSync(filePath, "utf-8");
+    const fileName = path.resolve(filePath);
+    const reporter = new index_js_3.ErrorReporter(source, fileName);
+    const lexer = new lexer_js_1.Lexer(source, fileName, reporter);
+    const tokens = lexer.tokenize();
+    const parser = new parser_js_1.Parser(tokens, source, fileName, reporter, detectFileEdition(fileName));
+    const ast = parser.parse();
+    if (reporter.hasErrors()) {
+      console.log(reporter.format());
+      process.exit(1);
+    }
+    const analyser = new analyser_js_1.SemanticAnalyser(reporter, source);
+    analyser.analyse(ast);
+    if (reporter.hasErrors()) {
+      console.log(reporter.format());
+      process.exit(1);
+    }
+    console.log(GREEN(`\u2713 ${path.basename(filePath)} \u2014 no errors`));
   }
-  const source = fs.readFileSync(filePath, "utf-8");
-  const fileName = path.resolve(filePath);
-  const reporter = new index_js_3.ErrorReporter(source, fileName);
-  const lexer = new lexer_js_1.Lexer(source, fileName, reporter);
-  const tokens = lexer.tokenize();
-  const parser = new parser_js_1.Parser(tokens, source, fileName, reporter, detectFileEdition(fileName));
-  const ast = parser.parse();
-  if (reporter.hasErrors()) {
-    console.log(reporter.format());
-    process.exit(1);
-  }
-  const analyser = new analyser_js_1.SemanticAnalyser(reporter, source);
-  analyser.analyse(ast);
-  if (reporter.hasErrors()) {
-    console.log(reporter.format());
-    process.exit(1);
-  }
-  console.log(GREEN(`\u2713 ${path.basename(filePath)} \u2014 no errors`));
 }
 function cmdInit(args) {
   if (args.includes("--help") || args.includes("-h")) {
@@ -16478,8 +18969,19 @@ Examples:
   }
 }
 async function cmdAdd(args) {
-  if (args.length === 0) {
-    console.error(RED("hkd add: Expected a package name, e.g. hkd add http@^1.0.0"));
+  const pathIdx = args.indexOf("--path");
+  const pathVal = pathIdx !== -1 ? args[pathIdx + 1] : void 0;
+  const cleanArgs = args.filter((a, idx) => {
+    if (a === "--path")
+      return false;
+    if (idx > 0 && args[idx - 1] === "--path")
+      return false;
+    if (a.startsWith("-"))
+      return false;
+    return true;
+  });
+  if (cleanArgs.length === 0 && !pathVal) {
+    console.error(RED("hkd add: Expected a package name or path, e.g. hkd add http@^1.0.0 or hkd add --path ../my-lib"));
     process.exit(1);
   }
   const projectDir = getProjectDir();
@@ -16488,8 +18990,10 @@ async function cmdAdd(args) {
     process.exit(1);
   }
   const pm = new manager_js_1.PackageManager2();
-  const res = await pm.add(projectDir, args[0], {
-    offline: args.includes("--offline")
+  const pkgSpec = cleanArgs[0] || "";
+  const res = await pm.add(projectDir, pkgSpec, {
+    offline: args.includes("--offline"),
+    path: pathVal
   });
   if (res.ok) {
     console.log(GREEN("\u2713 ") + res.message);
@@ -16542,8 +19046,10 @@ async function cmdUpdate(args) {
     console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
     process.exit(1);
   }
+  const cleanArgs = args.filter((a) => !a.startsWith("-"));
+  const targetPkg = cleanArgs[0];
   const pm = new manager_js_1.PackageManager2();
-  const res = await pm.install(projectDir, { offline: args.includes("--offline") });
+  const res = await pm.update(projectDir, targetPkg, { offline: args.includes("--offline") });
   if (res.ok) {
     console.log(GREEN("\u2713 ") + res.message);
   } else {
@@ -16675,6 +19181,78 @@ function cmdAudit(args) {
   }
   if (!res.ok)
     process.exit(1);
+}
+function cmdTree(args) {
+  const isJson = args.includes("--json");
+  const projectDir = getProjectDir();
+  if (!projectDir) {
+    console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
+    process.exit(1);
+  }
+  const manifest = (0, index_js_6.readManifest)(projectDir);
+  if (!manifest) {
+    console.error(RED("Error: Could not read hkd.toml"));
+    process.exit(1);
+  }
+  const lock = (0, lockfile_js_1.readLockfile)(projectDir);
+  const pkgMap = /* @__PURE__ */ new Map();
+  if (lock && lock.packages) {
+    for (const pkg of lock.packages) {
+      pkgMap.set(pkg.name, pkg);
+    }
+  }
+  function buildSubtree(pkgName, seen) {
+    const locked = pkgMap.get(pkgName);
+    const version = locked ? locked.version : typeof manifest?.dependencies?.[pkgName] === "string" ? manifest.dependencies[pkgName] : "local";
+    const node = {
+      name: pkgName,
+      version: version || "unknown",
+      dependencies: []
+    };
+    if (seen.has(pkgName)) {
+      return node;
+    }
+    const nextSeen = new Set(seen);
+    nextSeen.add(pkgName);
+    if (locked && locked.dependencies) {
+      for (const depStr of locked.dependencies) {
+        const depName = depStr.split(" ")[0];
+        node.dependencies.push(buildSubtree(depName, nextSeen));
+      }
+    }
+    return node;
+  }
+  const rootNode = {
+    name: manifest.name,
+    version: manifest.version,
+    dependencies: []
+  };
+  const directDeps = Object.keys(manifest.dependencies || {}).sort();
+  for (const dep of directDeps) {
+    rootNode.dependencies.push(buildSubtree(dep, /* @__PURE__ */ new Set([manifest.name])));
+  }
+  if (isJson) {
+    console.log(JSON.stringify(rootNode, null, 2));
+    return;
+  }
+  console.log(`${BOLD(rootNode.name)} v${rootNode.version}`);
+  if (rootNode.dependencies.length === 0) {
+    console.log("\u2514\u2500\u2500 " + DIM("(no dependencies)"));
+    return;
+  }
+  function printTree(node, prefix, isLast) {
+    const branch = isLast ? "\u2514\u2500\u2500 " : "\u251C\u2500\u2500 ";
+    console.log(`${prefix}${branch}${CYAN(node.name)} v${node.version}`);
+    const nextPrefix = prefix + (isLast ? "    " : "\u2502   ");
+    for (let i = 0; i < node.dependencies.length; i++) {
+      const isLastChild = i === node.dependencies.length - 1;
+      printTree(node.dependencies[i], nextPrefix, isLastChild);
+    }
+  }
+  for (let i = 0; i < rootNode.dependencies.length; i++) {
+    const isLast = i === rootNode.dependencies.length - 1;
+    printTree(rootNode.dependencies[i], "", isLast);
+  }
 }
 function cmdCache(args) {
   const sub = args[0] || "list";
@@ -17001,9 +19579,10 @@ ${BOLD("COMMANDS:")}
   ${CYAN("run")}       [file.hkd]          Run an HKD project or source file
   ${CYAN("build")}     [options]           Compile project modules incrementally
   ${CYAN("test")}      [file/dir]          Run tests
-  ${CYAN("fmt")}       <file.hkd> [-w]     Format source code (use -w to write back)
+  ${CYAN("fmt")}       [file.hkd] [-w]     Format source code (formats project if no file given)
   ${CYAN("lint")}      <file.hkd>          Lint source code for issues
-  ${CYAN("check")}     <file.hkd>          Type-check without running
+  ${CYAN("check")}     [file.hkd]          Type-check project or source file
+  ${CYAN("tree")}      [--json]            Display the resolved dependency tree
   ${CYAN("explain")}   <error_code>        Explain compiler error codes with code examples
   ${CYAN("rfc")}       <list|check|status> Language Evolution RFC proposal inspector & validator
   ${CYAN("doctor")}    [--json]            Run system and IDE integration diagnostic
