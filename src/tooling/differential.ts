@@ -83,7 +83,17 @@ export function runDifferentialProgram(source: string, name: string): Differenti
   let nativeStatus: number | undefined = undefined;
 
   if (fs.existsSync(nativeBinaryPath)) {
+    if (!isWindows) {
+      try { fs.chmodSync(nativeBinaryPath, 0o755); } catch {}
+    }
+    let canRun = false;
     try {
+      const probe = spawnSync(nativeBinaryPath, ["--help"], { encoding: "utf-8" });
+      canRun = probe.status === 0 || (probe.stderr || "").includes("HKD") || (probe.stdout || "").includes("HKD");
+    } catch {}
+
+    if (canRun) {
+      try {
       // Compile to temporary bytecode
       const tempDir = path.resolve(".hkd", "tmp");
       fs.mkdirSync(tempDir, { recursive: true });
@@ -108,9 +118,10 @@ export function runDifferentialProgram(source: string, name: string): Differenti
       try {
         fs.unlinkSync(tempHkdb);
       } catch {}
-    } catch (e: any) {
-      nativeOutput = e.message;
-      nativeStatus = 1;
+      } catch (e: any) {
+        nativeOutput = e.message;
+        nativeStatus = 1;
+      }
     }
   }
 

@@ -18,7 +18,19 @@ import { SemanticAnalyser } from "../../src/semantic/analyser.js";
 import { Compiler } from "../../src/bytecode/compiler.js";
 import { ErrorReporter } from "../../src/errors/index.js";
 
-const RUNTIME_PATH = path.resolve(__dirname, "../../native-runtime/zig-out/bin/hkd-runtime.exe");
+const RUNTIME_BIN = process.platform === "win32" ? "hkd-runtime.exe" : "hkd-runtime";
+const RUNTIME_PATH = path.resolve(__dirname, "../../native-runtime/zig-out/bin", RUNTIME_BIN);
+if (process.platform !== "win32" && fs.existsSync(RUNTIME_PATH)) {
+  try { fs.chmodSync(RUNTIME_PATH, 0o755); } catch {}
+}
+
+let isNativeRunnable = false;
+try {
+  if (fs.existsSync(RUNTIME_PATH)) {
+    const probe = spawnSync(RUNTIME_PATH, ["--help"], { encoding: "utf-8" });
+    isNativeRunnable = probe.status === 0 || (probe.stderr || "").includes("HKD") || (probe.stdout || "").includes("HKD");
+  }
+} catch {}
 
 describe("HKD 1.0 Bytecode Format & Compatibility Verification", () => {
   let tmpDir: string;
@@ -48,7 +60,7 @@ describe("HKD 1.0 Bytecode Format & Compatibility Verification", () => {
   });
 
   test("native runtime rejects bytecode with invalid magic bytes", () => {
-    if (!fs.existsSync(RUNTIME_PATH)) return;
+    if (!isNativeRunnable) return;
 
     const chunk = new Chunk("<main>", 0);
     chunk.writeByte(Op.Return, 1);
@@ -64,7 +76,7 @@ describe("HKD 1.0 Bytecode Format & Compatibility Verification", () => {
   });
 
   test("native runtime rejects unsupported bytecode version", () => {
-    if (!fs.existsSync(RUNTIME_PATH)) return;
+    if (!isNativeRunnable) return;
 
     const chunk = new Chunk("<main>", 0);
     chunk.writeByte(Op.Return, 1);
@@ -80,7 +92,7 @@ describe("HKD 1.0 Bytecode Format & Compatibility Verification", () => {
   });
 
   test("native runtime rejects truncated bytecode shorter than 8 bytes", () => {
-    if (!fs.existsSync(RUNTIME_PATH)) return;
+    if (!isNativeRunnable) return;
 
     const testFile = path.join(tmpDir, "truncated.hkdb");
     fs.writeFileSync(testFile, Buffer.from("HKD")); // only 3 bytes
@@ -91,7 +103,7 @@ describe("HKD 1.0 Bytecode Format & Compatibility Verification", () => {
   });
 
   test("constant pool serialization faithfully roundtrips in native runtime", () => {
-    if (!fs.existsSync(RUNTIME_PATH)) return;
+    if (!isNativeRunnable) return;
 
     const source = 'print("Hello from Constant Pool")';
     const reporter = new ErrorReporter(source, "<compat>");

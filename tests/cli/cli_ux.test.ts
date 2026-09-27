@@ -12,6 +12,7 @@
 import { describe, test, expect } from "@jest/globals";
 import { spawnSync } from "child_process";
 import * as path from "path";
+import * as os from "os";
 
 describe("HKD CLI 2.0 — UX, Error Codes & Diagnostics", () => {
   const cliScript = path.resolve("dist/cli/main.js");
@@ -51,6 +52,7 @@ describe("HKD CLI 2.0 — UX, Error Codes & Diagnostics", () => {
 
   test("CLI-UX-04: hkd run without arguments reports missing target file", () => {
     const res = spawnSync(process.execPath, [cliScript, "run"], {
+      cwd: os.tmpdir(),
       encoding: "utf-8",
       env: execEnv,
     });

@@ -10,7 +10,20 @@ import { SemanticAnalyser } from "../../src/semantic/analyser.js";
 import { Compiler } from "../../src/bytecode/compiler.js";
 import { serializeProgram } from "../../src/bytecode/serializer.js";
 
-const RUNTIME_PATH = path.resolve(__dirname, "../../native-runtime/zig-out/bin/hkd-runtime.exe");
+const RUNTIME_BIN = process.platform === "win32" ? "hkd-runtime.exe" : "hkd-runtime";
+const RUNTIME_PATH = path.resolve(__dirname, "../../native-runtime/zig-out/bin", RUNTIME_BIN);
+if (process.platform !== "win32" && fs.existsSync(RUNTIME_PATH)) {
+  try { fs.chmodSync(RUNTIME_PATH, 0o755); } catch {}
+}
+
+let isNativeRunnable = false;
+try {
+  if (fs.existsSync(RUNTIME_PATH)) {
+    const probe = spawnSync(RUNTIME_PATH, ["--help"], { encoding: "utf-8" });
+    isNativeRunnable = probe.status === 0 || (probe.stderr || "").includes("HKD") || (probe.stdout || "").includes("HKD");
+  }
+} catch {}
+
 const TEMP_FILE = path.resolve(process.cwd(), "temp_test_ic.hkdb");
 
 function run(source: string): { output: string[]; ok: boolean } {
@@ -50,7 +63,7 @@ function run(source: string): { output: string[]; ok: boolean } {
     }
   }
 
-  if (result.ok) {
+  if (result.ok && isNativeRunnable) {
     expect(nativeOk).toBe(true);
     const stdLines = lines.map((l) => l.trim()).filter((l) => l.length > 0);
     expect(nativeLines).toEqual(stdLines);

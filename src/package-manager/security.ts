@@ -31,7 +31,14 @@ export function assertSafePath(baseDir: string, relPath: string): string {
   }
 
   // Reject path traversal tokens
-  if (relPath.includes("..") || relPath.startsWith("/") || relPath.startsWith("\\") || path.isAbsolute(relPath)) {
+  if (
+    relPath.includes("..") ||
+    relPath.startsWith("/") ||
+    relPath.startsWith("\\") ||
+    path.win32.isAbsolute(relPath) ||
+    path.posix.isAbsolute(relPath) ||
+    /^[a-zA-Z]:/.test(relPath)
+  ) {
     throw new Error(`error[SEC005]: Security violation: Path traversal attempt detected: '${relPath}'`);
   }
 

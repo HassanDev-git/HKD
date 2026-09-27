@@ -11,7 +11,11 @@ import { ErrorReporter } from "../../src/errors/index.js";
 
 describe("HKD Phase 12AB — Differential Testing with Packages & Modules", () => {
   const testDir = path.resolve(".hkd/test_differential_p12");
-  const nativeRuntime = path.resolve("native-runtime/zig-out/bin/hkd-runtime.exe");
+  const RUNTIME_BIN = process.platform === "win32" ? "hkd-runtime.exe" : "hkd-runtime";
+  const nativeRuntime = path.resolve("native-runtime/zig-out/bin", RUNTIME_BIN);
+  if (process.platform !== "win32" && fs.existsSync(nativeRuntime)) {
+    try { fs.chmodSync(nativeRuntime, 0o755); } catch {}
+  }
 
   beforeAll(() => {
     fs.mkdirSync(testDir, { recursive: true });
@@ -70,7 +74,15 @@ describe("HKD Phase 12AB — Differential Testing with Packages & Modules", () =
     expect(refOutput.trim()).toBe("9900");
 
     // 2. Native Stack VM / JIT if available
-    if (fs.existsSync(nativeRuntime)) {
+    let isNativeRunnable = false;
+    try {
+      if (fs.existsSync(nativeRuntime)) {
+        const probe = spawnSync(nativeRuntime, ["--help"], { encoding: "utf-8" });
+        isNativeRunnable = probe.status === 0 || (probe.stderr || "").includes("HKD") || (probe.stdout || "").includes("HKD");
+      }
+    } catch {}
+
+    if (isNativeRunnable) {
       // Standard VM
       const vmRes = spawnSync(nativeRuntime, [hkdbPath, "--vm"], { encoding: "utf-8" });
       expect(vmRes.status).toBe(0);

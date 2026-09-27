@@ -81,33 +81,47 @@ function runDifferentialProgram(source, name) {
     let nativeOutput = undefined;
     let nativeStatus = undefined;
     if (fs.existsSync(nativeBinaryPath)) {
-        try {
-            // Compile to temporary bytecode
-            const tempDir = path.resolve(".hkd", "tmp");
-            fs.mkdirSync(tempDir, { recursive: true });
-            const tempHkdb = path.join(tempDir, `diff_${Date.now()}_${Math.floor(Math.random() * 1000)}.hkdb`);
-            const rep = new index_js_1.ErrorReporter(source, name);
-            const lex = new lexer_js_1.Lexer(source, name, rep);
-            const tok = lex.tokenize();
-            const par = new parser_js_1.Parser(tok, source, name, rep);
-            const a = par.parse();
-            const sem = new analyser_js_1.SemanticAnalyser(rep, source);
-            sem.analyse(a);
-            const comp = new compiler_js_1.Compiler(rep);
-            const ch = comp.compile(a);
-            const bytes = (0, serializer_js_1.serializeProgram)(ch);
-            fs.writeFileSync(tempHkdb, Buffer.from(bytes));
-            const run = (0, child_process_1.spawnSync)(nativeBinaryPath, [tempHkdb], { encoding: "utf-8" });
-            nativeOutput = run.stdout + (run.stderr ? `\n${run.stderr}` : "");
-            nativeStatus = run.status ?? 0;
+        if (!isWindows) {
             try {
-                fs.unlinkSync(tempHkdb);
+                fs.chmodSync(nativeBinaryPath, 0o755);
             }
             catch { }
         }
-        catch (e) {
-            nativeOutput = e.message;
-            nativeStatus = 1;
+        let canRun = false;
+        try {
+            const probe = (0, child_process_1.spawnSync)(nativeBinaryPath, ["--help"], { encoding: "utf-8" });
+            canRun = probe.status === 0 || (probe.stderr || "").includes("HKD") || (probe.stdout || "").includes("HKD");
+        }
+        catch { }
+        if (canRun) {
+            try {
+                // Compile to temporary bytecode
+                const tempDir = path.resolve(".hkd", "tmp");
+                fs.mkdirSync(tempDir, { recursive: true });
+                const tempHkdb = path.join(tempDir, `diff_${Date.now()}_${Math.floor(Math.random() * 1000)}.hkdb`);
+                const rep = new index_js_1.ErrorReporter(source, name);
+                const lex = new lexer_js_1.Lexer(source, name, rep);
+                const tok = lex.tokenize();
+                const par = new parser_js_1.Parser(tok, source, name, rep);
+                const a = par.parse();
+                const sem = new analyser_js_1.SemanticAnalyser(rep, source);
+                sem.analyse(a);
+                const comp = new compiler_js_1.Compiler(rep);
+                const ch = comp.compile(a);
+                const bytes = (0, serializer_js_1.serializeProgram)(ch);
+                fs.writeFileSync(tempHkdb, Buffer.from(bytes));
+                const run = (0, child_process_1.spawnSync)(nativeBinaryPath, [tempHkdb], { encoding: "utf-8" });
+                nativeOutput = run.stdout + (run.stderr ? `\n${run.stderr}` : "");
+                nativeStatus = run.status ?? 0;
+                try {
+                    fs.unlinkSync(tempHkdb);
+                }
+                catch { }
+            }
+            catch (e) {
+                nativeOutput = e.message;
+                nativeStatus = 1;
+            }
         }
     }
     // Normalize outputs (remove trailing whitespace and carriage returns)

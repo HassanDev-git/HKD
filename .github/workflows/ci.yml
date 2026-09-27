@@ -49,6 +49,11 @@ jobs:
         run: npm ci
       - name: Compile TypeScript
         run: npm run build
+      - name: Ensure Executable Permissions
+        if: runner.os != 'Windows'
+        run: |
+          chmod +x node_modules/@zigc/*/bin/* || true
+          chmod +x native-runtime/zig-out/bin/* || true
       - name: Run Test Suite
         run: npm test
 
