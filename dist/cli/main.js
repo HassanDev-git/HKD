@@ -479,7 +479,8 @@ function buildStandaloneNative(args) {
         const projectDir = getProjectDir();
         if (projectDir) {
             const manifest = (0, index_js_6.readManifest)(projectDir);
-            entryHkd = manifest ? path.resolve(projectDir, manifest.main ?? "src/main.hkd") : undefined;
+            const manifestMain = manifest?.main && manifest.main.endsWith(".hkd") ? manifest.main : "src/main.hkd";
+            entryHkd = manifest ? path.resolve(projectDir, manifestMain) : undefined;
         }
     }
     if (!entryHkd || !fs.existsSync(entryHkd)) {
@@ -530,7 +531,10 @@ function buildStandaloneNative(args) {
     const hkdbBytes = fs.readFileSync(tempHkdb);
     fs.unlinkSync(tempHkdb);
     // 2. Locate native runtime binary
-    const binName = process.platform === "win32" ? "hkd-runtime.exe" : "hkd-runtime";
+    const targetIdx = args.indexOf("--target");
+    const targetVal = targetIdx !== -1 ? args[targetIdx + 1] : undefined;
+    const isTargetWindows = targetVal ? targetVal.includes("windows") : process.platform === "win32";
+    const binName = isTargetWindows ? "hkd-runtime.exe" : "hkd-runtime";
     const possiblePaths = [
         path.resolve(__dirname, "../../native-runtime/zig-out/bin", binName),
         path.resolve(__dirname, "../../../native-runtime/zig-out/bin", binName),
@@ -555,6 +559,7 @@ function buildStandaloneNative(args) {
     payloadLenBuf.writeBigUInt64LE(BigInt(hkdbBytes.length));
     const magicBuf = Buffer.from("HKDSTAND", "ascii");
     const finalBinary = Buffer.concat([runtimeBytes, hkdbBytes, payloadLenBuf, magicBuf]);
+    fs.mkdirSync(path.dirname(outExe), { recursive: true });
     fs.writeFileSync(outExe, finalBinary);
     fs.writeFileSync(cachedBinaryPath, finalBinary);
     if (process.platform !== "win32") {

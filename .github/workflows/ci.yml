@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 concurrency:
-  group: \${{ github.workflow }}-\${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -31,9 +31,9 @@ jobs:
         run: node dist/cli/main.js audit
 
   test-matrix:
-    name: Test on \${{ matrix.os }}
+    name: Test on ${{ matrix.os }}
     needs: [lint-and-audit]
-    runs-on: \${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:

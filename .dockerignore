@@ -1,0 +1,14 @@
+# HKD Docker Ignore
+.git/
+.github/
+.vscode/
+node_modules/
+dist/
+target/
+.hkd/
+tests/
+*.log
+*.env*
+*.key
+*.pem
+*.secret
