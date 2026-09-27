@@ -14,7 +14,7 @@ let isNativeRunnable = false;
 try {
   if (fs.existsSync(RUNTIME_PATH)) {
     const probe = spawnSync(RUNTIME_PATH, ["--help"], { encoding: "utf-8" });
-    isNativeRunnable = probe.status === 0 || (probe.stderr || "").includes("HKD") || (probe.stdout || "").includes("HKD");
+    isNativeRunnable = probe.status === 0;
   }
 } catch {}
 

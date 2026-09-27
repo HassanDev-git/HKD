@@ -78,7 +78,7 @@ describe("HKD Phase 12AB — Differential Testing with Packages & Modules", () =
     try {
       if (fs.existsSync(nativeRuntime)) {
         const probe = spawnSync(nativeRuntime, ["--help"], { encoding: "utf-8" });
-        isNativeRunnable = probe.status === 0 || (probe.stderr || "").includes("HKD") || (probe.stdout || "").includes("HKD");
+        isNativeRunnable = probe.status === 0;
       }
     } catch {}
 

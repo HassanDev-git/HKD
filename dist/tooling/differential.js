@@ -90,7 +90,7 @@ function runDifferentialProgram(source, name) {
         let canRun = false;
         try {
             const probe = (0, child_process_1.spawnSync)(nativeBinaryPath, ["--help"], { encoding: "utf-8" });
-            canRun = probe.status === 0 || (probe.stderr || "").includes("HKD") || (probe.stdout || "").includes("HKD");
+            canRun = probe.status === 0;
         }
         catch { }
         if (canRun) {

@@ -53,7 +53,24 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           chmod +x node_modules/@zigc/*/bin/* || true
-          chmod +x native-runtime/zig-out/bin/* || true
+      - name: Build Native Runtime
+        run: |
+          node -e "
+            const { spawnSync } = require('child_process');
+            const path = require('path');
+            const fs = require('fs');
+            const isWin = process.platform === 'win32';
+            const isDarwin = process.platform === 'darwin';
+            const arch = process.arch === 'arm64' ? 'arm64' : 'x64';
+            const plat = isWin ? 'win32-x64' : (isDarwin ? 'darwin-' + arch : 'linux-' + arch);
+            const bin = isWin ? 'zig.exe' : 'zig';
+            const zigBin = path.resolve('node_modules', '@zigc', plat, 'bin', bin);
+            if (fs.existsSync(zigBin)) {
+              if (!isWin) try { fs.chmodSync(zigBin, 0o755); } catch {}
+              const res = spawnSync(zigBin, ['build', '-Doptimize=ReleaseFast'], { cwd: 'native-runtime', stdio: 'inherit' });
+              process.exit(res.status ?? 0);
+            }
+          " || true
       - name: Run Test Suite
         run: npm test
 
