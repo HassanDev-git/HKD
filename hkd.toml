@@ -1,0 +1,6 @@
+name = "hkd"
+version = "1.1.0"
+edition = "2026"
+license = "MIT"
+description = "The HKD Programming Language"
+main = "src/cli/main.ts"
