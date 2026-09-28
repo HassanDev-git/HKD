@@ -14,6 +14,8 @@ import { Parser } from "../parser/parser.js";
 import { SemanticAnalyser } from "../semantic/analyser.js";
 import { Compiler } from "../bytecode/compiler.js";
 import { VM, VmError } from "../vm/vm.js";
+import { RegisterVM } from "../vm/vm_register.js";
+import { lowerToRegisterChunk } from "../bytecode/register_lowering.js";
 import { HkdValue, HkdObject } from "../bytecode/chunk.js";
 import { getStdModule, setCurrentVm } from "../stdlib/index.js";
 import { detectFileEdition } from "../utils/index.js";
@@ -33,6 +35,8 @@ export interface RunOptions {
   noExit?: boolean;
   /** Language edition to target (default: 2026) */
   edition?: "2026" | "2027";
+  /** VM Architecture: "stack" (default) or "register" (Phase 9C experimental) */
+  vm?: "stack" | "register";
 }
 
 export interface RunResult {
@@ -107,7 +111,9 @@ export function runSource(source: string, opts: RunOptions = {}): RunResult {
   }
 
   // ── 5. Run ───────────────────────────────────────────────────────────────
-  const vm = new VM(opts.output ?? ((s) => process.stdout.write(s + "\n")));
+  const vmKind = opts.vm ?? (process.env.HKD_VM === "register" ? "register" : "stack");
+  const outputHandler = opts.output ?? ((s) => process.stdout.write(s + "\n"));
+  const vm = vmKind === "register" ? new RegisterVM(outputHandler) : new VM(outputHandler);
 
   // Register module loader
   vm.defineNative("__import__", 1, (args) => {
@@ -117,7 +123,12 @@ export function runSource(source: string, opts: RunOptions = {}): RunResult {
   setCurrentVm(vm);
   let result;
   try {
-    result = vm.run(chunk);
+    if (vmKind === "register") {
+      const regChunk = lowerToRegisterChunk(chunk);
+      result = (vm as RegisterVM).run(regChunk);
+    } else {
+      result = (vm as VM).run(chunk);
+    }
   } finally {
     setCurrentVm(null);
   }
@@ -169,7 +180,7 @@ export function runFile(filePath: string, opts: RunOptions = {}): RunResult {
 
 // ─── Module loader ────────────────────────────────────────────────────────────
 
-export function loadModule(modulePath: string, vm: VM, opts: RunOptions = {}): HkdValue {
+export function loadModule(modulePath: string, vm: VM | RegisterVM, opts: RunOptions = {}): HkdValue {
   // Check built-in stdlib first
   const stdlibModule = tryLoadStdlib(modulePath, vm);
   if (stdlibModule !== null) {
@@ -243,9 +254,9 @@ export function loadModule(modulePath: string, vm: VM, opts: RunOptions = {}): H
     }
 
     // 5. Run in a fresh, isolated VM instance
-    // Share the stdout handler from parent VM if available
+    const vmKind = opts.vm ?? (process.env.HKD_VM === "register" ? "register" : "stack");
     const outputHandler = (vm as any).output ?? ((s: string) => process.stdout.write(s + "\n"));
-    const subVm = new VM(outputHandler);
+    const subVm = vmKind === "register" ? new RegisterVM(outputHandler) : new VM(outputHandler);
 
     // Register loader recursively on the subVM
     subVm.defineNative("__import__", 1, (subArgs) => {
@@ -255,12 +266,16 @@ export function loadModule(modulePath: string, vm: VM, opts: RunOptions = {}): H
     setCurrentVm(subVm);
     let runResult;
     try {
-      runResult = subVm.run(chunk);
+      if (vmKind === "register") {
+        runResult = (subVm as RegisterVM).run(lowerToRegisterChunk(chunk));
+      } else {
+        runResult = (subVm as VM).run(chunk);
+      }
     } finally {
       setCurrentVm(vm);
     }
     if (!runResult.ok) {
-      throw new VmError(`Runtime error in module "${modulePath}": ${runResult.error}`, runResult.code ?? ErrorCode.E405);
+      throw new VmError(`Runtime error in module "${modulePath}": ${runResult.error}`, (runResult as any).code ?? ErrorCode.E405);
     }
 
     // Collect exported non-builtin globals
@@ -283,7 +298,7 @@ export function loadModule(modulePath: string, vm: VM, opts: RunOptions = {}): H
   }
 }
 
-function tryLoadStdlib(name: string, _vm: VM): HkdValue | null {
+function tryLoadStdlib(name: string, _vm: VM | RegisterVM): HkdValue | null {
   // Resolve "math", "json", "fs", "std.json", ... from the standard library so
   // that `hkd run <file>` exposes stdlib modules to HKD programs via `import`.
   return getStdModule(name);

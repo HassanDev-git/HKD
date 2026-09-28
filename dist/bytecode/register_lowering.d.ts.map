@@ -1,0 +1,1 @@
+{"version":3,"file":"register_lowering.d.ts","sourceRoot":"","sources":["../../src/bytecode/register_lowering.ts"],"names":[],"mappings":"AAAA;;;;;GAKG;AAEH,OAAO,EAAE,KAAK,EAAyB,MAAM,YAAY,CAAC;AAE1D,OAAO,EAAE,aAAa,EAAS,MAAM,qBAAqB,CAAC;AAE3D,wBAAgB,oBAAoB,CAAC,KAAK,EAAE,KAAK,GAAG,aAAa,CAydhE"}

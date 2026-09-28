@@ -40,6 +40,8 @@ const parser_js_1 = require("../parser/parser.js");
 const analyser_js_1 = require("../semantic/analyser.js");
 const compiler_js_1 = require("../bytecode/compiler.js");
 const vm_js_1 = require("../vm/vm.js");
+const vm_register_js_1 = require("../vm/vm_register.js");
+const register_lowering_js_1 = require("../bytecode/register_lowering.js");
 const index_js_2 = require("../stdlib/index.js");
 const index_js_3 = require("../utils/index.js");
 // ─── Module registry ──────────────────────────────────────────────────────────
@@ -98,7 +100,9 @@ function runSource(source, opts = {}) {
         return { ok: false, error: "Compile error", diagnostics: diags };
     }
     // ── 5. Run ───────────────────────────────────────────────────────────────
-    const vm = new vm_js_1.VM(opts.output ?? ((s) => process.stdout.write(s + "\n")));
+    const vmKind = opts.vm ?? (process.env.HKD_VM === "register" ? "register" : "stack");
+    const outputHandler = opts.output ?? ((s) => process.stdout.write(s + "\n"));
+    const vm = vmKind === "register" ? new vm_register_js_1.RegisterVM(outputHandler) : new vm_js_1.VM(outputHandler);
     // Register module loader
     vm.defineNative("__import__", 1, (args) => {
         return loadModule(args[0], vm, opts);
@@ -106,7 +110,13 @@ function runSource(source, opts = {}) {
     (0, index_js_2.setCurrentVm)(vm);
     let result;
     try {
-        result = vm.run(chunk);
+        if (vmKind === "register") {
+            const regChunk = (0, register_lowering_js_1.lowerToRegisterChunk)(chunk);
+            result = vm.run(regChunk);
+        }
+        else {
+            result = vm.run(chunk);
+        }
     }
     finally {
         (0, index_js_2.setCurrentVm)(null);
@@ -214,9 +224,9 @@ function loadModule(modulePath, vm, opts = {}) {
             throw new vm_js_1.VmError(`Compile error in module "${modulePath}":\n${reporter.format()}`, index_js_1.ErrorCode.E405);
         }
         // 5. Run in a fresh, isolated VM instance
-        // Share the stdout handler from parent VM if available
+        const vmKind = opts.vm ?? (process.env.HKD_VM === "register" ? "register" : "stack");
         const outputHandler = vm.output ?? ((s) => process.stdout.write(s + "\n"));
-        const subVm = new vm_js_1.VM(outputHandler);
+        const subVm = vmKind === "register" ? new vm_register_js_1.RegisterVM(outputHandler) : new vm_js_1.VM(outputHandler);
         // Register loader recursively on the subVM
         subVm.defineNative("__import__", 1, (subArgs) => {
             return loadModule(subArgs[0], subVm, { ...opts, fileName: canonicalPath });
@@ -224,7 +234,12 @@ function loadModule(modulePath, vm, opts = {}) {
         (0, index_js_2.setCurrentVm)(subVm);
         let runResult;
         try {
-            runResult = subVm.run(chunk);
+            if (vmKind === "register") {
+                runResult = subVm.run((0, register_lowering_js_1.lowerToRegisterChunk)(chunk));
+            }
+            else {
+                runResult = subVm.run(chunk);
+            }
         }
         finally {
             (0, index_js_2.setCurrentVm)(vm);

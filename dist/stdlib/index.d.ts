@@ -6,7 +6,7 @@
  */
 import { HkdObject } from "../bytecode/chunk.js";
 import { VM } from "../vm/vm.js";
-export declare function setCurrentVm(vm: VM | null): void;
+export declare function setCurrentVm(vm: any): void;
 export declare function registerStdlib(vm: VM): void;
 /**
  * Resolve a stdlib module (e.g. "math", "json", "fs", "std.json", ...) by name.

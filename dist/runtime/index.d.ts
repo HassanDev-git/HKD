@@ -5,6 +5,7 @@
  * This is the single entry point for executing HKD programs.
  */
 import { VM } from "../vm/vm.js";
+import { RegisterVM } from "../vm/vm_register.js";
 import { HkdValue } from "../bytecode/chunk.js";
 export interface RunOptions {
     /** File path for error reporting */
@@ -19,6 +20,8 @@ export interface RunOptions {
     noExit?: boolean;
     /** Language edition to target (default: 2026) */
     edition?: "2026" | "2027";
+    /** VM Architecture: "stack" (default) or "register" (Phase 9C experimental) */
+    vm?: "stack" | "register";
 }
 export interface RunResult {
     ok: boolean;
@@ -28,5 +31,5 @@ export interface RunResult {
 }
 export declare function runSource(source: string, opts?: RunOptions): RunResult;
 export declare function runFile(filePath: string, opts?: RunOptions): RunResult;
-export declare function loadModule(modulePath: string, vm: VM, opts?: RunOptions): HkdValue;
+export declare function loadModule(modulePath: string, vm: VM | RegisterVM, opts?: RunOptions): HkdValue;
 //# sourceMappingURL=index.d.ts.map

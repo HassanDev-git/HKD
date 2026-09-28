@@ -16,9 +16,9 @@ import { ErrorCode } from "../errors/index.js";
 
 type StdModule = Map<string, HkdValue>;
 
-let currentVmInstance: VM | null = null;
+let currentVmInstance: any = null;
 
-export function setCurrentVm(vm: VM | null): void {
+export function setCurrentVm(vm: any): void {
   currentVmInstance = vm;
 }
 
