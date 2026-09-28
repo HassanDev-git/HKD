@@ -369,7 +369,23 @@ export function optimizeRegisterChunk(
   const n = code.length;
   if (n === 0) return regChunk;
 
-  // Pass 1: Identify and eliminate redundant moves
+  // Track all jump target instruction indices (basic block boundaries)
+  const isJumpTarget = new Set<number>();
+  for (const ins of code) {
+    if (ins.op === RegOp.Jump) {
+      isJumpTarget.add(ins.dst);
+    } else if (
+      ins.op === RegOp.JumpIf ||
+      ins.op === RegOp.JumpIfNot ||
+      ins.op === RegOp.JumpNull ||
+      ins.op === RegOp.IterNext
+    ) {
+      isJumpTarget.add(ins.src2);
+    }
+  }
+
+  // Pass 1: Redundant Move & Instruction Optimization
+
   // Pattern 1: Move rX, rX (self-move) -> eliminate
   for (let i = 0; i < n; i++) {
     const ins = code[i];
@@ -383,6 +399,7 @@ export function optimizeRegisterChunk(
   // Pattern 2: Consecutive Move Propagation
   // Move rA, rB followed by Move rC, rA (where rA is a temporary) -> Move rC, rB
   for (let i = 0; i < n - 1; i++) {
+    if (isJumpTarget.has(i + 1)) continue;
     const ins1 = code[i];
     const ins2 = code[i + 1];
     if (
@@ -401,6 +418,7 @@ export function optimizeRegisterChunk(
   // If ins1 computes into temporary rT (rT >= 64) and ins2 is Move rDest, rT:
   // Forward rDest directly into ins1.dst and mark ins2 as Nop
   for (let i = 0; i < n - 1; i++) {
+    if (isJumpTarget.has(i + 1)) continue;
     const ins1 = code[i];
     const ins2 = code[i + 1];
     if (
@@ -423,8 +441,107 @@ export function optimizeRegisterChunk(
     }
   }
 
-  // Pass 2: Nop Stripping & Re-indexing Jumps
-  // Compute new index map for each instruction
+  // Pattern 4: Source Register Forwarding
+  // If ins1 is Move rTemp, rSrc (where rTemp >= 64 is a temporary)
+  // and a subsequent instruction in the same basic block uses rTemp as an operand:
+  for (let i = 0; i < n - 1; i++) {
+    if (isJumpTarget.has(i)) continue;
+    const ins1 = code[i];
+    if (ins1.op === RegOp.Move && ins1.dst >= 64) {
+      const rTemp = ins1.dst;
+      const rSrc = ins1.src1;
+      for (let j = i + 1; j < Math.min(i + 5, n); j++) {
+        if (isJumpTarget.has(j)) break;
+        const ins2 = code[j];
+        if (ins2.op === RegOp.Nop) continue;
+        // Stop on control flow or if rSrc is overwritten
+        if (
+          ins2.op === RegOp.Jump ||
+          ins2.op === RegOp.JumpIf ||
+          ins2.op === RegOp.JumpIfNot ||
+          ins2.op === RegOp.JumpNull ||
+          ins2.op === RegOp.Call ||
+          ins2.dst === rSrc
+        ) {
+          break;
+        }
+
+        if (ins2.op === RegOp.Return && ins2.dst === rTemp) {
+          ins2.dst = rSrc;
+          ins1.op = RegOp.Nop;
+          stats.movesEliminated++;
+          stats.registerMovesRemoved++;
+          break;
+        } else if (
+          ins2.op === RegOp.Add || ins2.op === RegOp.Sub || ins2.op === RegOp.Mul ||
+          ins2.op === RegOp.Div || ins2.op === RegOp.Mod || ins2.op === RegOp.Pow ||
+          ins2.op === RegOp.BitAnd || ins2.op === RegOp.BitOr || ins2.op === RegOp.BitXor ||
+          ins2.op === RegOp.Shl || ins2.op === RegOp.Shr || ins2.op === RegOp.Eq ||
+          ins2.op === RegOp.Ne || ins2.op === RegOp.Lt || ins2.op === RegOp.Le ||
+          ins2.op === RegOp.Gt || ins2.op === RegOp.Ge
+        ) {
+          let forwarded = false;
+          if (ins2.src1 === rTemp) {
+            ins2.src1 = rSrc;
+            forwarded = true;
+          }
+          if (ins2.src2 === rTemp) {
+            ins2.src2 = rSrc;
+            forwarded = true;
+          }
+          if (forwarded) {
+            ins1.op = RegOp.Nop;
+            stats.movesEliminated++;
+            stats.registerMovesRemoved++;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // Pattern 5: Eliminate trivial Jump to immediately following instruction
+  for (let i = 0; i < n; i++) {
+    const ins = code[i];
+    if (ins.op === RegOp.Jump && ins.dst === i + 1) {
+      ins.op = RegOp.Nop;
+      stats.deadInstructionsRemoved++;
+    }
+  }
+
+  // Pattern 6: Redundant LoadGlobal in same basic block
+  for (let i = 0; i < n - 1; i++) {
+    const ins1 = code[i];
+    if (ins1.op === RegOp.LoadGlobal) {
+      const globalIdx = ins1.src1;
+      const loadedReg = ins1.dst;
+      for (let j = i + 1; j < Math.min(i + 8, n); j++) {
+        const ins2 = code[j];
+        if (ins2.op === RegOp.Nop) continue;
+        if (
+          ins2.op === RegOp.Call ||
+          ins2.op === RegOp.StoreGlobal ||
+          ins2.op === RegOp.DefineGlobal ||
+          ins2.op === RegOp.Jump ||
+          ins2.op === RegOp.JumpIf ||
+          ins2.op === RegOp.JumpIfNot ||
+          ins2.op === RegOp.JumpNull ||
+          ins2.op === RegOp.Return ||
+          ins2.dst === loadedReg
+        ) {
+          break;
+        }
+        if (ins2.op === RegOp.LoadGlobal && ins2.src1 === globalIdx) {
+          ins2.op = RegOp.Move;
+          ins2.src1 = loadedReg;
+          stats.movesEliminated++;
+          break;
+        }
+      }
+    }
+  }
+
+  // Pass 2: Nop Stripping, Jump Target Re-indexing & Register Compaction
   let hasNops = false;
   for (let i = 0; i < n; i++) {
     if (code[i].op === RegOp.Nop) {

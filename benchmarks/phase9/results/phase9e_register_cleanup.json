@@ -1,0 +1,71 @@
+{
+  "phase": "Phase 9E",
+  "benchmark": "Register Cleanup & Move Forwarding Analysis",
+  "timestamp": "2026-09-28T20:02:27.985Z",
+  "results": [
+    {
+      "file": "minimal.hkd",
+      "instructions_before": 4,
+      "instructions_after": 4,
+      "instruction_reduction_percent": 0,
+      "moves_eliminated": 0,
+      "dead_instructions_removed": 0
+    },
+    {
+      "file": "loop_tight.hkd",
+      "instructions_before": 17,
+      "instructions_after": 17,
+      "instruction_reduction_percent": 0,
+      "moves_eliminated": 0,
+      "dead_instructions_removed": 0
+    },
+    {
+      "file": "recursion_fib.hkd",
+      "instructions_before": 10,
+      "instructions_after": 10,
+      "instruction_reduction_percent": 0,
+      "moves_eliminated": 0,
+      "dead_instructions_removed": 0
+    },
+    {
+      "file": "data_strings.hkd",
+      "instructions_before": 30,
+      "instructions_after": 30,
+      "instruction_reduction_percent": 0,
+      "moves_eliminated": 0,
+      "dead_instructions_removed": 0
+    },
+    {
+      "file": "control_flow_branching.hkd",
+      "instructions_before": 61,
+      "instructions_after": 61,
+      "instruction_reduction_percent": 0,
+      "moves_eliminated": 0,
+      "dead_instructions_removed": 0
+    },
+    {
+      "file": "control_flow_nested_loops.hkd",
+      "instructions_before": 38,
+      "instructions_after": 35,
+      "instruction_reduction_percent": 7.9,
+      "moves_eliminated": 3,
+      "dead_instructions_removed": 3
+    },
+    {
+      "file": "arithmetic_integer.hkd",
+      "instructions_before": 31,
+      "instructions_after": 31,
+      "instruction_reduction_percent": 0,
+      "moves_eliminated": 0,
+      "dead_instructions_removed": 0
+    },
+    {
+      "file": "runtime_repeated_execution.hkd",
+      "instructions_before": 25,
+      "instructions_after": 25,
+      "instruction_reduction_percent": 0,
+      "moves_eliminated": 0,
+      "dead_instructions_removed": 0
+    }
+  ]
+}

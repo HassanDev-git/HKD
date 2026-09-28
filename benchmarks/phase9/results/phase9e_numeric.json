@@ -1,0 +1,51 @@
+{
+  "phase": "Phase 9E",
+  "benchmark": "Numeric Workloads Investigation (Integer vs Floating-Point)",
+  "timestamp": "2026-09-28T20:02:42.311Z",
+  "results": {
+    "arithmetic_integer": {
+      "name": "Integer Arithmetic Loop",
+      "samples_ms": [
+        113.36,
+        103.16,
+        113.75,
+        112.1,
+        103.34,
+        122.36,
+        101.89
+      ],
+      "statistics_ms": {
+        "min": 101.8881,
+        "max": 122.362,
+        "mean": 109.993,
+        "median": 112.1011,
+        "p95": 119.7769,
+        "p99": 121.845,
+        "sampleCount": 7
+      },
+      "peak_rss_mb": 0
+    },
+    "arithmetic_numeric": {
+      "name": "Floating-Point Numeric Math",
+      "samples_ms": [
+        87.65,
+        89.52,
+        95.52,
+        103.92,
+        95.36,
+        89.38,
+        81.49
+      ],
+      "statistics_ms": {
+        "min": 81.4882,
+        "max": 103.9205,
+        "mean": 91.8329,
+        "median": 89.5157,
+        "p95": 101.3999,
+        "p99": 103.4164,
+        "sampleCount": 7
+      },
+      "peak_rss_mb": 0
+    }
+  }
+}

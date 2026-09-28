@@ -1,0 +1,31 @@
+{
+  "phase": "Phase 9E",
+  "benchmark": "Recursion and Call Overhead Investigation",
+  "timestamp": "2026-09-28T20:02:50.030Z",
+  "result": {
+    "workload": "recursion_fib",
+    "name": "Recursive Fibonacci (n=20)",
+    "samples_ms": [
+      48.48,
+      15.44,
+      19.84,
+      17.64,
+      15.85,
+      13.71,
+      13.57
+    ],
+    "statistics_ms": {
+      "min": 13.5706,
+      "max": 48.4776,
+      "mean": 20.647,
+      "median": 15.8503,
+      "p95": 39.8861,
+      "p99": 46.7593,
+      "sampleCount": 7
+    },
+    "instructions_in_function": 16,
+    "previous_9c_instructions": 21,
+    "instruction_reduction_percent": 23.8,
+    "verified_output": "6765"
+  }
+}
