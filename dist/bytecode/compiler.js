@@ -43,6 +43,7 @@ const index_js_1 = require("../errors/index.js");
 const lexer_js_1 = require("../lexer/lexer.js");
 const parser_js_1 = require("../parser/parser.js");
 const async_lowering_js_1 = require("./async_lowering.js");
+const optimizer_js_1 = require("./optimizer.js");
 // ─── Compiler frame (one per function) ───────────────────────────────────────
 class CompilerFrame {
     chunk;
@@ -124,9 +125,14 @@ class Compiler {
     currentSpecializedReceiverStruct = null;
     currentStruct = null;
     loadedImportPaths = new Set();
-    constructor(reporter, isModule = false) {
+    optimizer;
+    constructor(reporter, isModule = false, optimizerOptions) {
         this.reporter = reporter;
         this.isModule = isModule;
+        this.optimizer = new optimizer_js_1.OptimizerPipeline(optimizerOptions);
+    }
+    getOptimizer() {
+        return this.optimizer;
     }
     loadImportedAst(sourcePath) {
         try {
@@ -195,8 +201,9 @@ class Compiler {
     }
     // ── Public API ─────────────────────────────────────────────────────────────
     compile(program) {
+        const optProgram = this.optimizer.optimizeAst(program);
         // Pre-scan impl blocks for method resolution and generic functions
-        for (const stmt of program.statements) {
+        for (const stmt of optProgram.statements) {
             if (stmt.kind === "ImportStmt") {
                 this.scanImportedAst(stmt.source);
             }
@@ -217,11 +224,11 @@ class Compiler {
         }
         const frame = new CompilerFrame("<script>", 0);
         this.frames.push(frame);
-        for (const stmt of program.statements) {
+        for (const stmt of optProgram.statements) {
             this.compileStmt(stmt);
         }
         this.emit(255 /* Op.Halt */, 0);
-        const result = frame.chunk;
+        const result = this.optimizer.optimizeChunk(frame.chunk);
         this.frames.pop();
         return result;
     }

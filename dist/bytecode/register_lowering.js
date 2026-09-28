@@ -8,6 +8,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.lowerToRegisterChunk = lowerToRegisterChunk;
 const register_chunk_js_1 = require("./register_chunk.js");
+const optimizer_js_1 = require("./optimizer.js");
 function lowerToRegisterChunk(chunk) {
     const regChunk = new register_chunk_js_1.RegisterChunk(chunk.name, chunk.arity);
     regChunk.constants = [...chunk.constants];
@@ -420,6 +421,8 @@ function lowerToRegisterChunk(chunk) {
             }
         }
     }
-    return regChunk;
+    // Pass 3: Register-level optimization & compaction
+    const opt = new optimizer_js_1.OptimizerPipeline();
+    return opt.optimizeRegister(regChunk);
 }
 //# sourceMappingURL=register_lowering.js.map

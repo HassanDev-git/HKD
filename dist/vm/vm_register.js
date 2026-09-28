@@ -213,6 +213,9 @@ class RegisterVM {
                     if (typeof a === "number" && typeof b === "number") {
                         registers[ins.dst] = a + b;
                     }
+                    else if (typeof a === "string" && typeof b === "string") {
+                        registers[ins.dst] = a + b;
+                    }
                     else if (typeof a === "string" || typeof b === "string") {
                         registers[ins.dst] = this.hkdToString(a) + this.hkdToString(b);
                     }

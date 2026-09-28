@@ -8,6 +8,7 @@
 import { Chunk, HkdFunction, HkdValue } from "./chunk.js";
 import { Op } from "./opcodes.js";
 import { RegisterChunk, RegOp } from "./register_chunk.js";
+import { OptimizerPipeline } from "./optimizer.js";
 
 export function lowerToRegisterChunk(chunk: Chunk): RegisterChunk {
   const regChunk = new RegisterChunk(chunk.name, chunk.arity);
@@ -481,5 +482,7 @@ export function lowerToRegisterChunk(chunk: Chunk): RegisterChunk {
     }
   }
 
-  return regChunk;
+  // Pass 3: Register-level optimization & compaction
+  const opt = new OptimizerPipeline();
+  return opt.optimizeRegister(regChunk);
 }

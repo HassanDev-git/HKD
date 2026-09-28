@@ -19,6 +19,7 @@ import { ErrorCode, ErrorReporter } from "../errors/index.js";
 import { Lexer } from "../lexer/lexer.js";
 import { Parser } from "../parser/parser.js";
 import { desugarAsyncFunction, desugarAsyncFunctionExpr } from "./async_lowering.js";
+import { OptimizerPipeline, OptimizerOptions } from "./optimizer.js";
 
 // ─── Local variable slot ──────────────────────────────────────────────────────
 
@@ -127,10 +128,16 @@ export class Compiler {
   private currentSpecializedReceiverStruct: string | null = null;
   private currentStruct: string | null = null;
   private loadedImportPaths: Set<string> = new Set();
+  private optimizer: OptimizerPipeline;
 
-  constructor(reporter: ErrorReporter, isModule = false) {
+  constructor(reporter: ErrorReporter, isModule = false, optimizerOptions?: OptimizerOptions) {
     this.reporter = reporter;
     this.isModule = isModule;
+    this.optimizer = new OptimizerPipeline(optimizerOptions);
+  }
+
+  public getOptimizer(): OptimizerPipeline {
+    return this.optimizer;
   }
 
   private loadImportedAst(sourcePath: string): N.Program | null {
@@ -201,8 +208,10 @@ export class Compiler {
   // ── Public API ─────────────────────────────────────────────────────────────
 
   compile(program: N.Program): Chunk {
+    const optProgram = this.optimizer.optimizeAst(program);
+
     // Pre-scan impl blocks for method resolution and generic functions
-    for (const stmt of program.statements) {
+    for (const stmt of optProgram.statements) {
       if (stmt.kind === "ImportStmt") {
         this.scanImportedAst(stmt.source);
       }
@@ -224,12 +233,12 @@ export class Compiler {
     const frame = new CompilerFrame("<script>", 0);
     this.frames.push(frame);
 
-    for (const stmt of program.statements) {
+    for (const stmt of optProgram.statements) {
       this.compileStmt(stmt);
     }
 
     this.emit(Op.Halt, 0);
-    const result = frame.chunk;
+    const result = this.optimizer.optimizeChunk(frame.chunk);
     this.frames.pop();
     return result;
   }

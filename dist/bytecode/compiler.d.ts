@@ -12,6 +12,7 @@
 import * as N from "../ast/nodes.js";
 import { Chunk } from "./chunk.js";
 import { ErrorReporter } from "../errors/index.js";
+import { OptimizerPipeline, OptimizerOptions } from "./optimizer.js";
 export declare class Compiler {
     private frames;
     private reporter;
@@ -22,7 +23,9 @@ export declare class Compiler {
     private currentSpecializedReceiverStruct;
     private currentStruct;
     private loadedImportPaths;
-    constructor(reporter: ErrorReporter, isModule?: boolean);
+    private optimizer;
+    constructor(reporter: ErrorReporter, isModule?: boolean, optimizerOptions?: OptimizerOptions);
+    getOptimizer(): OptimizerPipeline;
     private loadImportedAst;
     private scanImportedAst;
     compile(program: N.Program): Chunk;
