@@ -258,8 +258,7 @@ export class Compiler {
   }
 
   private emitU16(op: Op, operand: number, line: number): void {
-    this.chunk.writeByte(op, line);
-    this.chunk.writeU16(operand, line);
+    this.chunk.writeOpU16(op, operand, line);
   }
 
   private emitConst(value: HkdValue, line: number): void {
@@ -399,8 +398,7 @@ export class Compiler {
       return;
     }
     const fnIdx = this.chunk.addConstant(fn);
-    this.chunk.writeByte(Op.MakeClosure, line);
-    this.chunk.writeU16(fnIdx, line);
+    this.chunk.writeOpU16(Op.MakeClosure, fnIdx, line);
     this.chunk.writeByte(upvalues.length, line);
     for (const uv of upvalues) {
       this.chunk.writeByte(uv.isLocal ? 1 : 0, line);

@@ -56,6 +56,8 @@ export declare class Chunk {
     constructor(name?: string, arity?: number);
     writeByte(byte: number, line?: number): number;
     writeU16(value: number, line?: number): void;
+    /** Write an opcode and a 16-bit unsigned operand in a single combined push. */
+    writeOpU16(op: Op, operand: number, line?: number): number;
     /** Write a signed 16-bit offset (for jumps). */
     writeI16(value: number, line?: number): void;
     /** Add a constant to the pool and return its index. */

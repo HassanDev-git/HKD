@@ -9,32 +9,36 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.lowerToRegisterChunk = lowerToRegisterChunk;
 const register_chunk_js_1 = require("./register_chunk.js");
 const optimizer_js_1 = require("./optimizer.js");
-function lowerToRegisterChunk(chunk) {
+function lowerToRegisterChunk(chunk, optPipeline) {
     const regChunk = new register_chunk_js_1.RegisterChunk(chunk.name, chunk.arity);
     regChunk.constants = [...chunk.constants];
+    const opt = optPipeline ?? new optimizer_js_1.OptimizerPipeline();
     // Recursively lower nested functions in constants
     for (let i = 0; i < regChunk.constants.length; i++) {
         const c = regChunk.constants[i];
         if (c && typeof c === "object" && c.type === "function") {
             const fn = c;
             if (!fn.registerChunk) {
-                fn.registerChunk = lowerToRegisterChunk(fn.chunk);
+                fn.registerChunk = lowerToRegisterChunk(fn.chunk, opt);
             }
         }
     }
     const numLocals = Math.max(chunk.localCount, chunk.arity, 64);
     const code = chunk.code;
     const lines = chunk.lines;
+    const codeLen = code.length;
     // Pass 1: Build basic instruction list and track stack_ip -> reg_idx mapping
-    const ipToRegIdx = new Map();
+    // Pre-allocated Int32Array eliminates thousands of Map bucket allocations and hashing
+    const ipToReg = new Int32Array(codeLen + 1);
+    ipToReg.fill(-1);
     const jumpFixups = [];
     let sp = 0; // Simulated operand stack pointer (relative to numLocals)
     let ip = 0;
     function reg(slot) {
         return numLocals + slot;
     }
-    while (ip < code.length) {
-        ipToRegIdx.set(ip, regChunk.code.length);
+    while (ip < codeLen) {
+        ipToReg[ip] = regChunk.code.length;
         const line = lines[ip] || 0;
         const op = code[ip++];
         switch (op) {
@@ -408,10 +412,11 @@ function lowerToRegisterChunk(chunk) {
         }
     }
     // Pass 2: Patch jump targets to register instruction indices
-    ipToRegIdx.set(code.length, regChunk.code.length);
-    for (const fix of jumpFixups) {
-        const targetRegIdx = ipToRegIdx.get(fix.targetStackIp);
-        if (targetRegIdx !== undefined) {
+    ipToReg[codeLen] = regChunk.code.length;
+    for (let i = 0; i < jumpFixups.length; i++) {
+        const fix = jumpFixups[i];
+        const targetRegIdx = ipToReg[fix.targetStackIp];
+        if (targetRegIdx !== -1) {
             const ins = regChunk.code[fix.regIdx];
             if (ins.op === register_chunk_js_1.RegOp.Jump) {
                 ins.dst = targetRegIdx;
@@ -422,7 +427,6 @@ function lowerToRegisterChunk(chunk) {
         }
     }
     // Pass 3: Register-level optimization & compaction
-    const opt = new optimizer_js_1.OptimizerPipeline();
     return opt.optimizeRegister(regChunk);
 }
 //# sourceMappingURL=register_lowering.js.map

@@ -20,12 +20,149 @@ function foldAstConstants(program, stats, options) {
     function scanMutations(node) {
         if (!node || typeof node !== "object")
             return;
-        if ((node.kind === "AssignExpr" || node.kind === "CompoundAssignExpr") && node.target?.kind === "IdentExpr") {
-            mutatedVars.add(node.target.name);
-        }
-        for (const key of Object.keys(node)) {
-            if (key !== "span")
-                scanMutations(node[key]);
+        switch (node.kind) {
+            case "Program": {
+                const stmts = node.statements;
+                if (stmts)
+                    for (let i = 0; i < stmts.length; i++)
+                        scanMutations(stmts[i]);
+                return;
+            }
+            case "BlockStmt": {
+                const body = node.body;
+                if (body)
+                    for (let i = 0; i < body.length; i++)
+                        scanMutations(body[i]);
+                return;
+            }
+            case "FunctionDeclStmt":
+                scanMutations(node.body);
+                return;
+            case "WhileStmt":
+                scanMutations(node.condition);
+                scanMutations(node.body);
+                return;
+            case "ForStmt":
+                scanMutations(node.iterable);
+                scanMutations(node.body);
+                return;
+            case "IfStmt":
+                scanMutations(node.condition);
+                scanMutations(node.then);
+                if (node.else_)
+                    scanMutations(node.else_);
+                return;
+            case "VarDeclStmt":
+            case "ConstDeclStmt":
+                if (node.initializer)
+                    scanMutations(node.initializer);
+                return;
+            case "ReturnStmt":
+                if (node.value)
+                    scanMutations(node.value);
+                return;
+            case "ExprStmt":
+                scanMutations(node.expr);
+                return;
+            case "AssignExpr":
+            case "CompoundAssignExpr":
+                if (node.target?.kind === "IdentExpr") {
+                    mutatedVars.add(node.target.name);
+                }
+                scanMutations(node.target);
+                scanMutations(node.value);
+                return;
+            case "BinaryExpr":
+                scanMutations(node.left);
+                scanMutations(node.right);
+                return;
+            case "UnaryExpr":
+                scanMutations(node.operand);
+                return;
+            case "IfExpr":
+                scanMutations(node.condition);
+                scanMutations(node.then);
+                if (node.else_)
+                    scanMutations(node.else_);
+                return;
+            case "BlockExpr": {
+                const body = node.body;
+                if (body)
+                    for (let i = 0; i < body.length; i++)
+                        scanMutations(body[i]);
+                return;
+            }
+            case "CallExpr": {
+                scanMutations(node.callee);
+                const args = node.args;
+                if (args)
+                    for (let i = 0; i < args.length; i++)
+                        scanMutations(args[i]);
+                return;
+            }
+            case "MemberExpr":
+                scanMutations(node.object);
+                return;
+            case "IndexExpr":
+                scanMutations(node.object);
+                scanMutations(node.index);
+                return;
+            case "ArrayLiteralExpr":
+            case "ArrayExpr": {
+                const elements = node.elements;
+                if (elements)
+                    for (let i = 0; i < elements.length; i++)
+                        scanMutations(elements[i]);
+                return;
+            }
+            case "ObjectLiteralExpr":
+            case "ObjectExpr":
+            case "StructInitExpr": {
+                const fields = node.fields;
+                if (fields)
+                    for (let i = 0; i < fields.length; i++)
+                        if (fields[i].value)
+                            scanMutations(fields[i].value);
+                return;
+            }
+            case "ImplBlockStmt": {
+                const methods = node.methods;
+                if (methods)
+                    for (let i = 0; i < methods.length; i++)
+                        scanMutations(methods[i]);
+                return;
+            }
+            case "ExportStmt":
+                scanMutations(node.declaration);
+                return;
+            case "TestStmt":
+                scanMutations(node.body);
+                return;
+            case "AssertStmt":
+                scanMutations(node.condition);
+                if (node.message)
+                    scanMutations(node.message);
+                return;
+            case "StructDeclStmt":
+            case "TraitDeclStmt":
+            case "TypeAliasStmt":
+            case "ImportStmt":
+            case "BreakStmt":
+            case "ContinueStmt":
+            case "IntLiteral":
+            case "FloatLiteral":
+            case "StringLiteral":
+            case "BoolLiteral":
+            case "NullLiteral":
+            case "IdentExpr":
+                return;
+            default: {
+                for (const key of Object.keys(node)) {
+                    if (key !== "span")
+                        scanMutations(node[key]);
+                }
+                return;
+            }
         }
     }
     scanMutations(program);
@@ -90,6 +227,8 @@ function foldAstConstants(program, stats, options) {
                         stats.constantsFolded++;
                         return left.value ? right : left;
                     }
+                    if (left === expr.left && right === expr.right)
+                        return expr;
                     return { ...expr, left, right };
                 }
                 if (expr.op === "||") {
@@ -97,6 +236,8 @@ function foldAstConstants(program, stats, options) {
                         stats.constantsFolded++;
                         return left.value ? left : right;
                     }
+                    if (left === expr.left && right === expr.right)
+                        return expr;
                     return { ...expr, left, right };
                 }
                 if (isLiteral(left) && isLiteral(right)) {
@@ -121,6 +262,8 @@ function foldAstConstants(program, stats, options) {
                                 stats.constantsFolded++;
                                 return makeLiteralNode(lVal / rVal, expr.span);
                             }
+                            if (left === expr.left && right === expr.right)
+                                return expr;
                             return { ...expr, left, right }; // Do not fold division by zero; preserves runtime error
                         }
                         if (expr.op === "%") {
@@ -128,6 +271,8 @@ function foldAstConstants(program, stats, options) {
                                 stats.constantsFolded++;
                                 return makeLiteralNode(lVal % rVal, expr.span);
                             }
+                            if (left === expr.left && right === expr.right)
+                                return expr;
                             return { ...expr, left, right }; // Do not fold modulo by zero
                         }
                         if (expr.op === "**") {
@@ -198,6 +343,8 @@ function foldAstConstants(program, stats, options) {
                         return makeLiteralNode(lVal !== rVal, expr.span);
                     }
                 }
+                if (left === expr.left && right === expr.right)
+                    return expr;
                 return { ...expr, left, right };
             }
             case "UnaryExpr": {
@@ -217,6 +364,8 @@ function foldAstConstants(program, stats, options) {
                         return makeLiteralNode(~val, expr.span);
                     }
                 }
+                if (operand === expr.operand)
+                    return expr;
                 return { ...expr, operand };
             }
             case "IfExpr": {
@@ -267,10 +416,18 @@ function foldAstConstants(program, stats, options) {
                     callee: foldExpr(expr.callee),
                     args: expr.args.map(foldExpr),
                 };
-            case "AssignExpr":
-                return { ...expr, value: foldExpr(expr.value) };
-            case "CompoundAssignExpr":
-                return { ...expr, value: foldExpr(expr.value) };
+            case "AssignExpr": {
+                const val = foldExpr(expr.value);
+                if (val === expr.value)
+                    return expr;
+                return { ...expr, value: val };
+            }
+            case "CompoundAssignExpr": {
+                const val = foldExpr(expr.value);
+                if (val === expr.value)
+                    return expr;
+                return { ...expr, value: val };
+            }
             case "ReturnStmt":
                 return expr;
             default:
@@ -279,10 +436,21 @@ function foldAstConstants(program, stats, options) {
     }
     function foldBlock(block) {
         const savedEnv = new Map(constEnv);
-        const body = block.body.map(foldStmt).filter(Boolean);
+        let changed = false;
+        const body = [];
+        for (let i = 0; i < block.body.length; i++) {
+            const s = block.body[i];
+            const folded = foldStmt(s);
+            if (folded !== s)
+                changed = true;
+            if (folded)
+                body.push(folded);
+        }
         constEnv.clear();
         for (const [k, v] of savedEnv)
             constEnv.set(k, v);
+        if (!changed && body.length === block.body.length)
+            return block;
         return {
             ...block,
             body,
@@ -299,6 +467,8 @@ function foldAstConstants(program, stats, options) {
                 else {
                     constEnv.delete(stmt.name);
                 }
+                if (init === stmt.initializer)
+                    return stmt;
                 return { ...stmt, initializer: init };
             }
             case "ConstDeclStmt": {
@@ -306,10 +476,16 @@ function foldAstConstants(program, stats, options) {
                 if (isLiteral(value) && !mutatedVars.has(stmt.name)) {
                     constEnv.set(stmt.name, value);
                 }
+                if (value === stmt.initializer)
+                    return stmt;
                 return { ...stmt, initializer: value };
             }
-            case "ExprStmt":
-                return { ...stmt, expr: foldExpr(stmt.expr) };
+            case "ExprStmt": {
+                const expr = foldExpr(stmt.expr);
+                if (expr === stmt.expr)
+                    return stmt;
+                return { ...stmt, expr };
+            }
             case "IfStmt": {
                 const cond = foldExpr(stmt.condition);
                 if (isLiteral(cond)) {
@@ -344,12 +520,24 @@ function foldAstConstants(program, stats, options) {
                     stats.deadInstructionsRemoved++;
                     return null;
                 }
-                return { ...stmt, condition: cond, body: foldBlock(stmt.body) };
+                const body = foldBlock(stmt.body);
+                if (cond === stmt.condition && body === stmt.body)
+                    return stmt;
+                return { ...stmt, condition: cond, body };
             }
-            case "ForStmt":
-                return { ...stmt, iterable: foldExpr(stmt.iterable), body: foldBlock(stmt.body) };
-            case "ReturnStmt":
-                return { ...stmt, value: stmt.value ? foldExpr(stmt.value) : null };
+            case "ForStmt": {
+                const iter = foldExpr(stmt.iterable);
+                const body = foldBlock(stmt.body);
+                if (iter === stmt.iterable && body === stmt.body)
+                    return stmt;
+                return { ...stmt, iterable: iter, body };
+            }
+            case "ReturnStmt": {
+                const val = stmt.value ? foldExpr(stmt.value) : null;
+                if (val === stmt.value)
+                    return stmt;
+                return { ...stmt, value: val };
+            }
             case "BlockStmt":
                 return foldBlock(stmt);
             case "FunctionDeclStmt": {
@@ -359,13 +547,26 @@ function foldAstConstants(program, stats, options) {
                 constEnv.clear();
                 for (const [k, v] of savedEnv)
                     constEnv.set(k, v);
+                if (foldedBody === stmt.body)
+                    return stmt;
                 return { ...stmt, body: foldedBody };
             }
             default:
                 return stmt;
         }
     }
-    const optimizedStmts = program.statements.map(foldStmt).filter(Boolean);
+    let changed = false;
+    const optimizedStmts = [];
+    for (let i = 0; i < program.statements.length; i++) {
+        const s = program.statements[i];
+        const folded = foldStmt(s);
+        if (folded !== s)
+            changed = true;
+        if (folded)
+            optimizedStmts.push(folded);
+    }
+    if (!changed && optimizedStmts.length === program.statements.length)
+        return program;
     return { ...program, statements: optimizedStmts };
 }
 // ─── 2. Bytecode Optimization Pass ────────────────────────────────────────────
@@ -500,6 +701,10 @@ function optimizeRegisterChunk(regChunk, stats, options) {
                         stats.registerMovesRemoved++;
                         break;
                     }
+                }
+                // If ins2 overwrote rTemp without consuming it, rTemp is dead
+                if (ins2.dst === rTemp) {
+                    break;
                 }
             }
         }

@@ -94,8 +94,16 @@ export class Chunk {
   }
 
   writeU16(value: number, line = 0): void {
-    this.writeByte((value >> 8) & 0xff, line);
-    this.writeByte(value & 0xff, line);
+    this.code.push((value >> 8) & 0xff, value & 0xff);
+    this.lines.push(line, line);
+  }
+
+  /** Write an opcode and a 16-bit unsigned operand in a single combined push. */
+  writeOpU16(op: Op, operand: number, line = 0): number {
+    const offset = this.code.length;
+    this.code.push(op, (operand >> 8) & 0xff, operand & 0xff);
+    this.lines.push(line, line, line);
+    return offset;
   }
 
   /** Write a signed 16-bit offset (for jumps). */
@@ -126,15 +134,14 @@ export class Chunk {
   /** Emit LOAD_CONST for a value. */
   emitConstant(value: HkdValue, line = 0): void {
     const idx = this.addConstant(value);
-    this.writeByte(Op.LoadConst, line);
-    this.writeU16(idx, line);
+    this.writeOpU16(Op.LoadConst, idx, line);
   }
 
   /** Emit a jump instruction and return the offset of the placeholder. */
   emitJump(op: Op, line = 0): number {
-    this.writeByte(op, line);
-    const offset = this.code.length;
-    this.writeI16(0xffff, line); // placeholder
+    const offset = this.code.length + 1;
+    this.code.push(op, 0xff, 0xff);
+    this.lines.push(line, line, line);
     return offset;
   }
 
@@ -156,12 +163,12 @@ export class Chunk {
 
   /** Emit a loop jump back to `loopStart`. */
   emitLoop(loopStart: number, line = 0): void {
-    this.writeByte(Op.Jump, line);
-    const offset = this.code.length;
-    this.writeI16(0, line);
+    const offset = this.code.length + 1;
+    this.code.push(Op.Jump, 0, 0);
+    this.lines.push(line, line, line);
 
     // Relative offset back to loopStart
-    const relative = loopStart - (this.code.length); // negative
+    const relative = loopStart - this.code.length;
     const u16 = relative & 0xffff;
     this.code[offset]     = (u16 >> 8) & 0xff;
     this.code[offset + 1] = u16 & 0xff;

@@ -1,0 +1,83 @@
+{
+  "phase": "Phase 9F",
+  "benchmark": "Bytecode Emission Throughput & Latency",
+  "timestamp": "2026-09-28T20:41:01.382Z",
+  "iterations": 50,
+  "results": {
+    "compiler_small": {
+      "source_bytes": 188,
+      "bytecode_bytes": 55,
+      "constant_count": 11,
+      "samples_ms": [
+        0.22239999999999327,
+        0.18129999999999313,
+        0.14209999999999923,
+        0.13159999999999172,
+        0.1296999999999855,
+        0.1419999999999959,
+        0.1547999999999945
+      ],
+      "statistics_ms": {
+        "min": 0.0772,
+        "max": 3.9895,
+        "mean": 0.3063,
+        "median": 0.1438,
+        "p95": 0.9389,
+        "p99": 2.7503,
+        "sampleCount": 50
+      },
+      "pre_optimization_ms": 0.241,
+      "speedup": 1.68
+    },
+    "compiler_medium": {
+      "source_bytes": 1951,
+      "bytecode_bytes": 59,
+      "constant_count": 16,
+      "samples_ms": [
+        0.6512000000000171,
+        2.023300000000006,
+        0.4863000000000284,
+        0.5774999999999864,
+        0.41910000000001446,
+        0.7590000000000146,
+        0.39819999999997435
+      ],
+      "statistics_ms": {
+        "min": 0.2394,
+        "max": 2.0233,
+        "mean": 0.4711,
+        "median": 0.3631,
+        "p95": 0.9938,
+        "p99": 1.8039,
+        "sampleCount": 50
+      },
+      "pre_optimization_ms": 0.976,
+      "speedup": 2.69
+    },
+    "compiler_large": {
+      "source_bytes": 24281,
+      "bytecode_bytes": 383,
+      "constant_count": 124,
+      "samples_ms": [
+        8.392100000000028,
+        3.4151999999999703,
+        2.924500000000023,
+        2.351500000000044,
+        2.4703999999999837,
+        3.4225999999999885,
+        3.982500000000016
+      ],
+      "statistics_ms": {
+        "min": 1.2065,
+        "max": 8.3921,
+        "mean": 2.6026,
+        "median": 2.4643,
+        "p95": 4.3193,
+        "p99": 6.7817,
+        "sampleCount": 50
+      },
+      "pre_optimization_ms": 6.488,
+      "speedup": 2.63
+    }
+  }
+}

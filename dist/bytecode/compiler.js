@@ -243,8 +243,7 @@ class Compiler {
         this.chunk.writeByte(op, line);
     }
     emitU16(op, operand, line) {
-        this.chunk.writeByte(op, line);
-        this.chunk.writeU16(operand, line);
+        this.chunk.writeOpU16(op, operand, line);
     }
     emitConst(value, line) {
         this.chunk.emitConstant(value, line);
@@ -386,8 +385,7 @@ class Compiler {
             return;
         }
         const fnIdx = this.chunk.addConstant(fn);
-        this.chunk.writeByte(98 /* Op.MakeClosure */, line);
-        this.chunk.writeU16(fnIdx, line);
+        this.chunk.writeOpU16(98 /* Op.MakeClosure */, fnIdx, line);
         this.chunk.writeByte(upvalues.length, line);
         for (const uv of upvalues) {
             this.chunk.writeByte(uv.isLocal ? 1 : 0, line);

@@ -1,0 +1,83 @@
+{
+  "phase": "Phase 9F",
+  "benchmark": "Register Lowering Throughput & Memory Efficiency",
+  "timestamp": "2026-09-28T20:41:01.384Z",
+  "iterations": 50,
+  "results": {
+    "compiler_small": {
+      "source_bytes": 188,
+      "register_instructions": 20,
+      "registers_used": 67,
+      "samples_ms": [
+        0.2741999999999791,
+        0.17739999999997735,
+        0.21650000000002478,
+        0.16339999999999577,
+        0.15029999999998722,
+        0.12869999999998072,
+        0.17740000000000578
+      ],
+      "statistics_ms": {
+        "min": 0.0647,
+        "max": 2.4583,
+        "mean": 0.2513,
+        "median": 0.1624,
+        "p95": 0.4735,
+        "p99": 2.007,
+        "sampleCount": 50
+      },
+      "pre_optimization_ms": 0.11,
+      "speedup": 0.68
+    },
+    "compiler_medium": {
+      "source_bytes": 1951,
+      "register_instructions": 21,
+      "registers_used": 67,
+      "samples_ms": [
+        0.282100000000014,
+        0.6773000000000025,
+        0.603999999999985,
+        0.38759999999996353,
+        0.2544000000000324,
+        0.21119999999996253,
+        0.4228999999999701
+      ],
+      "statistics_ms": {
+        "min": 0.1045,
+        "max": 0.843,
+        "mean": 0.2595,
+        "median": 0.2224,
+        "p95": 0.6385,
+        "p99": 0.7618,
+        "sampleCount": 50
+      },
+      "pre_optimization_ms": 0.36,
+      "speedup": 1.62
+    },
+    "compiler_large": {
+      "source_bytes": 24281,
+      "register_instructions": 129,
+      "registers_used": 124,
+      "samples_ms": [
+        0.9983000000000857,
+        0.8900999999999613,
+        1.0988999999999578,
+        0.8313000000000557,
+        1.5117999999999938,
+        1.3774999999999409,
+        1.3870000000000573
+      ],
+      "statistics_ms": {
+        "min": 0.7458,
+        "max": 3.7974,
+        "mean": 1.4758,
+        "median": 1.4955,
+        "p95": 2.3176,
+        "p99": 3.2888,
+        "sampleCount": 50
+      },
+      "pre_optimization_ms": 1.843,
+      "speedup": 1.23
+    }
+  }
+}

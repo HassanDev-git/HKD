@@ -1,0 +1,83 @@
+{
+  "phase": "Phase 9F",
+  "benchmark": "Bytecode Serialization Direct FastBufferWriter Throughput",
+  "timestamp": "2026-09-28T20:41:01.384Z",
+  "iterations": 50,
+  "results": {
+    "compiler_small": {
+      "source_bytes": 188,
+      "serialized_bytes": 385,
+      "samples_ms": [
+        0.3482999999999947,
+        0.11369999999999436,
+        0.2442000000000064,
+        0.109800000000007,
+        0.10239999999998872,
+        0.11770000000001346,
+        0.0998000000000161
+      ],
+      "statistics_ms": {
+        "min": 0.0794,
+        "max": 0.8366,
+        "mean": 0.1429,
+        "median": 0.1003,
+        "p95": 0.3076,
+        "p99": 0.6272,
+        "sampleCount": 50
+      },
+      "throughput_mb_sec": 3.66,
+      "pre_optimization_ms": 0.16,
+      "speedup": 1.6
+    },
+    "compiler_medium": {
+      "source_bytes": 1951,
+      "serialized_bytes": 2796,
+      "samples_ms": [
+        0.1882999999999697,
+        0.15690000000000737,
+        0.14350000000001728,
+        0.14459999999996853,
+        0.25430000000000064,
+        0.15289999999998827,
+        0.14350000000001728
+      ],
+      "statistics_ms": {
+        "min": 0.0961,
+        "max": 0.896,
+        "mean": 0.1719,
+        "median": 0.1415,
+        "p95": 0.2445,
+        "p99": 0.8152,
+        "sampleCount": 50
+      },
+      "throughput_mb_sec": 18.84,
+      "pre_optimization_ms": 0.377,
+      "speedup": 2.66
+    },
+    "compiler_large": {
+      "source_bytes": 24281,
+      "serialized_bytes": 39574,
+      "samples_ms": [
+        0.9280999999999722,
+        0.7898000000000138,
+        0.9497000000000071,
+        1.4396000000000413,
+        2.967899999999986,
+        2.321900000000028,
+        1.070699999999988
+      ],
+      "statistics_ms": {
+        "min": 0.3869,
+        "max": 11.2618,
+        "mean": 1.4033,
+        "median": 0.9111,
+        "p95": 3.3255,
+        "p99": 8.339,
+        "sampleCount": 50
+      },
+      "throughput_mb_sec": 41.42,
+      "pre_optimization_ms": 1.241,
+      "speedup": 1.36
+    }
+  }
+}

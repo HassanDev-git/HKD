@@ -10,9 +10,11 @@ import { Op } from "./opcodes.js";
 import { RegisterChunk, RegOp } from "./register_chunk.js";
 import { OptimizerPipeline } from "./optimizer.js";
 
-export function lowerToRegisterChunk(chunk: Chunk): RegisterChunk {
+export function lowerToRegisterChunk(chunk: Chunk, optPipeline?: OptimizerPipeline): RegisterChunk {
   const regChunk = new RegisterChunk(chunk.name, chunk.arity);
   regChunk.constants = [...chunk.constants];
+
+  const opt = optPipeline ?? new OptimizerPipeline();
 
   // Recursively lower nested functions in constants
   for (let i = 0; i < regChunk.constants.length; i++) {
@@ -20,7 +22,7 @@ export function lowerToRegisterChunk(chunk: Chunk): RegisterChunk {
     if (c && typeof c === "object" && (c as any).type === "function") {
       const fn = c as HkdFunction;
       if (!(fn as any).registerChunk) {
-        (fn as any).registerChunk = lowerToRegisterChunk(fn.chunk);
+        (fn as any).registerChunk = lowerToRegisterChunk(fn.chunk, opt);
       }
     }
   }
@@ -28,9 +30,12 @@ export function lowerToRegisterChunk(chunk: Chunk): RegisterChunk {
   const numLocals = Math.max(chunk.localCount, chunk.arity, 64);
   const code = chunk.code;
   const lines = chunk.lines;
+  const codeLen = code.length;
 
   // Pass 1: Build basic instruction list and track stack_ip -> reg_idx mapping
-  const ipToRegIdx = new Map<number, number>();
+  // Pre-allocated Int32Array eliminates thousands of Map bucket allocations and hashing
+  const ipToReg = new Int32Array(codeLen + 1);
+  ipToReg.fill(-1);
   const jumpFixups: Array<{ regIdx: number; targetStackIp: number }> = [];
 
   let sp = 0; // Simulated operand stack pointer (relative to numLocals)
@@ -40,8 +45,8 @@ export function lowerToRegisterChunk(chunk: Chunk): RegisterChunk {
     return numLocals + slot;
   }
 
-  while (ip < code.length) {
-    ipToRegIdx.set(ip, regChunk.code.length);
+  while (ip < codeLen) {
+    ipToReg[ip] = regChunk.code.length;
     const line = lines[ip] || 0;
     const op = code[ip++];
 
@@ -469,10 +474,11 @@ export function lowerToRegisterChunk(chunk: Chunk): RegisterChunk {
   }
 
   // Pass 2: Patch jump targets to register instruction indices
-  ipToRegIdx.set(code.length, regChunk.code.length);
-  for (const fix of jumpFixups) {
-    const targetRegIdx = ipToRegIdx.get(fix.targetStackIp);
-    if (targetRegIdx !== undefined) {
+  ipToReg[codeLen] = regChunk.code.length;
+  for (let i = 0; i < jumpFixups.length; i++) {
+    const fix = jumpFixups[i];
+    const targetRegIdx = ipToReg[fix.targetStackIp];
+    if (targetRegIdx !== -1) {
       const ins = regChunk.code[fix.regIdx];
       if (ins.op === RegOp.Jump) {
         ins.dst = targetRegIdx;
@@ -483,6 +489,5 @@ export function lowerToRegisterChunk(chunk: Chunk): RegisterChunk {
   }
 
   // Pass 3: Register-level optimization & compaction
-  const opt = new OptimizerPipeline();
   return opt.optimizeRegister(regChunk);
 }

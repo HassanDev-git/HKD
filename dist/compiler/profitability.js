@@ -31,43 +31,251 @@ function analyzeAstProfitability(program) {
     function scan(node) {
         if (!node || typeof node !== "object")
             return;
-        if (node.kind) {
-            if (node.kind.endsWith("Stmt")) {
-                statementCount++;
-                if (node.kind === "FunctionDeclStmt") {
-                    functionCount++;
-                    if (node.isAsync)
-                        hasAsync = true;
+        switch (node.kind) {
+            // ── Statements ──────────────────────────────────────────────────────────
+            case "Program": {
+                const stmts = node.statements;
+                if (stmts) {
+                    for (let i = 0; i < stmts.length; i++)
+                        scan(stmts[i]);
                 }
-                else if (node.kind === "WhileStmt" || node.kind === "ForStmt") {
-                    loopCount++;
-                }
-                else if (node.kind === "IfStmt") {
-                    branchCount++;
-                }
+                return;
             }
-            else if (node.kind.endsWith("Expr")) {
-                expressionCount++;
-                if (node.kind === "AssignExpr" || node.kind === "CompoundAssignExpr") {
-                    hasMutations = true;
+            case "BlockStmt": {
+                statementCount++;
+                const body = node.body;
+                if (body) {
+                    for (let i = 0; i < body.length; i++)
+                        scan(body[i]);
                 }
-                else if (node.kind === "BinaryExpr") {
-                    // Check for literal operands that could fold
-                    const l = node.left?.kind;
-                    const r = node.right?.kind;
-                    if (l === "IntLiteral" || l === "FloatLiteral" || l === "StringLiteral" || l === "BoolLiteral" ||
-                        r === "IntLiteral" || r === "FloatLiteral" || r === "StringLiteral" || r === "BoolLiteral") {
-                        hasFoldableCandidates = true;
+                return;
+            }
+            case "FunctionDeclStmt": {
+                statementCount++;
+                functionCount++;
+                if (node.isAsync)
+                    hasAsync = true;
+                scan(node.body);
+                return;
+            }
+            case "WhileStmt": {
+                statementCount++;
+                loopCount++;
+                scan(node.condition);
+                scan(node.body);
+                return;
+            }
+            case "ForStmt": {
+                statementCount++;
+                loopCount++;
+                scan(node.iterable);
+                scan(node.body);
+                return;
+            }
+            case "IfStmt": {
+                statementCount++;
+                branchCount++;
+                scan(node.condition);
+                scan(node.then);
+                if (node.else_)
+                    scan(node.else_);
+                return;
+            }
+            case "VarDeclStmt":
+            case "ConstDeclStmt": {
+                statementCount++;
+                if (node.initializer)
+                    scan(node.initializer);
+                return;
+            }
+            case "ReturnStmt": {
+                statementCount++;
+                if (node.value)
+                    scan(node.value);
+                return;
+            }
+            case "ExprStmt": {
+                statementCount++;
+                scan(node.expr);
+                return;
+            }
+            case "ImplBlockStmt": {
+                statementCount++;
+                const methods = node.methods;
+                if (methods) {
+                    for (let i = 0; i < methods.length; i++)
+                        scan(methods[i]);
+                }
+                return;
+            }
+            case "ExportStmt": {
+                statementCount++;
+                scan(node.declaration);
+                return;
+            }
+            case "TestStmt": {
+                statementCount++;
+                scan(node.body);
+                return;
+            }
+            case "AssertStmt": {
+                statementCount++;
+                scan(node.condition);
+                if (node.message)
+                    scan(node.message);
+                return;
+            }
+            case "StructDeclStmt":
+            case "TraitDeclStmt":
+            case "TypeAliasStmt":
+            case "ImportStmt":
+            case "BreakStmt":
+            case "ContinueStmt": {
+                statementCount++;
+                return;
+            }
+            // ── Expressions ─────────────────────────────────────────────────────────
+            case "AssignExpr":
+            case "CompoundAssignExpr": {
+                expressionCount++;
+                hasMutations = true;
+                scan(node.target);
+                scan(node.value);
+                return;
+            }
+            case "BinaryExpr": {
+                expressionCount++;
+                const l = node.left?.kind;
+                const r = node.right?.kind;
+                if (l === "IntLiteral" || l === "FloatLiteral" || l === "StringLiteral" || l === "BoolLiteral" ||
+                    r === "IntLiteral" || r === "FloatLiteral" || r === "StringLiteral" || r === "BoolLiteral") {
+                    hasFoldableCandidates = true;
+                }
+                scan(node.left);
+                scan(node.right);
+                return;
+            }
+            case "UnaryExpr": {
+                expressionCount++;
+                scan(node.operand);
+                return;
+            }
+            case "IfExpr": {
+                expressionCount++;
+                branchCount++;
+                scan(node.condition);
+                scan(node.then);
+                if (node.else_)
+                    scan(node.else_);
+                return;
+            }
+            case "BlockExpr": {
+                expressionCount++;
+                const body = node.body;
+                if (body) {
+                    for (let i = 0; i < body.length; i++)
+                        scan(body[i]);
+                }
+                return;
+            }
+            case "CallExpr": {
+                expressionCount++;
+                scan(node.callee);
+                const args = node.args;
+                if (args) {
+                    for (let i = 0; i < args.length; i++)
+                        scan(args[i]);
+                }
+                return;
+            }
+            case "MemberExpr": {
+                expressionCount++;
+                scan(node.object);
+                return;
+            }
+            case "IndexExpr": {
+                expressionCount++;
+                scan(node.object);
+                scan(node.index);
+                return;
+            }
+            case "ArrayLiteralExpr":
+            case "ArrayExpr": {
+                expressionCount++;
+                const elements = node.elements;
+                if (elements) {
+                    for (let i = 0; i < elements.length; i++)
+                        scan(elements[i]);
+                }
+                return;
+            }
+            case "ObjectLiteralExpr":
+            case "ObjectExpr":
+            case "StructInitExpr": {
+                expressionCount++;
+                const fields = node.fields;
+                if (fields) {
+                    for (let i = 0; i < fields.length; i++) {
+                        if (fields[i].value)
+                            scan(fields[i].value);
                     }
                 }
-                else if (node.kind === "IfExpr") {
-                    branchCount++;
-                }
+                return;
             }
-        }
-        for (const key of Object.keys(node)) {
-            if (key !== "span")
-                scan(node[key]);
+            case "MatchExpr": {
+                expressionCount++;
+                scan(node.scrutinee);
+                const arms = node.arms;
+                if (arms) {
+                    for (let i = 0; i < arms.length; i++) {
+                        if (arms[i].guard)
+                            scan(arms[i].guard);
+                        scan(arms[i].body);
+                    }
+                }
+                return;
+            }
+            case "RangeExpr": {
+                expressionCount++;
+                scan(node.start);
+                scan(node.end);
+                return;
+            }
+            case "CastExpr": {
+                expressionCount++;
+                scan(node.expr);
+                return;
+            }
+            case "AwaitExpr": {
+                expressionCount++;
+                hasAsync = true;
+                scan(node.expr);
+                return;
+            }
+            case "FunctionExpr": {
+                expressionCount++;
+                if (node.isAsync)
+                    hasAsync = true;
+                scan(node.body);
+                return;
+            }
+            case "IntLiteral":
+            case "FloatLiteral":
+            case "StringLiteral":
+            case "BoolLiteral":
+            case "NullLiteral":
+            case "IdentExpr": {
+                expressionCount++;
+                return;
+            }
+            default: {
+                // Fallback for any unknown nodes: walk properties safely
+                for (const key of Object.keys(node)) {
+                    if (key !== "span")
+                        scan(node[key]);
+                }
+                return;
+            }
         }
     }
     scan(program);

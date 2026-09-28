@@ -1,0 +1,38 @@
+{
+  "phase": "Phase 9F Pre-Optimization",
+  "benchmark": "Compiler Phase Breakdown",
+  "timestamp": "2026-09-28T20:32:49.595Z",
+  "iterations": 50,
+  "results": {
+    "compiler_small": {
+      "source_bytes": 188,
+      "lex_time_ms": 0.059,
+      "parse_time_ms": 0.137,
+      "semantic_time_ms": 0.106,
+      "bytecode_emit_time_ms": 0.241,
+      "register_lowering_time_ms": 0.11,
+      "serialization_time_ms": 0.16,
+      "total_compile_time_ms": 0.813
+    },
+    "compiler_medium": {
+      "source_bytes": 1951,
+      "lex_time_ms": 0.302,
+      "parse_time_ms": 0.268,
+      "semantic_time_ms": 0.348,
+      "bytecode_emit_time_ms": 0.976,
+      "register_lowering_time_ms": 0.36,
+      "serialization_time_ms": 0.377,
+      "total_compile_time_ms": 2.631
+    },
+    "compiler_large": {
+      "source_bytes": 24281,
+      "lex_time_ms": 1.842,
+      "parse_time_ms": 0.909,
+      "semantic_time_ms": 1.077,
+      "bytecode_emit_time_ms": 6.488,
+      "register_lowering_time_ms": 1.843,
+      "serialization_time_ms": 1.241,
+      "total_compile_time_ms": 13.4
+    }
+  }
+}

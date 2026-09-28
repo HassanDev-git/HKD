@@ -1,109 +1,138 @@
 import { Buffer } from "buffer";
 import { Chunk } from "./chunk.js";
 
-export function serialize(chunk: Chunk): Buffer {
-  const parts: Buffer[] = [];
+class FastBufferWriter {
+  public buffer: Buffer;
+  public offset: number;
 
-  // Helper to append a single byte
-  const writeByte = (b: number) => {
-    const buf = Buffer.alloc(1);
-    buf.writeUInt8(b, 0);
-    parts.push(buf);
-  };
+  constructor(initialCapacity = 16384) {
+    this.buffer = Buffer.allocUnsafe(initialCapacity);
+    this.offset = 0;
+  }
 
-  // Helper to append a u16
-  const writeU16 = (val: number) => {
-    const buf = Buffer.alloc(2);
-    buf.writeUInt16BE(val, 0);
-    parts.push(buf);
-  };
+  ensure(extra: number): void {
+    if (this.offset + extra > this.buffer.length) {
+      const newCap = Math.max(this.buffer.length * 2, this.offset + extra + 1024);
+      const newBuf = Buffer.allocUnsafe(newCap);
+      this.buffer.copy(newBuf, 0, 0, this.offset);
+      this.buffer = newBuf;
+    }
+  }
 
-  // Helper to append a u32
-  const writeU32 = (val: number) => {
-    const buf = Buffer.alloc(4);
-    buf.writeUInt32BE(val, 0);
-    parts.push(buf);
-  };
+  writeByte(b: number): void {
+    this.ensure(1);
+    this.buffer[this.offset++] = b;
+  }
 
-  // Helper to append a double (f64)
-  const writeF64 = (val: number) => {
-    const buf = Buffer.alloc(8);
-    buf.writeDoubleBE(val, 0);
-    parts.push(buf);
-  };
+  writeU16(val: number): void {
+    this.ensure(2);
+    this.buffer.writeUInt16BE(val, this.offset);
+    this.offset += 2;
+  }
 
-  // Helper to append a string
-  const writeString = (str: string) => {
-    const strBuf = Buffer.from(str, "utf-8");
-    writeU16(strBuf.length);
-    parts.push(strBuf);
-  };
+  writeU32(val: number): void {
+    this.ensure(4);
+    this.buffer.writeUInt32BE(val, this.offset);
+    this.offset += 4;
+  }
 
+  writeF64(val: number): void {
+    this.ensure(8);
+    this.buffer.writeDoubleBE(val, this.offset);
+    this.offset += 8;
+  }
+
+  writeString(str: string): void {
+    const len = Buffer.byteLength(str, "utf-8");
+    this.writeU16(len);
+    this.ensure(len);
+    this.buffer.write(str, this.offset, len, "utf-8");
+    this.offset += len;
+  }
+
+  writeBytes(bytes: number[]): void {
+    const len = bytes.length;
+    this.ensure(len);
+    for (let i = 0; i < len; i++) {
+      this.buffer[this.offset + i] = bytes[i];
+    }
+    this.offset += len;
+  }
+
+  toBuffer(): Buffer {
+    const result = Buffer.allocUnsafe(this.offset);
+    this.buffer.copy(result, 0, 0, this.offset);
+    return result;
+  }
+}
+
+function serializeChunk(chunk: Chunk, writer: FastBufferWriter): void {
   // 1. Serialize name
-  writeString(chunk.name);
+  writer.writeString(chunk.name);
 
   // 2. Serialize arity
-  writeByte(chunk.arity);
+  writer.writeByte(chunk.arity);
 
   // 3. Serialize localCount
-  writeU16(chunk.localCount);
+  writer.writeU16(chunk.localCount);
 
   // 4. Serialize upvalueCount
-  writeU16(chunk.upvalueCount);
+  writer.writeU16(chunk.upvalueCount);
 
   // 5. Serialize code length & bytes
-  writeU32(chunk.code.length);
-  const codeBuf = Buffer.from(chunk.code);
-  parts.push(codeBuf);
+  writer.writeU32(chunk.code.length);
+  writer.writeBytes(chunk.code);
 
   // 6. Serialize lines length & array of u16
-  writeU32(chunk.lines.length);
-  const linesBuf = Buffer.alloc(chunk.lines.length * 2);
-  for (let i = 0; i < chunk.lines.length; i++) {
-    linesBuf.writeUInt16BE(chunk.lines[i], i * 2);
+  const lineCount = chunk.lines.length;
+  writer.writeU32(lineCount);
+  writer.ensure(lineCount * 2);
+  for (let i = 0; i < lineCount; i++) {
+    writer.buffer.writeUInt16BE(chunk.lines[i], writer.offset);
+    writer.offset += 2;
   }
-  parts.push(linesBuf);
 
   // 7. Serialize constants
-  writeU16(chunk.constants.length);
+  writer.writeU16(chunk.constants.length);
   for (const val of chunk.constants) {
     if (val === null) {
-      writeByte(0x00);
+      writer.writeByte(0x00);
     } else if (typeof val === "boolean") {
-      writeByte(val ? 0x02 : 0x01);
+      writer.writeByte(val ? 0x02 : 0x01);
     } else if (typeof val === "number") {
-      writeByte(0x03);
-      writeF64(val);
+      writer.writeByte(0x03);
+      writer.writeF64(val);
     } else if (typeof val === "string") {
-      writeByte(0x04);
-      writeString(val);
+      writer.writeByte(0x04);
+      writer.writeString(val);
     } else if (typeof val === "object" && val.type === "function") {
-      writeByte(0x05);
-      const subBuf = serialize(val.chunk);
-      parts.push(subBuf);
+      writer.writeByte(0x05);
+      serializeChunk(val.chunk, writer);
     } else {
       throw new Error(`Unsupported constant type: ${typeof val}`);
     }
   }
+}
 
-  return Buffer.concat(parts);
+export function serialize(chunk: Chunk): Buffer {
+  const writer = new FastBufferWriter();
+  serializeChunk(chunk, writer);
+  return writer.toBuffer();
 }
 
 export function serializeProgram(chunk: Chunk): Buffer {
-  const header = Buffer.alloc(8);
-  // Magic bytes "HKDB"
-  header.write("HKDB", 0, "ascii");
-  // Format version
-  header.writeUInt8(1, 4);
-  // Language major
-  header.writeUInt8(0, 5);
-  // Language minor
-  header.writeUInt8(1, 6);
-  // Runtime ABI
-  header.writeUInt8(1, 7);
+  const writer = new FastBufferWriter(32768);
+  // Header: 'HKDB' + format 1 + major 0 + minor 1 + abi 1
+  writer.ensure(8);
+  writer.buffer.write("HKDB", 0, "ascii");
+  writer.buffer[4] = 1;
+  writer.buffer[5] = 0;
+  writer.buffer[6] = 1;
+  writer.buffer[7] = 1;
+  writer.offset = 8;
 
-  const body = serialize(chunk);
-  return Buffer.concat([header, body]);
+  serializeChunk(chunk, writer);
+  return writer.toBuffer();
 }
 
 export function deserializeProgram(buffer: Buffer): Chunk {

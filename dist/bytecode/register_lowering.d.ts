@@ -6,5 +6,6 @@
  */
 import { Chunk } from "./chunk.js";
 import { RegisterChunk } from "./register_chunk.js";
-export declare function lowerToRegisterChunk(chunk: Chunk): RegisterChunk;
+import { OptimizerPipeline } from "./optimizer.js";
+export declare function lowerToRegisterChunk(chunk: Chunk, optPipeline?: OptimizerPipeline): RegisterChunk;
 //# sourceMappingURL=register_lowering.d.ts.map
