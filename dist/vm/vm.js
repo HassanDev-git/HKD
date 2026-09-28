@@ -166,23 +166,29 @@ class VM {
     }
     // ── Main execution loop ────────────────────────────────────────────────────
     execute(targetFrames = 0) {
+        let frame = this.frames[this.frames.length - 1];
+        let code = frame.chunk.code;
         while (true) {
-            const frame = this.currentFrame();
-            const currentIp = frame.ip;
-            const line = frame.chunk.lines[currentIp] || 0;
             if (this.dbg) {
-                const action = this.dbg.onBeforeInstruction?.(this, frame, frame.chunk.code[currentIp], line);
+                const currentIp = frame.ip;
+                const line = frame.chunk.lines[currentIp] || 0;
+                const action = this.dbg.onBeforeInstruction?.(this, frame, code[currentIp], line);
                 if (action === "pause") {
                     this.isPaused = true;
                     return { ok: true, value: null };
                 }
             }
-            const op = frame.chunk.readByte(frame.ip++);
+            const op = code[frame.ip++];
             switch (op) {
                 // ── Stack ─────────────────────────────────────────────────────────
                 case 1 /* Op.LoadConst */: {
-                    const idx = this.readU16();
-                    this.push(this.getConstant(frame, idx));
+                    const idx = ((code[frame.ip] << 8) | code[frame.ip + 1]) >>> 0;
+                    frame.ip += 2;
+                    const constants = frame.chunk.constants;
+                    if (idx >= constants.length) {
+                        throw new VmError(`Bytecode safety violation: constant index ${idx} out of bounds (constant pool size: ${constants.length})`, index_js_1.ErrorCode.E401);
+                    }
+                    this.push(constants[idx]);
                     break;
                 }
                 case 2 /* Op.LoadNull */:
@@ -198,42 +204,49 @@ class VM {
                     this.pop();
                     break;
                 case 6 /* Op.Dup */:
-                    this.push(this.peek(0));
+                    this.push(this.stack[this.stack.length - 1]);
                     break;
                 // ── Locals ────────────────────────────────────────────────────────
                 case 16 /* Op.LoadLocal */: {
-                    const slot = this.readU16();
+                    const slot = ((code[frame.ip] << 8) | code[frame.ip + 1]) >>> 0;
+                    frame.ip += 2;
                     this.push(this.stack[frame.base + slot]);
                     break;
                 }
                 case 17 /* Op.StoreLocal */: {
-                    const slot = this.readU16();
-                    this.stack[frame.base + slot] = this.peek(0);
+                    const slot = ((code[frame.ip] << 8) | code[frame.ip + 1]) >>> 0;
+                    frame.ip += 2;
+                    this.stack[frame.base + slot] = this.stack[this.stack.length - 1];
                     break;
                 }
                 case 18 /* Op.DefineLocal */: {
-                    const slot = this.readU16();
+                    const slot = ((code[frame.ip] << 8) | code[frame.ip + 1]) >>> 0;
+                    frame.ip += 2;
                     this.stack[frame.base + slot] = this.pop();
                     break;
                 }
                 // ── Globals ───────────────────────────────────────────────────────
                 case 19 /* Op.LoadGlobal */: {
-                    const nameIdx = this.readU16();
+                    const nameIdx = ((code[frame.ip] << 8) | code[frame.ip + 1]) >>> 0;
+                    frame.ip += 2;
                     const name = this.getConstant(frame, nameIdx);
-                    if (!this.globals.has(name)) {
+                    const val = this.globals.get(name);
+                    if (val === undefined && !this.globals.has(name)) {
                         throw new VmError(`Undefined variable \`${name}\``, index_js_1.ErrorCode.E301);
                     }
-                    this.push(this.globals.get(name));
+                    this.push(val);
                     break;
                 }
                 case 20 /* Op.StoreGlobal */: {
-                    const nameIdx = this.readU16();
+                    const nameIdx = ((code[frame.ip] << 8) | code[frame.ip + 1]) >>> 0;
+                    frame.ip += 2;
                     const name = this.getConstant(frame, nameIdx);
-                    this.globals.set(name, this.peek(0));
+                    this.globals.set(name, this.stack[this.stack.length - 1]);
                     break;
                 }
                 case 21 /* Op.DefineGlobal */: {
-                    const nameIdx = this.readU16();
+                    const nameIdx = ((code[frame.ip] << 8) | code[frame.ip + 1]) >>> 0;
+                    frame.ip += 2;
                     const name = this.getConstant(frame, nameIdx);
                     this.globals.set(name, this.pop());
                     break;
@@ -261,23 +274,39 @@ class VM {
                 case 32 /* Op.Add */: {
                     const b = this.pop();
                     const a = this.pop();
-                    if (typeof a === "string" || typeof b === "string") {
-                        this.push(this.hkdToString(a) + this.hkdToString(b));
-                    }
-                    else if (typeof a === "number" && typeof b === "number") {
+                    if (typeof a === "number" && typeof b === "number") {
                         this.push(a + b);
+                    }
+                    else if (typeof a === "string" || typeof b === "string") {
+                        this.push(this.hkdToString(a) + this.hkdToString(b));
                     }
                     else {
                         throw new VmError(`Cannot add ${typeof a} and ${typeof b}`, index_js_1.ErrorCode.E405);
                     }
                     break;
                 }
-                case 33 /* Op.Sub */:
-                    this.numericOp("-");
+                case 33 /* Op.Sub */: {
+                    const b = this.pop();
+                    const a = this.pop();
+                    if (typeof a === "number" && typeof b === "number") {
+                        this.push(a - b);
+                    }
+                    else {
+                        throw new VmError("Operator '-' requires numbers", index_js_1.ErrorCode.E405);
+                    }
                     break;
-                case 34 /* Op.Mul */:
-                    this.numericOp("*");
+                }
+                case 34 /* Op.Mul */: {
+                    const b = this.pop();
+                    const a = this.pop();
+                    if (typeof a === "number" && typeof b === "number") {
+                        this.push(a * b);
+                    }
+                    else {
+                        throw new VmError("Operator '*' requires numbers", index_js_1.ErrorCode.E405);
+                    }
                     break;
+                }
                 case 35 /* Op.Div */: {
                     const b = this.pop();
                     const a = this.pop();
@@ -317,41 +346,79 @@ class VM {
                 }
                 case 38 /* Op.Neg */: {
                     const a = this.pop();
-                    if (typeof a === "number")
+                    if (typeof a === "number") {
                         this.push(-a);
-                    else
+                    }
+                    else {
                         throw new VmError("Negation requires a number", index_js_1.ErrorCode.E405);
+                    }
                     break;
                 }
                 // ── Comparison ────────────────────────────────────────────────────
                 case 48 /* Op.Eq */: {
                     const b = this.pop(), a = this.pop();
-                    this.push(this.hkdEquals(a, b));
+                    if (typeof a === "number" && typeof b === "number") {
+                        this.push(a === b);
+                    }
+                    else if (typeof a === "boolean" && typeof b === "boolean") {
+                        this.push(a === b);
+                    }
+                    else {
+                        this.push(this.hkdEquals(a, b));
+                    }
                     break;
                 }
                 case 49 /* Op.Ne */: {
                     const b = this.pop(), a = this.pop();
-                    this.push(!this.hkdEquals(a, b));
+                    if (typeof a === "number" && typeof b === "number") {
+                        this.push(a !== b);
+                    }
+                    else if (typeof a === "boolean" && typeof b === "boolean") {
+                        this.push(a !== b);
+                    }
+                    else {
+                        this.push(!this.hkdEquals(a, b));
+                    }
                     break;
                 }
                 case 50 /* Op.Lt */: {
                     const b = this.pop(), a = this.pop();
-                    this.push(this.compareValues(a, b) < 0);
+                    if (typeof a === "number" && typeof b === "number") {
+                        this.push(a < b);
+                    }
+                    else {
+                        this.push(this.compareValues(a, b) < 0);
+                    }
                     break;
                 }
                 case 51 /* Op.Le */: {
                     const b = this.pop(), a = this.pop();
-                    this.push(this.compareValues(a, b) <= 0);
+                    if (typeof a === "number" && typeof b === "number") {
+                        this.push(a <= b);
+                    }
+                    else {
+                        this.push(this.compareValues(a, b) <= 0);
+                    }
                     break;
                 }
                 case 52 /* Op.Gt */: {
                     const b = this.pop(), a = this.pop();
-                    this.push(this.compareValues(a, b) > 0);
+                    if (typeof a === "number" && typeof b === "number") {
+                        this.push(a > b);
+                    }
+                    else {
+                        this.push(this.compareValues(a, b) > 0);
+                    }
                     break;
                 }
                 case 53 /* Op.Ge */: {
                     const b = this.pop(), a = this.pop();
-                    this.push(this.compareValues(a, b) >= 0);
+                    if (typeof a === "number" && typeof b === "number") {
+                        this.push(a >= b);
+                    }
+                    else {
+                        this.push(this.compareValues(a, b) >= 0);
+                    }
                     break;
                 }
                 // ── Logical ───────────────────────────────────────────────────────
@@ -389,37 +456,43 @@ class VM {
                 }
                 // ── Jumps ─────────────────────────────────────────────────────────
                 case 80 /* Op.Jump */: {
-                    const offset = frame.chunk.readI16(frame.ip);
+                    const raw = (code[frame.ip] << 8) | code[frame.ip + 1];
+                    const offset = raw > 0x7fff ? raw - 0x10000 : raw;
                     frame.ip += 2 + offset;
                     break;
                 }
                 case 81 /* Op.JumpFalse */: {
-                    const offset = frame.chunk.readI16(frame.ip);
+                    const raw = (code[frame.ip] << 8) | code[frame.ip + 1];
+                    const offset = raw > 0x7fff ? raw - 0x10000 : raw;
                     frame.ip += 2;
-                    if (!this.isTruthy(this.peek(0)))
+                    const top = this.stack[this.stack.length - 1];
+                    if (top === false || top === null || top === 0 || top === "")
                         frame.ip += offset;
                     break;
                 }
                 case 82 /* Op.JumpTrue */: {
-                    const offset = frame.chunk.readI16(frame.ip);
+                    const raw = (code[frame.ip] << 8) | code[frame.ip + 1];
+                    const offset = raw > 0x7fff ? raw - 0x10000 : raw;
                     frame.ip += 2;
-                    if (this.isTruthy(this.peek(0)))
+                    const top = this.stack[this.stack.length - 1];
+                    if (top !== false && top !== null && top !== 0 && top !== "")
                         frame.ip += offset;
                     break;
                 }
                 case 83 /* Op.JumpNull */: {
-                    const offset = frame.chunk.readI16(frame.ip);
+                    const raw = (code[frame.ip] << 8) | code[frame.ip + 1];
+                    const offset = raw > 0x7fff ? raw - 0x10000 : raw;
                     frame.ip += 2;
-                    if (this.peek(0) === null)
+                    if (this.stack[this.stack.length - 1] === null)
                         frame.ip += offset;
                     break;
                 }
                 // ── Functions ─────────────────────────────────────────────────────
                 case 96 /* Op.Call */: {
-                    const argc = frame.chunk.readByte(frame.ip++);
+                    const argc = code[frame.ip++];
                     const callee = this.peek(argc);
                     // Self-tail call optimization
-                    if (frame.ip < frame.chunk.code.length && frame.chunk.code[frame.ip] === 97 /* Op.Return */) {
+                    if (frame.ip < code.length && code[frame.ip] === 97 /* Op.Return */) {
                         const isSelf = (callee && typeof callee === "object" && "type" in callee && (callee.type === "function" ? callee.chunk === frame.chunk : callee.type === "closure" ? callee.fn.chunk === frame.chunk : false));
                         const arity = (callee && typeof callee === "object" && "type" in callee && (callee.type === "function" ? callee.arity : callee.type === "closure" ? callee.fn.arity : -1));
                         if (isSelf && arity === argc) {
@@ -433,6 +506,8 @@ class VM {
                         }
                     }
                     this.callValue(callee, argc);
+                    frame = this.frames[this.frames.length - 1];
+                    code = frame.chunk.code;
                     break;
                 }
                 case 97 /* Op.Return */: {
@@ -443,6 +518,8 @@ class VM {
                     if (this.frames.length === targetFrames) {
                         return { ok: true, value: returnValue };
                     }
+                    frame = this.frames[this.frames.length - 1];
+                    code = frame.chunk.code;
                     this.push(returnValue);
                     break;
                 }
@@ -654,11 +731,12 @@ class VM {
     currentFrame() {
         return this.frames[this.frames.length - 1];
     }
-    readU16() {
-        const frame = this.currentFrame();
-        const val = frame.chunk.readU16(frame.ip);
+    readU16(f) {
+        const frame = f ?? this.frames[this.frames.length - 1];
+        const code = frame.chunk.code;
+        const ip = frame.ip;
         frame.ip += 2;
-        return val;
+        return ((code[ip] << 8) | code[ip + 1]) >>> 0;
     }
     // ── Value operations ──────────────────────────────────────────────────────
     numericOp(op) {

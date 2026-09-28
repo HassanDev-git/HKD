@@ -1,0 +1,758 @@
+{
+  "schema_version": 1,
+  "baseline": "phase9-baseline-v1",
+  "generated_at": "2026-09-28T17:33:18.900Z",
+  "git": {
+    "commit": "029e04c9f5ae2f243fa94029bae4fb8a2defd694",
+    "branch": "main",
+    "dirty": true
+  },
+  "environment": {
+    "os": "win32",
+    "architecture": "x64",
+    "cpu_model": "Intel(R) Core(TM) i7-4900MQ CPU @ 2.80GHz",
+    "cpu_logical_cores": 8,
+    "total_memory_bytes": 8381378560,
+    "node_version": "v24.19.0",
+    "typescript_version": "5.5.2",
+    "hkd_version": "1.1.0",
+    "build_mode": "production",
+    "runner_version": "phase9-runner-1.0.0"
+  },
+  "artifacts": {
+    "hkd_cli_entry_bytes": 72991,
+    "native_vm_binary_bytes": 1145344,
+    "sample_bytecode_bytes": 79
+  },
+  "methodology": {
+    "workload_count": 18,
+    "warmup_iterations": 3,
+    "measured_iterations": 5,
+    "primary_metric": "median",
+    "timing_clock": "monotonic high-resolution (performance.now)",
+    "memory_measurement": "process.memoryUsage().rss",
+    "reproducibility": "deterministic"
+  },
+  "workloads": [
+    {
+      "id": "startup_cli",
+      "name": "CLI Version Startup",
+      "category": "startup",
+      "execution_type": "cli_process",
+      "description": "Measures instantaneous CLI process startup and version resolution",
+      "iterations": {
+        "warmup": 3,
+        "measured": 5
+      },
+      "samples_ms": [
+        161.2013,
+        149.5302,
+        145.5678,
+        144.4078,
+        141.9521
+      ],
+      "statistics_ms": {
+        "min": 141.9521,
+        "max": 161.2013,
+        "mean": 148.5318,
+        "median": 145.5678,
+        "p95": 158.8671,
+        "p99": 160.7345
+      },
+      "memory": {
+        "peak_rss_bytes": 43057152,
+        "start_rss_bytes": 42827776,
+        "end_rss_bytes": 43122688
+      },
+      "allocations": {
+        "allocations": null,
+        "deallocations": null,
+        "allocation_source": "unavailable (requires native profiling/valgrind instrumentation)"
+      },
+      "correctness": {
+        "verified": true,
+        "actual_output": "HKD 1.1.0"
+      }
+    },
+    {
+      "id": "startup_minimal",
+      "name": "Cold Script Startup",
+      "category": "startup",
+      "execution_type": "cli_process",
+      "description": "Measures cold process startup and execution of minimal script",
+      "iterations": {
+        "warmup": 3,
+        "measured": 5
+      },
+      "samples_ms": [
+        238.3092,
+        225.9081,
+        209.9159,
+        203.2968,
+        206.1696
+      ],
+      "statistics_ms": {
+        "min": 203.2968,
+        "max": 238.3092,
+        "mean": 216.7199,
+        "median": 209.9159,
+        "p95": 235.829,
+        "p99": 237.8132
+      },
+      "memory": {
+        "peak_rss_bytes": 43520000,
+        "start_rss_bytes": 43257856,
+        "end_rss_bytes": 43520000
+      },
+      "allocations": {
+        "allocations": null,
+        "deallocations": null,
+        "allocation_source": "unavailable (requires native profiling/valgrind instrumentation)"
+      },
+      "correctness": {
+        "verified": true,
+        "actual_output": "ready"
+      }
+    },
+    {
+      "id": "compiler_small",
+      "name": "Small Source Compilation",
+      "category": "compiler",
+      "execution_type": "compiler_pipeline",
+      "description": "Measures full lexing, parsing, semantic checking, and bytecode emission (<50 LOC)",
+      "iterations": {
+        "warmup": 3,
+        "measured": 5
+      },
+      "samples_ms": [
+        0.9959,
+        1.204,
+        0.54,
+        0.6934,
+        0.9961
+      ],
+      "statistics_ms": {
+        "min": 0.54,
+        "max": 1.204,
+        "mean": 0.8859,
+        "median": 0.9959,
+        "p95": 1.1624,
+        "p99": 1.1957
+      },
+      "memory": {
+        "peak_rss_bytes": 45027328,
+        "start_rss_bytes": 44429312,
+        "end_rss_bytes": 45027328
+      },
+      "allocations": {
+        "allocations": null,
+        "deallocations": null,
+        "allocation_source": "unavailable (requires native profiling/valgrind instrumentation)"
+      },
+      "correctness": {
+        "verified": true,
+        "actual_output": "compiled 385 bytes"
+      }
+    },
+    {
+      "id": "compiler_medium",
+      "name": "Medium Project Compilation",
+      "category": "compiler",
+      "execution_type": "compiler_pipeline",
+      "description": "Measures compiler throughput on medium-sized modular program (~300 LOC)",
+      "iterations": {
+        "warmup": 3,
+        "measured": 5
+      },
+      "samples_ms": [
+        3.0172,
+        2.7311,
+        1.665,
+        1.9674,
+        2.0778
+      ],
+      "statistics_ms": {
+        "min": 1.665,
+        "max": 3.0172,
+        "mean": 2.2917,
+        "median": 2.0778,
+        "p95": 2.96,
+        "p99": 3.0058
+      },
+      "memory": {
+        "peak_rss_bytes": 46579712,
+        "start_rss_bytes": 45297664,
+        "end_rss_bytes": 45932544
+      },
+      "allocations": {
+        "allocations": null,
+        "deallocations": null,
+        "allocation_source": "unavailable (requires native profiling/valgrind instrumentation)"
+      },
+      "correctness": {
+        "verified": true,
+        "actual_output": "compiled 2796 bytes"
+      }
+    },
+    {
+      "id": "compiler_large",
+      "name": "Large Workload Compilation",
+      "category": "compiler",
+      "execution_type": "compiler_pipeline",
+      "description": "Measures multi-module compiler pipeline stress (~1200 LOC)",
+      "iterations": {
+        "warmup": 3,
+        "measured": 5
+      },
+      "samples_ms": [
+        19.3375,
+        8.8742,
+        10.7255,
+        11.0127,
+        11.7689
+      ],
+      "statistics_ms": {
+        "min": 8.8742,
+        "max": 19.3375,
+        "mean": 12.3438,
+        "median": 11.0127,
+        "p95": 17.8238,
+        "p99": 19.0348
+      },
+      "memory": {
+        "peak_rss_bytes": 69160960,
+        "start_rss_bytes": 62377984,
+        "end_rss_bytes": 67813376
+      },
+      "allocations": {
+        "allocations": null,
+        "deallocations": null,
+        "allocation_source": "unavailable (requires native profiling/valgrind instrumentation)"
+      },
+      "correctness": {
+        "verified": true,
+        "actual_output": "compiled 39574 bytes"
+      }
+    },
+    {
+      "id": "arithmetic_integer",
+      "name": "Integer Arithmetic Loop",
+      "category": "arithmetic",
+      "execution_type": "runtime_vm",
+      "description": "Evaluates tight integer arithmetic (add, sub, mul, div, mod) across 100,000 iterations",
+      "iterations": {
+        "warmup": 3,
+        "measured": 5
+      },
+      "samples_ms": [
+        67.5813,
+        90.4449,
+        65.6037,
+        66.0481,
+        64.2121
+      ],
+      "statistics_ms": {
+        "min": 64.2121,
+        "max": 90.4449,
+        "mean": 70.778,
+        "median": 66.0481,
+        "p95": 85.8722,
+        "p99": 89.5304
+      },
+      "memory": {
+        "peak_rss_bytes": 81498112,
+        "start_rss_bytes": 73654272,
+        "end_rss_bytes": 81498112
+      },
+      "allocations": {
+        "allocations": null,
+        "deallocations": null,
+        "allocation_source": "unavailable (requires native profiling/valgrind instrumentation)"
+      },
+      "correctness": {
+        "verified": true,
+        "actual_output": "49875000"
+      }
+    },
+    {
+      "id": "arithmetic_numeric",
+      "name": "Floating-Point Numeric Math",
+      "category": "arithmetic",
+      "execution_type": "runtime_vm",
+      "description": "Evaluates floating-point double arithmetic over 100,000 iterations",
+      "iterations": {
+        "warmup": 3,
+        "measured": 5
+      },
+      "samples_ms": [
+        78.7602,
+        75.5966,
+        73.7911,
+        61.4849,
+        68.7322
+      ],
+      "statistics_ms": {
+        "min": 61.4849,
+        "max": 78.7602,
+        "mean": 71.673,
+        "median": 73.7911,
+        "p95": 78.1275,
+        "p99": 78.6337
+      },
+      "memory": {
+        "peak_rss_bytes": 84856832,
+        "start_rss_bytes": 84750336,
+        "end_rss_bytes": 84856832
+      },
+      "allocations": {
+        "allocations": null,
+        "deallocations": null,
+        "allocation_source": "unavailable (requires native profiling/valgrind instrumentation)"
+      },
+      "correctness": {
+        "verified": true,
+        "actual_output": "2.0000049999422536"
+      }
+    },
+    {
+      "id": "loop_tight",
+      "name": "Tight Loop Counter",
+      "category": "arithmetic",
+      "execution_type": "runtime_vm",
+      "description": "Measures pure bytecode loop branch and counter increment throughput (500,000 iterations)",
+      "iterations": {
+        "warmup": 3,
+        "measured": 5
+      },
+      "samples_ms": [
+        140.2745,
+        150.0706,
+        135.9207,
+        123.7855,
+        110.6753
+      ],
+      "statistics_ms": {
+        "min": 110.6753,
+        "max": 150.0706,
+        "mean": 132.1453,
+        "median": 135.9207,
+        "p95": 148.1114,
+        "p99": 149.6788
+      },
+      "memory": {
+        "peak_rss_bytes": 84856832,
+        "start_rss_bytes": 84856832,
+        "end_rss_bytes": 84856832
+      },
+      "allocations": {
+        "allocations": null,
+        "deallocations": null,
+        "allocation_source": "unavailable (requires native profiling/valgrind instrumentation)"
+      },
+      "correctness": {
+        "verified": true,
+        "actual_output": "500000"
+      }
+    },
+    {
+      "id": "control_flow_branching",
+      "name": "Multi-Way Branching Logic",
+      "category": "control_flow",
+      "execution_type": "runtime_vm",
+      "description": "Evaluates conditional branching and jump target prediction across 100,000 iterations",
+      "iterations": {
+        "warmup": 3,
+        "measured": 5
+      },
+      "samples_ms": [
+        82.5097,
+        71.6368,
+        75.5842,
+        78.906,
+        77.1545
+      ],
+      "statistics_ms": {
+        "min": 71.6368,
+        "max": 82.5097,
+        "mean": 77.1582,
+        "median": 77.1545,
+        "p95": 81.789,
+        "p99": 82.3656
+      },
+      "memory": {
+        "peak_rss_bytes": 85209088,
+        "start_rss_bytes": 84799488,
+        "end_rss_bytes": 85209088
+      },
+      "allocations": {
+        "allocations": null,
+        "deallocations": null,
+        "allocation_source": "unavailable (requires native profiling/valgrind instrumentation)"
+      },
+      "correctness": {
+        "verified": true,
+        "actual_output": "33334,33333,33333"
+      }
+    },
+    {
+      "id": "control_flow_nested_loops",
+      "name": "Nested 2D Loop Traversal",
+      "category": "control_flow",
+      "execution_type": "runtime_vm",
+      "description": "Evaluates nested loop execution across 90,000 2D coordinate iterations",
+      "iterations": {
+        "warmup": 3,
+        "measured": 5
+      },
+      "samples_ms": [
+        54.8269,
+        51.784,
+        61.6982,
+        52.864,
+        48.8507
+      ],
+      "statistics_ms": {
+        "min": 48.8507,
+        "max": 61.6982,
+        "mean": 54.0048,
+        "median": 52.864,
+        "p95": 60.3239,
+        "p99": 61.4233
+      },
+      "memory": {
+        "peak_rss_bytes": 85020672,
+        "start_rss_bytes": 84992000,
+        "end_rss_bytes": 84779008
+      },
+      "allocations": {
+        "allocations": null,
+        "deallocations": null,
+        "allocation_source": "unavailable (requires native profiling/valgrind instrumentation)"
+      },
+      "correctness": {
+        "verified": true,
+        "actual_output": "4266000"
+      }
+    },
+    {
+      "id": "function_calls",
+      "name": "Function Invocation Overhead",
+      "category": "functions",
+      "execution_type": "runtime_vm",
+      "description": "Measures function call frame creation, parameter passing, and return across 100,000 calls",
+      "iterations": {
+        "warmup": 3,
+        "measured": 5
+      },
+      "samples_ms": [
+        61.5963,
+        66.6004,
+        66.8862,
+        65.146,
+        64.3182
+      ],
+      "statistics_ms": {
+        "min": 61.5963,
+        "max": 66.8862,
+        "mean": 64.9094,
+        "median": 65.146,
+        "p95": 66.829,
+        "p99": 66.8748
+      },
+      "memory": {
+        "peak_rss_bytes": 85622784,
+        "start_rss_bytes": 85225472,
+        "end_rss_bytes": 85622784
+      },
+      "allocations": {
+        "allocations": null,
+        "deallocations": null,
+        "allocation_source": "unavailable (requires native profiling/valgrind instrumentation)"
+      },
+      "correctness": {
+        "verified": true,
+        "actual_output": "100000"
+      }
+    },
+    {
+      "id": "recursion_fib",
+      "name": "Recursive Fibonacci (n=20)",
+      "category": "functions",
+      "execution_type": "runtime_vm",
+      "description": "Measures deep call stack management and recursive unwinding (fib(20))",
+      "iterations": {
+        "warmup": 3,
+        "measured": 5
+      },
+      "samples_ms": [
+        11.9068,
+        11.2805,
+        13.336,
+        11.7972,
+        11.6466
+      ],
+      "statistics_ms": {
+        "min": 11.2805,
+        "max": 13.336,
+        "mean": 11.9934,
+        "median": 11.7972,
+        "p95": 13.0502,
+        "p99": 13.2788
+      },
+      "memory": {
+        "peak_rss_bytes": 87240704,
+        "start_rss_bytes": 87240704,
+        "end_rss_bytes": 85618688
+      },
+      "allocations": {
+        "allocations": null,
+        "deallocations": null,
+        "allocation_source": "unavailable (requires native profiling/valgrind instrumentation)"
+      },
+      "correctness": {
+        "verified": true,
+        "actual_output": "6765"
+      }
+    },
+    {
+      "id": "data_strings",
+      "name": "String Concatenation & Length",
+      "category": "data",
+      "execution_type": "runtime_vm",
+      "description": "Measures dynamic string buffer allocation, concatenation, and querying (5,000 appends)",
+      "iterations": {
+        "warmup": 3,
+        "measured": 5
+      },
+      "samples_ms": [
+        4.6291,
+        4.3017,
+        4.3056,
+        4.5532,
+        4.6242
+      ],
+      "statistics_ms": {
+        "min": 4.3017,
+        "max": 4.6291,
+        "mean": 4.4828,
+        "median": 4.5532,
+        "p95": 4.6281,
+        "p99": 4.6289
+      },
+      "memory": {
+        "peak_rss_bytes": 92594176,
+        "start_rss_bytes": 88088576,
+        "end_rss_bytes": 87453696
+      },
+      "allocations": {
+        "allocations": null,
+        "deallocations": null,
+        "allocation_source": "unavailable (requires native profiling/valgrind instrumentation)"
+      },
+      "correctness": {
+        "verified": true,
+        "actual_output": "5004"
+      }
+    },
+    {
+      "id": "data_arrays",
+      "name": "Array Growth & Element Append",
+      "category": "data",
+      "execution_type": "runtime_vm",
+      "description": "Measures dynamic array capacity expansion and element indexing (10,000 elements)",
+      "iterations": {
+        "warmup": 3,
+        "measured": 5
+      },
+      "samples_ms": [
+        9.2483,
+        8.9501,
+        9.9256,
+        7.4179,
+        7.6688
+      ],
+      "statistics_ms": {
+        "min": 7.4179,
+        "max": 9.9256,
+        "mean": 8.6421,
+        "median": 8.9501,
+        "p95": 9.7901,
+        "p99": 9.8985
+      },
+      "memory": {
+        "peak_rss_bytes": 88821760,
+        "start_rss_bytes": 86134784,
+        "end_rss_bytes": 86151168
+      },
+      "allocations": {
+        "allocations": null,
+        "deallocations": null,
+        "allocation_source": "unavailable (requires native profiling/valgrind instrumentation)"
+      },
+      "correctness": {
+        "verified": true,
+        "actual_output": "10000"
+      }
+    },
+    {
+      "id": "data_objects",
+      "name": "Struct Property Mutation",
+      "category": "data",
+      "execution_type": "runtime_vm",
+      "description": "Measures struct instance field writes and property lookups (50,000 property cycles)",
+      "iterations": {
+        "warmup": 3,
+        "measured": 5
+      },
+      "samples_ms": [
+        33.8214,
+        50.2041,
+        43.5471,
+        33.7136,
+        35.2281
+      ],
+      "statistics_ms": {
+        "min": 33.7136,
+        "max": 50.2041,
+        "mean": 39.3029,
+        "median": 35.2281,
+        "p95": 48.8727,
+        "p99": 49.9378
+      },
+      "memory": {
+        "peak_rss_bytes": 86495232,
+        "start_rss_bytes": 86495232,
+        "end_rss_bytes": 86200320
+      },
+      "allocations": {
+        "allocations": null,
+        "deallocations": null,
+        "allocation_source": "unavailable (requires native profiling/valgrind instrumentation)"
+      },
+      "correctness": {
+        "verified": true,
+        "actual_output": "49999,50000"
+      }
+    },
+    {
+      "id": "runtime_allocations",
+      "name": "Heap Allocation & GC Churn",
+      "category": "runtime",
+      "execution_type": "runtime_vm",
+      "description": "Measures short-lived heap allocation and garbage collection reclamation pressure (5,000 objects)",
+      "iterations": {
+        "warmup": 3,
+        "measured": 5
+      },
+      "samples_ms": [
+        7.7196,
+        63.7889,
+        33.2726,
+        9.075,
+        19.7508
+      ],
+      "statistics_ms": {
+        "min": 7.7196,
+        "max": 63.7889,
+        "mean": 26.7214,
+        "median": 19.7508,
+        "p95": 57.6856,
+        "p99": 62.5682
+      },
+      "memory": {
+        "peak_rss_bytes": 89755648,
+        "start_rss_bytes": 89755648,
+        "end_rss_bytes": 88383488
+      },
+      "allocations": {
+        "allocations": null,
+        "deallocations": null,
+        "allocation_source": "unavailable (requires native profiling/valgrind instrumentation)"
+      },
+      "correctness": {
+        "verified": true,
+        "actual_output": "5000"
+      }
+    },
+    {
+      "id": "runtime_repeated_execution",
+      "name": "Repeated Steady-State Loop",
+      "category": "runtime",
+      "execution_type": "runtime_vm",
+      "description": "Measures sustained execution loop verifying steady-state runtime performance",
+      "iterations": {
+        "warmup": 3,
+        "measured": 5
+      },
+      "samples_ms": [
+        46.4052,
+        46.3079,
+        45.631,
+        42.7008,
+        45.4962
+      ],
+      "statistics_ms": {
+        "min": 42.7008,
+        "max": 46.4052,
+        "mean": 45.3082,
+        "median": 45.631,
+        "p95": 46.3857,
+        "p99": 46.4013
+      },
+      "memory": {
+        "peak_rss_bytes": 86917120,
+        "start_rss_bytes": 86917120,
+        "end_rss_bytes": 86794240
+      },
+      "allocations": {
+        "allocations": null,
+        "deallocations": null,
+        "allocation_source": "unavailable (requires native profiling/valgrind instrumentation)"
+      },
+      "correctness": {
+        "verified": true,
+        "actual_output": "125"
+      }
+    },
+    {
+      "id": "concurrency_async",
+      "name": "Async Task Execution (RFC-004)",
+      "category": "concurrency",
+      "execution_type": "runtime_vm",
+      "description": "Measures async function suspension, future resolution, and cooperative task scheduling",
+      "iterations": {
+        "warmup": 3,
+        "measured": 5
+      },
+      "samples_ms": [
+        1.3494,
+        1.4093,
+        1.3286,
+        1.7739,
+        2.1908
+      ],
+      "statistics_ms": {
+        "min": 1.3286,
+        "max": 2.1908,
+        "mean": 1.6104,
+        "median": 1.4093,
+        "p95": 2.1074,
+        "p99": 2.1741
+      },
+      "memory": {
+        "peak_rss_bytes": 93208576,
+        "start_rss_bytes": 87105536,
+        "end_rss_bytes": 93216768
+      },
+      "allocations": {
+        "allocations": null,
+        "deallocations": null,
+        "allocation_source": "unavailable (requires native profiling/valgrind instrumentation)"
+      },
+      "correctness": {
+        "verified": true,
+        "actual_output": "60"
+      }
+    }
+  ]
+}

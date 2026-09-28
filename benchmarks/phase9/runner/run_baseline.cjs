@@ -129,7 +129,7 @@ function verifyOutput(workload, actualStdout) {
   return true; // No explicit assertion required
 }
 
-function runBaselineSuite() {
+function runBaselineSuite(options = {}) {
   console.log("================================================================================");
   console.log("             HKD PHASE 9A — AUTHORITATIVE PERFORMANCE BASELINE v1               ");
   console.log("================================================================================");
@@ -287,19 +287,26 @@ function runBaselineSuite() {
     workloads: workloadResults,
   };
 
-  // Write JSON report to benchmarks/baseline_v1.json
-  const jsonPath = path.join(ROOT_DIR, "benchmarks", "baseline_v1.json");
-  const jsonResultPath = path.join(ROOT_DIR, "benchmarks", "phase9", "results", "baseline_v1.json");
-  fs.writeFileSync(jsonPath, JSON.stringify(baselineReport, null, 2), "utf-8");
-  fs.writeFileSync(jsonResultPath, JSON.stringify(baselineReport, null, 2), "utf-8");
-
-  // Generate Markdown report to benchmarks/baseline_v1.md
-  generateMarkdownReport(baselineReport);
-
-  console.log("\n================================================================================");
-  console.log(`Baseline JSON generated: benchmarks/baseline_v1.json`);
-  console.log(`Baseline Markdown report: benchmarks/baseline_v1.md`);
-  console.log("================================================================================");
+  // Write JSON report
+  const customOut = options.out || process.env.HKD_BENCHMARK_OUTPUT;
+  if (customOut) {
+    const targetOut = path.resolve(customOut);
+    fs.mkdirSync(path.dirname(targetOut), { recursive: true });
+    fs.writeFileSync(targetOut, JSON.stringify(baselineReport, null, 2), "utf-8");
+    console.log(`\n================================================================================`);
+    console.log(`Candidate JSON generated: ${customOut}`);
+    console.log(`================================================================================`);
+  } else {
+    const jsonPath = path.join(ROOT_DIR, "benchmarks", "baseline_v1.json");
+    const jsonResultPath = path.join(ROOT_DIR, "benchmarks", "phase9", "results", "baseline_v1.json");
+    fs.writeFileSync(jsonPath, JSON.stringify(baselineReport, null, 2), "utf-8");
+    fs.writeFileSync(jsonResultPath, JSON.stringify(baselineReport, null, 2), "utf-8");
+    generateMarkdownReport(baselineReport);
+    console.log("\n================================================================================");
+    console.log(`Baseline JSON generated: benchmarks/baseline_v1.json`);
+    console.log(`Baseline Markdown report: benchmarks/baseline_v1.md`);
+    console.log("================================================================================");
+  }
   return baselineReport;
 }
 
@@ -421,7 +428,13 @@ function generateMarkdownReport(report) {
 }
 
 if (require.main === module) {
-  runBaselineSuite();
+  const args = process.argv.slice(2);
+  let outPath;
+  const outIdx = args.indexOf("--out");
+  if (outIdx !== -1 && args[outIdx + 1]) {
+    outPath = args[outIdx + 1];
+  }
+  runBaselineSuite({ out: outPath });
 }
 
 module.exports = {

@@ -216,72 +216,88 @@ export class VM {
   // ── Main execution loop ────────────────────────────────────────────────────
 
   private execute(targetFrames: number = 0): VmResult {
-    while (true) {
-      const frame = this.currentFrame();
-      const currentIp = frame.ip;
-      const line = frame.chunk.lines[currentIp] || 0;
+    let frame = this.frames[this.frames.length - 1];
+    let code = frame.chunk.code;
 
+    while (true) {
       if (this.dbg) {
-        const action = this.dbg.onBeforeInstruction?.(this, frame, frame.chunk.code[currentIp], line);
+        const currentIp = frame.ip;
+        const line = frame.chunk.lines[currentIp] || 0;
+        const action = this.dbg.onBeforeInstruction?.(this, frame, code[currentIp], line);
         if (action === "pause") {
           this.isPaused = true;
           return { ok: true, value: null };
         }
       }
 
-      const op = frame.chunk.readByte(frame.ip++);
+      const op = code[frame.ip++];
 
       switch (op) {
         // ── Stack ─────────────────────────────────────────────────────────
         case Op.LoadConst: {
-          const idx = this.readU16();
-          this.push(this.getConstant(frame, idx));
+          const idx = ((code[frame.ip] << 8) | code[frame.ip + 1]) >>> 0;
+          frame.ip += 2;
+          const constants = frame.chunk.constants;
+          if (idx >= constants.length) {
+            throw new VmError(
+              `Bytecode safety violation: constant index ${idx} out of bounds (constant pool size: ${constants.length})`,
+              ErrorCode.E401
+            );
+          }
+          this.push(constants[idx]);
           break;
         }
         case Op.LoadNull:  this.push(null); break;
         case Op.LoadTrue:  this.push(true); break;
         case Op.LoadFalse: this.push(false); break;
         case Op.Pop:       this.pop(); break;
-        case Op.Dup:       this.push(this.peek(0)); break;
+        case Op.Dup:       this.push(this.stack[this.stack.length - 1]); break;
 
         // ── Locals ────────────────────────────────────────────────────────
         case Op.LoadLocal: {
-          const slot = this.readU16();
+          const slot = ((code[frame.ip] << 8) | code[frame.ip + 1]) >>> 0;
+          frame.ip += 2;
           this.push(this.stack[frame.base + slot]);
           break;
         }
         case Op.StoreLocal: {
-          const slot = this.readU16();
-          this.stack[frame.base + slot] = this.peek(0);
+          const slot = ((code[frame.ip] << 8) | code[frame.ip + 1]) >>> 0;
+          frame.ip += 2;
+          this.stack[frame.base + slot] = this.stack[this.stack.length - 1];
           break;
         }
         case Op.DefineLocal: {
-          const slot = this.readU16();
+          const slot = ((code[frame.ip] << 8) | code[frame.ip + 1]) >>> 0;
+          frame.ip += 2;
           this.stack[frame.base + slot] = this.pop();
           break;
         }
 
         // ── Globals ───────────────────────────────────────────────────────
         case Op.LoadGlobal: {
-          const nameIdx = this.readU16();
+          const nameIdx = ((code[frame.ip] << 8) | code[frame.ip + 1]) >>> 0;
+          frame.ip += 2;
           const name = this.getConstant(frame, nameIdx) as string;
-          if (!this.globals.has(name)) {
+          const val = this.globals.get(name);
+          if (val === undefined && !this.globals.has(name)) {
             throw new VmError(
               `Undefined variable \`${name}\``,
               ErrorCode.E301
             );
           }
-          this.push(this.globals.get(name)!);
+          this.push(val!);
           break;
         }
         case Op.StoreGlobal: {
-          const nameIdx = this.readU16();
+          const nameIdx = ((code[frame.ip] << 8) | code[frame.ip + 1]) >>> 0;
+          frame.ip += 2;
           const name = this.getConstant(frame, nameIdx) as string;
-          this.globals.set(name, this.peek(0));
+          this.globals.set(name, this.stack[this.stack.length - 1]);
           break;
         }
         case Op.DefineGlobal: {
-          const nameIdx = this.readU16();
+          const nameIdx = ((code[frame.ip] << 8) | code[frame.ip + 1]) >>> 0;
+          frame.ip += 2;
           const name = this.getConstant(frame, nameIdx) as string;
           this.globals.set(name, this.pop());
           break;
@@ -310,17 +326,35 @@ export class VM {
         case Op.Add: {
           const b = this.pop();
           const a = this.pop();
-          if (typeof a === "string" || typeof b === "string") {
-            this.push(this.hkdToString(a) + this.hkdToString(b));
-          } else if (typeof a === "number" && typeof b === "number") {
+          if (typeof a === "number" && typeof b === "number") {
             this.push(a + b);
+          } else if (typeof a === "string" || typeof b === "string") {
+            this.push(this.hkdToString(a) + this.hkdToString(b));
           } else {
             throw new VmError(`Cannot add ${typeof a} and ${typeof b}`, ErrorCode.E405);
           }
           break;
         }
-        case Op.Sub: this.numericOp("-"); break;
-        case Op.Mul: this.numericOp("*"); break;
+        case Op.Sub: {
+          const b = this.pop();
+          const a = this.pop();
+          if (typeof a === "number" && typeof b === "number") {
+            this.push(a - b);
+          } else {
+            throw new VmError("Operator '-' requires numbers", ErrorCode.E405);
+          }
+          break;
+        }
+        case Op.Mul: {
+          const b = this.pop();
+          const a = this.pop();
+          if (typeof a === "number" && typeof b === "number") {
+            this.push(a * b);
+          } else {
+            throw new VmError("Operator '*' requires numbers", ErrorCode.E405);
+          }
+          break;
+        }
         case Op.Div: {
           const b = this.pop();
           const a = this.pop();
@@ -355,26 +389,73 @@ export class VM {
         }
         case Op.Neg: {
           const a = this.pop();
-          if (typeof a === "number") this.push(-a);
-          else throw new VmError("Negation requires a number", ErrorCode.E405);
+          if (typeof a === "number") {
+            this.push(-a);
+          } else {
+            throw new VmError("Negation requires a number", ErrorCode.E405);
+          }
           break;
         }
 
         // ── Comparison ────────────────────────────────────────────────────
         case Op.Eq: {
           const b = this.pop(), a = this.pop();
-          this.push(this.hkdEquals(a, b));
+          if (typeof a === "number" && typeof b === "number") {
+            this.push(a === b);
+          } else if (typeof a === "boolean" && typeof b === "boolean") {
+            this.push(a === b);
+          } else {
+            this.push(this.hkdEquals(a, b));
+          }
           break;
         }
         case Op.Ne: {
           const b = this.pop(), a = this.pop();
-          this.push(!this.hkdEquals(a, b));
+          if (typeof a === "number" && typeof b === "number") {
+            this.push(a !== b);
+          } else if (typeof a === "boolean" && typeof b === "boolean") {
+            this.push(a !== b);
+          } else {
+            this.push(!this.hkdEquals(a, b));
+          }
           break;
         }
-        case Op.Lt: { const b = this.pop(), a = this.pop(); this.push(this.compareValues(a, b) < 0); break; }
-        case Op.Le: { const b = this.pop(), a = this.pop(); this.push(this.compareValues(a, b) <= 0); break; }
-        case Op.Gt: { const b = this.pop(), a = this.pop(); this.push(this.compareValues(a, b) > 0); break; }
-        case Op.Ge: { const b = this.pop(), a = this.pop(); this.push(this.compareValues(a, b) >= 0); break; }
+        case Op.Lt: {
+          const b = this.pop(), a = this.pop();
+          if (typeof a === "number" && typeof b === "number") {
+            this.push(a < b);
+          } else {
+            this.push(this.compareValues(a, b) < 0);
+          }
+          break;
+        }
+        case Op.Le: {
+          const b = this.pop(), a = this.pop();
+          if (typeof a === "number" && typeof b === "number") {
+            this.push(a <= b);
+          } else {
+            this.push(this.compareValues(a, b) <= 0);
+          }
+          break;
+        }
+        case Op.Gt: {
+          const b = this.pop(), a = this.pop();
+          if (typeof a === "number" && typeof b === "number") {
+            this.push(a > b);
+          } else {
+            this.push(this.compareValues(a, b) > 0);
+          }
+          break;
+        }
+        case Op.Ge: {
+          const b = this.pop(), a = this.pop();
+          if (typeof a === "number" && typeof b === "number") {
+            this.push(a >= b);
+          } else {
+            this.push(this.compareValues(a, b) >= 0);
+          }
+          break;
+        }
 
         // ── Logical ───────────────────────────────────────────────────────
         case Op.Not: this.push(!this.isTruthy(this.pop())); break;
@@ -389,36 +470,42 @@ export class VM {
 
         // ── Jumps ─────────────────────────────────────────────────────────
         case Op.Jump: {
-          const offset = frame.chunk.readI16(frame.ip);
+          const raw = (code[frame.ip] << 8) | code[frame.ip + 1];
+          const offset = raw > 0x7fff ? raw - 0x10000 : raw;
           frame.ip += 2 + offset;
           break;
         }
         case Op.JumpFalse: {
-          const offset = frame.chunk.readI16(frame.ip);
+          const raw = (code[frame.ip] << 8) | code[frame.ip + 1];
+          const offset = raw > 0x7fff ? raw - 0x10000 : raw;
           frame.ip += 2;
-          if (!this.isTruthy(this.peek(0))) frame.ip += offset;
+          const top = this.stack[this.stack.length - 1];
+          if (top === false || top === null || top === 0 || top === "") frame.ip += offset;
           break;
         }
         case Op.JumpTrue: {
-          const offset = frame.chunk.readI16(frame.ip);
+          const raw = (code[frame.ip] << 8) | code[frame.ip + 1];
+          const offset = raw > 0x7fff ? raw - 0x10000 : raw;
           frame.ip += 2;
-          if (this.isTruthy(this.peek(0))) frame.ip += offset;
+          const top = this.stack[this.stack.length - 1];
+          if (top !== false && top !== null && top !== 0 && top !== "") frame.ip += offset;
           break;
         }
         case Op.JumpNull: {
-          const offset = frame.chunk.readI16(frame.ip);
+          const raw = (code[frame.ip] << 8) | code[frame.ip + 1];
+          const offset = raw > 0x7fff ? raw - 0x10000 : raw;
           frame.ip += 2;
-          if (this.peek(0) === null) frame.ip += offset;
+          if (this.stack[this.stack.length - 1] === null) frame.ip += offset;
           break;
         }
 
         // ── Functions ─────────────────────────────────────────────────────
         case Op.Call: {
-          const argc = frame.chunk.readByte(frame.ip++);
+          const argc = code[frame.ip++];
           const callee = this.peek(argc);
 
           // Self-tail call optimization
-          if (frame.ip < frame.chunk.code.length && frame.chunk.code[frame.ip] === Op.Return) {
+          if (frame.ip < code.length && code[frame.ip] === Op.Return) {
             const isSelf = (callee && typeof callee === "object" && "type" in callee && (callee.type === "function" ? callee.chunk === frame.chunk : callee.type === "closure" ? callee.fn.chunk === frame.chunk : false));
             const arity = (callee && typeof callee === "object" && "type" in callee && (callee.type === "function" ? callee.arity : callee.type === "closure" ? callee.fn.arity : -1));
             if (isSelf && arity === argc) {
@@ -433,6 +520,8 @@ export class VM {
           }
 
           this.callValue(callee, argc);
+          frame = this.frames[this.frames.length - 1];
+          code = frame.chunk.code;
           break;
         }
         case Op.Return: {
@@ -445,6 +534,8 @@ export class VM {
             return { ok: true, value: returnValue };
           }
 
+          frame = this.frames[this.frames.length - 1];
+          code = frame.chunk.code;
           this.push(returnValue);
           break;
         }
@@ -684,11 +775,12 @@ export class VM {
     return this.frames[this.frames.length - 1];
   }
 
-  private readU16(): number {
-    const frame = this.currentFrame();
-    const val = frame.chunk.readU16(frame.ip);
+  private readU16(f?: CallFrame): number {
+    const frame = f ?? this.frames[this.frames.length - 1];
+    const code = frame.chunk.code;
+    const ip = frame.ip;
     frame.ip += 2;
-    return val;
+    return ((code[ip] << 8) | code[ip + 1]) >>> 0;
   }
 
   // ── Value operations ──────────────────────────────────────────────────────
