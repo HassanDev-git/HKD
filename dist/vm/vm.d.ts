@@ -15,12 +15,17 @@
  */
 import { Chunk, HkdValue, HkdClosure, Upvalue } from "../bytecode/chunk.js";
 import { ErrorCode } from "../errors/index.js";
+export interface GlobalCell {
+    name: string;
+    value: HkdValue;
+}
 interface CallFrame {
     closure: HkdClosure | null;
     chunk: Chunk;
     ip: number;
     base: number;
     openUpvalues: Upvalue[];
+    cells: Array<GlobalCell | undefined>;
 }
 export type VmResult = {
     ok: true;
@@ -37,6 +42,7 @@ export declare class VM {
     private stack;
     private frames;
     private globals;
+    private globalCells;
     private output;
     private dbg;
     isPaused: boolean;
@@ -47,6 +53,7 @@ export declare class VM {
     constructor(output?: (s: string) => void);
     setDebugger(dbg: VmDebugger | null): void;
     run(chunk: Chunk): VmResult;
+    getGlobalCell(name: string): GlobalCell;
     /** Register a native function in the global scope. */
     defineNative(name: string, arity: number, fn: (args: HkdValue[]) => HkdValue): void;
     /** Read a global value. */

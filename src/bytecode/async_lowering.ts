@@ -90,23 +90,88 @@ function makeString(value: string, span: SourceSpan): N.StringLiteral {
 }
 
 /** Check if an expression or any subexpression is an AwaitExpr. */
-export function hasAwait(node: N.AstNode): boolean {
+export function hasAwait(node: N.AstNode | null | undefined): boolean {
   if (!node) return false;
-  const anyNode = node as any;
-  if (anyNode.kind === "AwaitExpr") return true;
-
-  for (const key of Object.keys(anyNode)) {
-    if (key === "span") continue;
-    const val = anyNode[key];
-    if (Array.isArray(val)) {
-      for (const item of val) {
-        if (item && typeof item === "object" && hasAwait(item)) return true;
+  const n = node as any;
+  switch (n.kind) {
+    case "AwaitExpr":
+      return true;
+    case "BinaryExpr":
+      return hasAwait(n.left) || hasAwait(n.right);
+    case "UnaryExpr":
+      return hasAwait(n.operand);
+    case "CallExpr":
+      if (hasAwait(n.callee)) return true;
+      for (let i = 0; i < n.args.length; i++) {
+        if (hasAwait(n.args[i])) return true;
       }
-    } else if (val && typeof val === "object" && val.kind) {
-      if (hasAwait(val)) return true;
-    }
+      return false;
+    case "IndexExpr":
+      return hasAwait(n.object) || hasAwait(n.index);
+    case "MemberExpr":
+      return hasAwait(n.object);
+    case "AssignExpr":
+      return hasAwait(n.target) || hasAwait(n.value);
+    case "CompoundAssignExpr":
+      return hasAwait(n.target) || hasAwait(n.value);
+    case "ArrayExpr":
+      for (let i = 0; i < n.elements.length; i++) {
+        if (hasAwait(n.elements[i])) return true;
+      }
+      return false;
+    case "ObjectExpr":
+      for (let i = 0; i < n.fields.length; i++) {
+        if (hasAwait(n.fields[i].value)) return true;
+      }
+      return false;
+    case "IfExpr":
+      return hasAwait(n.condition) || hasAwait(n.then) || (n.else_ ? hasAwait(n.else_) : false);
+    case "BlockExpr":
+      for (let i = 0; i < n.body.length; i++) {
+        if (hasAwait(n.body[i])) return true;
+      }
+      return false;
+    case "StructInitExpr":
+      for (let i = 0; i < n.fields.length; i++) {
+        if (hasAwait(n.fields[i].value)) return true;
+      }
+      return false;
+    case "RangeExpr":
+      return hasAwait(n.start) || hasAwait(n.end);
+    case "CastExpr":
+      return hasAwait(n.expr);
+    case "MatchExpr":
+      if (hasAwait(n.scrutinee)) return true;
+      for (let i = 0; i < n.arms.length; i++) {
+        const arm = n.arms[i];
+        if (arm.guard && hasAwait(arm.guard)) return true;
+        if (hasAwait(arm.body)) return true;
+      }
+      return false;
+    case "VarDeclStmt":
+      return n.initializer ? hasAwait(n.initializer) : false;
+    case "ConstDeclStmt":
+      return hasAwait(n.initializer);
+    case "ExprStmt":
+      return hasAwait(n.expr);
+    case "ReturnStmt":
+      return n.value ? hasAwait(n.value) : false;
+    case "IfStmt":
+      return hasAwait(n.condition) || hasAwait(n.then) || (n.else_ ? hasAwait(n.else_) : false);
+    case "WhileStmt":
+      return hasAwait(n.condition) || hasAwait(n.body);
+    case "ForStmt":
+      return hasAwait(n.iterable) || hasAwait(n.body);
+    case "BlockStmt":
+      for (let i = 0; i < n.body.length; i++) {
+        if (hasAwait(n.body[i])) return true;
+      }
+      return false;
+    case "AssertStmt":
+      return hasAwait(n.condition) || (n.message ? hasAwait(n.message) : false);
+    default:
+      return false;
   }
-  return false;
 }
 
 let liftCounter = 0;
@@ -123,19 +188,82 @@ function liftAwaitsFromExpr(expr: N.Expr, liftedStmts: N.Stmt[]): N.Expr {
     return makeIdent(tmpName, span);
   }
 
-  const anyExpr = { ...expr } as any;
-  for (const key of Object.keys(anyExpr)) {
-    if (key === "span") continue;
-    const val = anyExpr[key];
-    if (Array.isArray(val)) {
-      anyExpr[key] = val.map((item) =>
-        item && typeof item === "object" && item.kind ? liftAwaitsFromExpr(item, liftedStmts) : item
-      );
-    } else if (val && typeof val === "object" && val.kind) {
-      anyExpr[key] = liftAwaitsFromExpr(val, liftedStmts);
-    }
+  switch (expr.kind) {
+    case "BinaryExpr":
+      return {
+        ...expr,
+        left: liftAwaitsFromExpr(expr.left, liftedStmts),
+        right: liftAwaitsFromExpr(expr.right, liftedStmts),
+      };
+    case "UnaryExpr":
+      return {
+        ...expr,
+        operand: liftAwaitsFromExpr(expr.operand, liftedStmts),
+      };
+    case "CallExpr":
+      return {
+        ...expr,
+        callee: liftAwaitsFromExpr(expr.callee, liftedStmts),
+        args: expr.args.map((a) => liftAwaitsFromExpr(a, liftedStmts)),
+      };
+    case "IndexExpr":
+      return {
+        ...expr,
+        object: liftAwaitsFromExpr(expr.object, liftedStmts),
+        index: liftAwaitsFromExpr(expr.index, liftedStmts),
+      };
+    case "MemberExpr":
+      return {
+        ...expr,
+        object: liftAwaitsFromExpr(expr.object, liftedStmts),
+      };
+    case "AssignExpr":
+      return {
+        ...expr,
+        target: liftAwaitsFromExpr(expr.target, liftedStmts),
+        value: liftAwaitsFromExpr(expr.value, liftedStmts),
+      };
+    case "CompoundAssignExpr":
+      return {
+        ...expr,
+        target: liftAwaitsFromExpr(expr.target, liftedStmts),
+        value: liftAwaitsFromExpr(expr.value, liftedStmts),
+      };
+    case "ArrayExpr":
+      return {
+        ...expr,
+        elements: expr.elements.map((e) => liftAwaitsFromExpr(e, liftedStmts)),
+      };
+    case "ObjectExpr":
+      return {
+        ...expr,
+        fields: expr.fields.map((f) => ({
+          ...f,
+          value: liftAwaitsFromExpr(f.value, liftedStmts),
+        })),
+      };
+    case "StructInitExpr":
+      return {
+        ...expr,
+        fields: expr.fields.map((f) => ({
+          ...f,
+          value: liftAwaitsFromExpr(f.value, liftedStmts),
+        })),
+      };
+    case "RangeExpr":
+      return {
+        ...expr,
+        start: liftAwaitsFromExpr(expr.start, liftedStmts),
+        end: liftAwaitsFromExpr(expr.end, liftedStmts),
+      };
+    case "CastExpr":
+      return {
+        ...expr,
+        expr: liftAwaitsFromExpr(expr.expr, liftedStmts),
+      };
+    default:
+      return expr;
   }
-  return anyExpr;
 }
 
 /** Flatten blocks and lift awaits out of expressions in statements. */
@@ -246,23 +374,36 @@ function flattenAndLiftStmts(stmts: N.Stmt[]): N.Stmt[] {
 /** Collect all variable names declared via `let` in statement list. */
 function collectDeclaredVariables(stmts: N.Stmt[]): string[] {
   const vars: string[] = [];
-  function walk(node: any) {
-    if (!node || typeof node !== "object") return;
-    if (node.kind === "VarDeclStmt" && typeof node.name === "string") {
-      vars.push(node.name);
-    }
-    for (const key of Object.keys(node)) {
-      if (key === "span") continue;
-      const child = node[key];
-      if (Array.isArray(child)) {
-        for (const item of child) walk(item);
-      } else if (child && typeof child === "object" && child.kind) {
-        walk(child);
-      }
+  function walkStmt(s: N.Stmt) {
+    if (!s) return;
+    switch (s.kind) {
+      case "VarDeclStmt":
+        if (typeof s.name === "string") vars.push(s.name);
+        break;
+      case "BlockStmt":
+        for (let i = 0; i < s.body.length; i++) walkStmt(s.body[i]);
+        break;
+      case "IfStmt":
+        for (let i = 0; i < s.then.body.length; i++) walkStmt(s.then.body[i]);
+        if (s.else_) {
+          if (s.else_.kind === "BlockStmt") {
+            for (let i = 0; i < s.else_.body.length; i++) walkStmt(s.else_.body[i]);
+          } else if (s.else_.kind === "IfStmt") {
+            walkStmt(s.else_);
+          }
+        }
+        break;
+      case "WhileStmt":
+        for (let i = 0; i < s.body.body.length; i++) walkStmt(s.body.body[i]);
+        break;
+      case "ForStmt":
+        if (typeof s.variable === "string") vars.push(s.variable);
+        for (let i = 0; i < s.body.body.length; i++) walkStmt(s.body.body[i]);
+        break;
     }
   }
-  for (const s of stmts) {
-    walk(s);
+  for (let i = 0; i < stmts.length; i++) {
+    walkStmt(stmts[i]);
   }
   return Array.from(new Set(vars));
 }

@@ -13,9 +13,14 @@
 import { Chunk, HkdValue } from "../bytecode/chunk.js";
 import { RegisterChunk } from "../bytecode/register_chunk.js";
 import { VmResult } from "./vm.js";
+export interface GlobalCell {
+    name: string;
+    value: HkdValue;
+}
 export declare class RegisterVM {
     private frames;
     private globals;
+    private globalCells;
     private output;
     private futureCallbacks;
     private callbackQueue;
@@ -24,6 +29,7 @@ export declare class RegisterVM {
     constructor(output?: (s: string) => void);
     dispatchCallback(cb: HkdValue, args: HkdValue[]): void;
     runCallable(callee: HkdValue, args: HkdValue[]): HkdValue;
+    getGlobalCell(name: string): GlobalCell;
     defineNative(name: string, arity: number, fn: (args: HkdValue[]) => HkdValue): void;
     getGlobal(name: string): HkdValue | undefined;
     setGlobal(name: string, value: HkdValue): void;

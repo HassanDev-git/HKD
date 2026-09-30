@@ -36,12 +36,18 @@ const MAX_CALL_DEPTH  = 512;
 
 // ─── Call frame ───────────────────────────────────────────────────────────────
 
+export interface GlobalCell {
+  name: string;
+  value: HkdValue;
+}
+
 interface CallFrame {
   closure: HkdClosure | null;
   chunk: Chunk;
   ip: number;
   base: number;       // index into value stack where this frame's locals start
   openUpvalues: Upvalue[];
+  cells: Array<GlobalCell | undefined>;
 }
 
 // ─── VM Result ────────────────────────────────────────────────────────────────
@@ -60,6 +66,7 @@ export class VM {
   private stack: HkdValue[] = [];
   private frames: CallFrame[] = [];
   private globals: Map<string, HkdValue> = new Map();
+  private globalCells: Map<string, GlobalCell> = new Map();
   private output: (s: string) => void;
   private dbg: VmDebugger | null = null;
   public isPaused: boolean = false;
@@ -125,6 +132,15 @@ export class VM {
     }
   }
 
+  public getGlobalCell(name: string): GlobalCell {
+    let cell = this.globalCells.get(name);
+    if (!cell) {
+      cell = { name, value: this.globals.has(name) ? this.globals.get(name)! : (undefined as any) };
+      this.globalCells.set(name, cell);
+    }
+    return cell;
+  }
+
   /** Register a native function in the global scope. */
   defineNative(name: string, arity: number, fn: (args: HkdValue[]) => HkdValue): void {
     const native: HkdNativeFunction = {
@@ -134,16 +150,22 @@ export class VM {
       call: fn,
     };
     this.globals.set(name, native);
+    const cell = this.globalCells.get(name);
+    if (cell) cell.value = native;
   }
 
   /** Read a global value. */
   getGlobal(name: string): HkdValue | undefined {
+    const cell = this.globalCells.get(name);
+    if (cell !== undefined && cell.value !== undefined) return cell.value;
     return this.globals.get(name);
   }
 
   /** Set a global value. */
   setGlobal(name: string, value: HkdValue): void {
     this.globals.set(name, value);
+    const cell = this.globalCells.get(name);
+    if (cell) cell.value = value;
   }
 
   public resume(): VmResult {
@@ -196,8 +218,12 @@ export class VM {
   }
 
   public getAllGlobals(): Array<{ name: string; value: HkdValue }> {
+    const map = new Map<string, HkdValue>(this.globals);
+    for (const [k, cell] of this.globalCells.entries()) {
+      if (cell.value !== undefined) map.set(k, cell.value);
+    }
     const list: Array<{ name: string; value: HkdValue }> = [];
-    for (const [k, v] of this.globals.entries()) {
+    for (const [k, v] of map.entries()) {
       list.push({ name: k, value: v });
     }
     return list;
@@ -218,6 +244,7 @@ export class VM {
   private execute(targetFrames: number = 0): VmResult {
     let frame = this.frames[this.frames.length - 1];
     let code = frame.chunk.code;
+    let cells = frame.cells;
 
     while (true) {
       if (this.dbg) {
@@ -277,29 +304,45 @@ export class VM {
         case Op.LoadGlobal: {
           const nameIdx = ((code[frame.ip] << 8) | code[frame.ip + 1]) >>> 0;
           frame.ip += 2;
-          const name = this.getConstant(frame, nameIdx) as string;
-          const val = this.globals.get(name);
-          if (val === undefined && !this.globals.has(name)) {
+          let cell = cells[nameIdx];
+          if (!cell) {
+            const name = this.getConstant(frame, nameIdx) as string;
+            cell = this.getGlobalCell(name);
+            cells[nameIdx] = cell;
+          }
+          if (cell.value === undefined && !this.globals.has(cell.name)) {
             throw new VmError(
-              `Undefined variable \`${name}\``,
+              `Undefined variable \`${cell.name}\``,
               ErrorCode.E301
             );
           }
-          this.push(val!);
+          this.push(cell.value!);
           break;
         }
         case Op.StoreGlobal: {
           const nameIdx = ((code[frame.ip] << 8) | code[frame.ip + 1]) >>> 0;
           frame.ip += 2;
-          const name = this.getConstant(frame, nameIdx) as string;
-          this.globals.set(name, this.stack[this.stack.length - 1]);
+          let cell = cells[nameIdx];
+          if (!cell) {
+            const name = this.getConstant(frame, nameIdx) as string;
+            cell = this.getGlobalCell(name);
+            cells[nameIdx] = cell;
+          }
+          cell.value = this.stack[this.stack.length - 1];
           break;
         }
         case Op.DefineGlobal: {
           const nameIdx = ((code[frame.ip] << 8) | code[frame.ip + 1]) >>> 0;
           frame.ip += 2;
-          const name = this.getConstant(frame, nameIdx) as string;
-          this.globals.set(name, this.pop());
+          let cell = cells[nameIdx];
+          if (!cell) {
+            const name = this.getConstant(frame, nameIdx) as string;
+            cell = this.getGlobalCell(name);
+            cells[nameIdx] = cell;
+          }
+          const val = this.pop();
+          cell.value = val;
+          this.globals.set(cell.name, val);
           break;
         }
 
@@ -522,6 +565,7 @@ export class VM {
           this.callValue(callee, argc);
           frame = this.frames[this.frames.length - 1];
           code = frame.chunk.code;
+          cells = frame.cells;
           break;
         }
         case Op.Return: {
@@ -536,6 +580,7 @@ export class VM {
 
           frame = this.frames[this.frames.length - 1];
           code = frame.chunk.code;
+          cells = frame.cells;
           this.push(returnValue);
           break;
         }
@@ -742,6 +787,7 @@ export class VM {
       ip: 0,
       base,
       openUpvalues: [],
+      cells: [],
     });
   }
 

@@ -1,0 +1,95 @@
+{
+  "phase": "Phase 9G",
+  "benchmark": "Compiler vs Runtime Execution Boundary Profiling",
+  "timestamp": "2026-09-30T22:12:59.290Z",
+  "results": {
+    "minimal": {
+      "lex_ms": 0.06,
+      "parse_ms": 0.095,
+      "semantic_ms": 0.128,
+      "bytecode_emit_ms": 0.192,
+      "register_lowering_ms": 0.114,
+      "vm_init_ms": 0.033,
+      "vm_run_register_ms": 0.069,
+      "vm_run_stack_ms": 0.376,
+      "total_ms": 0.691
+    },
+    "loop_tight": {
+      "lex_ms": 0.369,
+      "parse_ms": 0.358,
+      "semantic_ms": 0.301,
+      "bytecode_emit_ms": 3.027,
+      "register_lowering_ms": 1.105,
+      "vm_init_ms": 0.079,
+      "vm_run_register_ms": 506.952,
+      "vm_run_stack_ms": 551.186,
+      "total_ms": 512.191
+    },
+    "arithmetic_integer": {
+      "lex_ms": 0.224,
+      "parse_ms": 0.31,
+      "semantic_ms": 0.527,
+      "bytecode_emit_ms": 1.263,
+      "register_lowering_ms": 0.225,
+      "vm_init_ms": 0.062,
+      "vm_run_register_ms": 187.233,
+      "vm_run_stack_ms": 286.461,
+      "total_ms": 189.845
+    },
+    "function_calls": {
+      "lex_ms": 0.119,
+      "parse_ms": 0.378,
+      "semantic_ms": 1.201,
+      "bytecode_emit_ms": 1.465,
+      "register_lowering_ms": 0.322,
+      "vm_init_ms": 0.04,
+      "vm_run_register_ms": 193.362,
+      "vm_run_stack_ms": 331.653,
+      "total_ms": 196.887
+    },
+    "data_objects": {
+      "lex_ms": 0.257,
+      "parse_ms": 0.354,
+      "semantic_ms": 0.605,
+      "bytecode_emit_ms": 0.97,
+      "register_lowering_ms": 2.955,
+      "vm_init_ms": 0.03,
+      "vm_run_register_ms": 128.481,
+      "vm_run_stack_ms": 185.244,
+      "total_ms": 133.652
+    },
+    "runtime_allocations": {
+      "lex_ms": 0.412,
+      "parse_ms": 1.18,
+      "semantic_ms": 0.657,
+      "bytecode_emit_ms": 3.432,
+      "register_lowering_ms": 1.372,
+      "vm_init_ms": 0.033,
+      "vm_run_register_ms": 1.103,
+      "vm_run_stack_ms": 0.435,
+      "total_ms": 8.19
+    },
+    "concurrency_async": {
+      "lex_ms": 0.988,
+      "parse_ms": 6.715,
+      "semantic_ms": 2.199,
+      "bytecode_emit_ms": 14.965,
+      "register_lowering_ms": 4.193,
+      "vm_init_ms": 1.092,
+      "vm_run_register_ms": 1.62,
+      "vm_run_stack_ms": 4.455,
+      "total_ms": 31.772
+    },
+    "compiler_large": {
+      "lex_ms": 24.886,
+      "parse_ms": 34.154,
+      "semantic_ms": 30.32,
+      "bytecode_emit_ms": 14.952,
+      "register_lowering_ms": 8.904,
+      "vm_init_ms": 0.03,
+      "vm_run_register_ms": 1.696,
+      "vm_run_stack_ms": 3.482,
+      "total_ms": 114.943
+    }
+  }
+}

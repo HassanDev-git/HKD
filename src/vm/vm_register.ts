@@ -30,17 +30,24 @@ import { VmError, VmResult } from "./vm.js";
 
 const MAX_CALL_DEPTH = 512;
 
+export interface GlobalCell {
+  name: string;
+  value: HkdValue;
+}
+
 interface RegCallFrame {
   closure: HkdClosure | null;
   chunk: RegisterChunk;
   ip: number;
   registers: HkdValue[];
   destReg: number;
+  cells: Array<GlobalCell | undefined>;
 }
 
 export class RegisterVM {
   private frames: RegCallFrame[] = [];
   private globals: Map<string, HkdValue> = new Map();
+  private globalCells: Map<string, GlobalCell> = new Map();
   private output: (s: string) => void;
   private futureCallbacks: WeakMap<HkdObject, Array<HkdValue>> = new WeakMap();
   private callbackQueue: Array<[HkdValue, HkdValue[]]> = [];
@@ -93,6 +100,15 @@ export class RegisterVM {
     throw new VmError("Cannot call non-function", ErrorCode.E408);
   }
 
+  public getGlobalCell(name: string): GlobalCell {
+    let cell = this.globalCells.get(name);
+    if (!cell) {
+      cell = { name, value: this.globals.has(name) ? this.globals.get(name)! : (undefined as any) };
+      this.globalCells.set(name, cell);
+    }
+    return cell;
+  }
+
   public defineNative(name: string, arity: number, fn: (args: HkdValue[]) => HkdValue): void {
     const native: HkdNativeFunction = {
       type: "native",
@@ -101,19 +117,29 @@ export class RegisterVM {
       call: fn,
     };
     this.globals.set(name, native);
+    const cell = this.globalCells.get(name);
+    if (cell) cell.value = native;
   }
 
   public getGlobal(name: string): HkdValue | undefined {
+    const cell = this.globalCells.get(name);
+    if (cell !== undefined && cell.value !== undefined) return cell.value;
     return this.globals.get(name);
   }
 
   public setGlobal(name: string, value: HkdValue): void {
     this.globals.set(name, value);
+    const cell = this.globalCells.get(name);
+    if (cell) cell.value = value;
   }
 
   public getAllGlobals(): Array<{ name: string; value: HkdValue }> {
+    const map = new Map<string, HkdValue>(this.globals);
+    for (const [k, cell] of this.globalCells.entries()) {
+      if (cell.value !== undefined) map.set(k, cell.value);
+    }
     const list: Array<{ name: string; value: HkdValue }> = [];
-    for (const [k, v] of this.globals.entries()) {
+    for (const [k, v] of map.entries()) {
       list.push({ name: k, value: v });
     }
     return list;
@@ -172,6 +198,7 @@ export class RegisterVM {
       ip: 0,
       registers,
       destReg,
+      cells: [],
     });
   }
 
@@ -180,6 +207,7 @@ export class RegisterVM {
     let code = frame.chunk.code;
     let registers = frame.registers;
     let constants = frame.chunk.constants;
+    let cells = frame.cells;
 
     while (true) {
       const ins = code[frame.ip++];
@@ -213,24 +241,43 @@ export class RegisterVM {
           break;
 
         case RegOp.LoadGlobal: {
-          const name = constants[ins.src1] as string;
-          const val = this.globals.get(name);
-          if (val === undefined && !this.globals.has(name)) {
-            throw new VmError(`Undefined variable \`${name}\``, ErrorCode.E301);
+          const idx = ins.src1;
+          let cell = cells[idx];
+          if (!cell) {
+            const name = constants[idx] as string;
+            cell = this.getGlobalCell(name);
+            cells[idx] = cell;
           }
-          registers[ins.dst] = val!;
+          if (cell.value === undefined && !this.globals.has(cell.name)) {
+            throw new VmError(`Undefined variable \`${cell.name}\``, ErrorCode.E301);
+          }
+          registers[ins.dst] = cell.value!;
           break;
         }
 
         case RegOp.StoreGlobal: {
-          const name = constants[ins.dst] as string;
-          this.globals.set(name, registers[ins.src1]);
+          const idx = ins.dst;
+          let cell = cells[idx];
+          if (!cell) {
+            const name = constants[idx] as string;
+            cell = this.getGlobalCell(name);
+            cells[idx] = cell;
+          }
+          cell.value = registers[ins.src1];
           break;
         }
 
         case RegOp.DefineGlobal: {
-          const name = constants[ins.dst] as string;
-          this.globals.set(name, registers[ins.src1]);
+          const idx = ins.dst;
+          let cell = cells[idx];
+          if (!cell) {
+            const name = constants[idx] as string;
+            cell = this.getGlobalCell(name);
+            cells[idx] = cell;
+          }
+          const val = registers[ins.src1];
+          cell.value = val;
+          this.globals.set(cell.name, val);
           break;
         }
 
@@ -551,6 +598,7 @@ export class RegisterVM {
           code = frame.chunk.code;
           registers = frame.registers;
           constants = frame.chunk.constants;
+          cells = frame.cells;
           break;
         }
 
@@ -569,6 +617,7 @@ export class RegisterVM {
           code = frame.chunk.code;
           registers = frame.registers;
           constants = frame.chunk.constants;
+          cells = frame.cells;
           registers[returnFrame.destReg] = returnValue;
           break;
         }

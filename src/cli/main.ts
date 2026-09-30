@@ -28,38 +28,124 @@ import { runFile } from "../runtime/index.js";
 import { ErrorReporter } from "../errors/index.js";
 import { Lexer } from "../lexer/lexer.js";
 import { Parser } from "../parser/parser.js";
-import { format } from "../formatter/index.js";
-import { lint, formatLintIssues, LintCode } from "../linter/index.js";
-import { PackageManager, readManifest } from "../package-manager/index.js";
-import { PackageManager2 } from "../package-manager/manager.js";
-import { auditProject } from "../package-manager/audit.js";
-import { verifyBuildReproducibility } from "../package-manager/reproducible.js";
-import { ContentAddressedCache } from "../package-manager/cache.js";
-import { readLockfile, LockedPackage } from "../package-manager/lockfile.js";
-import { startRepl } from "./repl.js";
-import { runTests } from "./test-runner.js";
 import { SemanticAnalyser } from "../semantic/analyser.js";
 import { Compiler } from "../bytecode/compiler.js";
 import { serializeProgram } from "../bytecode/serializer.js";
-import { runDoctor, printDoctorReport } from "./doctor.js";
-import { parseTarget, listTargetsFormatted } from "../deploy/targets.js";
-import { resolveProfile } from "../deploy/profiles.js";
-import { verifyArtifact } from "../deploy/artifact.js";
-import { buildReleaseBundle } from "../deploy/release.js";
-import { loadEffectiveConfig, formatConfigReport } from "../deploy/env-config.js";
-import { initContainer } from "../deploy/container.js";
-import { PlatformRegistry } from "../deploy/platform/platform-manager.js";
-import { GenericServerAdapter } from "../deploy/platform/generic-server.js";
-import { DockerAdapter } from "../deploy/platform/docker.js";
-import { GithubActionsAdapter } from "../deploy/platform/github-actions.js";
-import { VercelAdapter } from "../deploy/platform/vercel.js";
-import { writeSbomJson } from "../deploy/sbom.js";
-import { runDeployCheck, printDeployCheckReport, runDeployDryRun } from "../deploy/check.js";
-import { getRuntimeInfo, printRuntimeInfo, ExitCode } from "../deploy/runtime-info.js";
-import { runMigration } from "../tooling/migrate.js";
-import { runVerifyRelease, printVerifyReleaseReport } from "../tooling/verify-release.js";
-import { explainError } from "./explain.js";
-import { RfcValidator } from "../tooling/rfc-validator.js";
+
+// ExitCode definition to avoid eager loading of deploy runtime-info module
+export const ExitCode = {
+  Success: 0,
+  RuntimeError: 1,
+  UsageError: 2,
+  ConfigError: 3,
+  BuildError: 4,
+  DeployError: 5,
+} as const;
+
+// Lazy module loaders for CLI subcommands to eliminate cold-start import overhead
+const lazy = <T>(loader: () => T) => {
+  let mod: T | undefined;
+  return (): T => {
+    if (!mod) mod = loader();
+    return mod;
+  };
+};
+
+const getFormatter = lazy(() => require("../formatter/index.js") as typeof import("../formatter/index.js"));
+const getLinter = lazy(() => require("../linter/index.js") as typeof import("../linter/index.js"));
+const getPackageManager = lazy(() => require("../package-manager/index.js") as typeof import("../package-manager/index.js"));
+const getPackageManager2 = lazy(() => require("../package-manager/manager.js") as typeof import("../package-manager/manager.js"));
+const getAudit = lazy(() => require("../package-manager/audit.js") as typeof import("../package-manager/audit.js"));
+const getReproducible = lazy(() => require("../package-manager/reproducible.js") as typeof import("../package-manager/reproducible.js"));
+const getCache = lazy(() => require("../package-manager/cache.js") as typeof import("../package-manager/cache.js"));
+const getLockfile = lazy(() => require("../package-manager/lockfile.js") as typeof import("../package-manager/lockfile.js"));
+const getRepl = lazy(() => require("./repl.js") as typeof import("./repl.js"));
+const getTestRunner = lazy(() => require("./test-runner.js") as typeof import("./test-runner.js"));
+const getDoctor = lazy(() => require("./doctor.js") as typeof import("./doctor.js"));
+const getTargets = lazy(() => require("../deploy/targets.js") as typeof import("../deploy/targets.js"));
+const getProfiles = lazy(() => require("../deploy/profiles.js") as typeof import("../deploy/profiles.js"));
+const getArtifact = lazy(() => require("../deploy/artifact.js") as typeof import("../deploy/artifact.js"));
+const getRelease = lazy(() => require("../deploy/release.js") as typeof import("../deploy/release.js"));
+const getEnvConfig = lazy(() => require("../deploy/env-config.js") as typeof import("../deploy/env-config.js"));
+const getContainer = lazy(() => require("../deploy/container.js") as typeof import("../deploy/container.js"));
+const getPlatform = lazy(() => require("../deploy/platform/platform-manager.js") as typeof import("../deploy/platform/platform-manager.js"));
+const getGenericServer = lazy(() => require("../deploy/platform/generic-server.js") as typeof import("../deploy/platform/generic-server.js"));
+const getDocker = lazy(() => require("../deploy/platform/docker.js") as typeof import("../deploy/platform/docker.js"));
+const getGithubActions = lazy(() => require("../deploy/platform/github-actions.js") as typeof import("../deploy/platform/github-actions.js"));
+const getVercel = lazy(() => require("../deploy/platform/vercel.js") as typeof import("../deploy/platform/vercel.js"));
+const getSbom = lazy(() => require("../deploy/sbom.js") as typeof import("../deploy/sbom.js"));
+const getDeployCheck = lazy(() => require("../deploy/check.js") as typeof import("../deploy/check.js"));
+const getRuntimeInfoMod = lazy(() => require("../deploy/runtime-info.js") as typeof import("../deploy/runtime-info.js"));
+const getMigrate = lazy(() => require("../tooling/migrate.js") as typeof import("../tooling/migrate.js"));
+const getVerifyRelease = lazy(() => require("../tooling/verify-release.js") as typeof import("../tooling/verify-release.js"));
+const getExplain = lazy(() => require("./explain.js") as typeof import("./explain.js"));
+const getRfcValidator = lazy(() => require("../tooling/rfc-validator.js") as typeof import("../tooling/rfc-validator.js"));
+
+function readManifest(dir: string) {
+  return getPackageManager().readManifest(dir);
+}
+
+function format(...args: any[]): any { return (getFormatter().format as any)(...args); }
+function lint(...args: any[]): any { return (getLinter().lint as any)(...args); }
+function formatLintIssues(...args: any[]): any { return (getLinter().formatLintIssues as any)(...args); }
+const LintCode = {
+  get L001() { return getLinter().LintCode.L001; },
+  get L005() { return getLinter().LintCode.L005; },
+};
+function verifyBuildReproducibility(...args: any[]): any { return (getReproducible().verifyBuildReproducibility as any)(...args); }
+function startRepl(...args: any[]): any { return (getRepl().startRepl as any)(...args); }
+function runTests(...args: any[]): any { return (getTestRunner().runTests as any)(...args); }
+function runDoctor(...args: any[]): any { return (getDoctor().runDoctor as any)(...args); }
+function printDoctorReport(...args: any[]): any { return (getDoctor().printDoctorReport as any)(...args); }
+function listTargetsFormatted(...args: any[]): any { return (getTargets().listTargetsFormatted as any)(...args); }
+function parseTarget(...args: any[]): any { return (getTargets().parseTarget as any)(...args); }
+function resolveProfile(...args: any[]): any { return (getProfiles().resolveProfile as any)(...args); }
+function buildReleaseBundle(...args: any[]): any { return (getRelease().buildReleaseBundle as any)(...args); }
+function verifyArtifact(...args: any[]): any { return (getArtifact().verifyArtifact as any)(...args); }
+function loadEffectiveConfig(...args: any[]): any { return (getEnvConfig().loadEffectiveConfig as any)(...args); }
+function formatConfigReport(...args: any[]): any { return (getEnvConfig().formatConfigReport as any)(...args); }
+function initContainer(...args: any[]): any { return (getContainer().initContainer as any)(...args); }
+function writeSbomJson(...args: any[]): any { return (getSbom().writeSbomJson as any)(...args); }
+function runDeployCheck(...args: any[]): any { return (getDeployCheck().runDeployCheck as any)(...args); }
+function printDeployCheckReport(...args: any[]): any { return (getDeployCheck().printDeployCheckReport as any)(...args); }
+function runDeployDryRun(...args: any[]): any { return (getDeployCheck().runDeployDryRun as any)(...args); }
+function getRuntimeInfo(...args: any[]): any { return (getRuntimeInfoMod().getRuntimeInfo as any)(...args); }
+function printRuntimeInfo(...args: any[]): any { return (getRuntimeInfoMod().printRuntimeInfo as any)(...args); }
+function runMigration(...args: any[]): any { return (getMigrate().runMigration as any)(...args); }
+function runVerifyRelease(...args: any[]): any { return (getVerifyRelease().runVerifyRelease as any)(...args); }
+function printVerifyReleaseReport(...args: any[]): any { return (getVerifyRelease().printVerifyReleaseReport as any)(...args); }
+function explainError(...args: any[]): any { return (getExplain().explainError as any)(...args); }
+function auditProject(...args: any[]): any { return (getAudit().auditProject as any)(...args); }
+function readLockfile(...args: any[]): any { return (getLockfile().readLockfile as any)(...args); }
+type LockedPackage = any;
+
+const PackageManager = new Proxy(class {} as any, {
+  construct(_, args) { return new (getPackageManager().PackageManager as any)(...args); }
+});
+const PackageManager2 = new Proxy(class {} as any, {
+  construct(_, args) { return new (getPackageManager2().PackageManager2 as any)(...args); }
+});
+const ContentAddressedCache = new Proxy(class {} as any, {
+  construct(_, args) { return new (getCache().ContentAddressedCache as any)(...args); }
+});
+const PlatformRegistry = new Proxy(class {} as any, {
+  construct(_, args) { return new (getPlatform().PlatformRegistry as any)(...args); }
+});
+const GenericServerAdapter = new Proxy(class {} as any, {
+  construct(_, args) { return new (getGenericServer().GenericServerAdapter as any)(...args); }
+});
+const DockerAdapter = new Proxy(class {} as any, {
+  construct(_, args) { return new (getDocker().DockerAdapter as any)(...args); }
+});
+const GithubActionsAdapter = new Proxy(class {} as any, {
+  construct(_, args) { return new (getGithubActions().GithubActionsAdapter as any)(...args); }
+});
+const VercelAdapter = new Proxy(class {} as any, {
+  construct(_, args) { return new (getVercel().VercelAdapter as any)(...args); }
+});
+const RfcValidator = new Proxy(class {} as any, {
+  construct(_, args) { return new (getRfcValidator().RfcValidator as any)(...args); }
+});
 
 // ─── Colour helpers ───────────────────────────────────────────────────────────
 
@@ -81,6 +167,10 @@ function main() {
   }
 
   const command = args[0];
+  if (command === "version" || command === "--version" || command === "-v") {
+    console.log(`HKD ${HKD_VERSION}`);
+    return;
+  }
 
   switch (command) {
     case "run":       cmdRun(args.slice(1)); break;
@@ -152,6 +242,9 @@ function main() {
 function getImportSources(filePath: string): string[] {
   try {
     const source = fs.readFileSync(filePath, "utf-8");
+    if (!source.includes("import")) {
+      return [];
+    }
     const reporter = new ErrorReporter(source, filePath);
     const lexer = new Lexer(source, filePath, reporter);
     const tokens = lexer.tokenize();
@@ -961,9 +1054,9 @@ function cmdLint(args: string[]): void {
   const output = formatLintIssues(issues, source, fileName);
   console.log(output);
 
-  const errors  = issues.filter((i) => i.severity === "error");
-  const warnings = issues.filter((i) => i.severity === "warning");
-  const hints   = issues.filter((i) => i.severity === "hint");
+  const errors  = issues.filter((i: any) => i.severity === "error");
+  const warnings = issues.filter((i: any) => i.severity === "warning");
+  const hints   = issues.filter((i: any) => i.severity === "hint");
 
   const summary = [
     errors.length   > 0 ? RED(`${errors.length} error(s)`)     : null,
@@ -1683,7 +1776,7 @@ function cmdDeploy(args: string[]): void {
   } else if (sub === "manifest") {
     const adapter = new GenericServerAdapter();
     const outDir = path.join(projectDir, "target", "deploy");
-    adapter.generateBundle(projectDir, outDir).then((files) => {
+    adapter.generateBundle(projectDir, outDir).then((files: any) => {
       console.log(GREEN(`✓ Deployment manifest generated in ${outDir}:`));
       for (const f of files) console.log(`  - ${path.basename(f)}`);
     });

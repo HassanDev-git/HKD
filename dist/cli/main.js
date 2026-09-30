@@ -43,6 +43,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.ExitCode = void 0;
 exports.applyLintFixes = applyLintFixes;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
@@ -53,37 +54,127 @@ const index_js_2 = require("../runtime/index.js");
 const index_js_3 = require("../errors/index.js");
 const lexer_js_1 = require("../lexer/lexer.js");
 const parser_js_1 = require("../parser/parser.js");
-const index_js_4 = require("../formatter/index.js");
-const index_js_5 = require("../linter/index.js");
-const index_js_6 = require("../package-manager/index.js");
-const manager_js_1 = require("../package-manager/manager.js");
-const audit_js_1 = require("../package-manager/audit.js");
-const reproducible_js_1 = require("../package-manager/reproducible.js");
-const cache_js_1 = require("../package-manager/cache.js");
-const lockfile_js_1 = require("../package-manager/lockfile.js");
-const repl_js_1 = require("./repl.js");
-const test_runner_js_1 = require("./test-runner.js");
 const analyser_js_1 = require("../semantic/analyser.js");
 const compiler_js_1 = require("../bytecode/compiler.js");
 const serializer_js_1 = require("../bytecode/serializer.js");
-const doctor_js_1 = require("./doctor.js");
-const targets_js_1 = require("../deploy/targets.js");
-const artifact_js_1 = require("../deploy/artifact.js");
-const release_js_1 = require("../deploy/release.js");
-const env_config_js_1 = require("../deploy/env-config.js");
-const container_js_1 = require("../deploy/container.js");
-const platform_manager_js_1 = require("../deploy/platform/platform-manager.js");
-const generic_server_js_1 = require("../deploy/platform/generic-server.js");
-const docker_js_1 = require("../deploy/platform/docker.js");
-const github_actions_js_1 = require("../deploy/platform/github-actions.js");
-const vercel_js_1 = require("../deploy/platform/vercel.js");
-const sbom_js_1 = require("../deploy/sbom.js");
-const check_js_1 = require("../deploy/check.js");
-const runtime_info_js_1 = require("../deploy/runtime-info.js");
-const migrate_js_1 = require("../tooling/migrate.js");
-const verify_release_js_1 = require("../tooling/verify-release.js");
-const explain_js_1 = require("./explain.js");
-const rfc_validator_js_1 = require("../tooling/rfc-validator.js");
+// ExitCode definition to avoid eager loading of deploy runtime-info module
+exports.ExitCode = {
+    Success: 0,
+    RuntimeError: 1,
+    UsageError: 2,
+    ConfigError: 3,
+    BuildError: 4,
+    DeployError: 5,
+};
+// Lazy module loaders for CLI subcommands to eliminate cold-start import overhead
+const lazy = (loader) => {
+    let mod;
+    return () => {
+        if (!mod)
+            mod = loader();
+        return mod;
+    };
+};
+const getFormatter = lazy(() => require("../formatter/index.js"));
+const getLinter = lazy(() => require("../linter/index.js"));
+const getPackageManager = lazy(() => require("../package-manager/index.js"));
+const getPackageManager2 = lazy(() => require("../package-manager/manager.js"));
+const getAudit = lazy(() => require("../package-manager/audit.js"));
+const getReproducible = lazy(() => require("../package-manager/reproducible.js"));
+const getCache = lazy(() => require("../package-manager/cache.js"));
+const getLockfile = lazy(() => require("../package-manager/lockfile.js"));
+const getRepl = lazy(() => require("./repl.js"));
+const getTestRunner = lazy(() => require("./test-runner.js"));
+const getDoctor = lazy(() => require("./doctor.js"));
+const getTargets = lazy(() => require("../deploy/targets.js"));
+const getProfiles = lazy(() => require("../deploy/profiles.js"));
+const getArtifact = lazy(() => require("../deploy/artifact.js"));
+const getRelease = lazy(() => require("../deploy/release.js"));
+const getEnvConfig = lazy(() => require("../deploy/env-config.js"));
+const getContainer = lazy(() => require("../deploy/container.js"));
+const getPlatform = lazy(() => require("../deploy/platform/platform-manager.js"));
+const getGenericServer = lazy(() => require("../deploy/platform/generic-server.js"));
+const getDocker = lazy(() => require("../deploy/platform/docker.js"));
+const getGithubActions = lazy(() => require("../deploy/platform/github-actions.js"));
+const getVercel = lazy(() => require("../deploy/platform/vercel.js"));
+const getSbom = lazy(() => require("../deploy/sbom.js"));
+const getDeployCheck = lazy(() => require("../deploy/check.js"));
+const getRuntimeInfoMod = lazy(() => require("../deploy/runtime-info.js"));
+const getMigrate = lazy(() => require("../tooling/migrate.js"));
+const getVerifyRelease = lazy(() => require("../tooling/verify-release.js"));
+const getExplain = lazy(() => require("./explain.js"));
+const getRfcValidator = lazy(() => require("../tooling/rfc-validator.js"));
+function readManifest(dir) {
+    return getPackageManager().readManifest(dir);
+}
+function format(...args) { return getFormatter().format(...args); }
+function lint(...args) { return getLinter().lint(...args); }
+function formatLintIssues(...args) { return getLinter().formatLintIssues(...args); }
+const LintCode = {
+    get L001() { return getLinter().LintCode.L001; },
+    get L005() { return getLinter().LintCode.L005; },
+};
+function verifyBuildReproducibility(...args) { return getReproducible().verifyBuildReproducibility(...args); }
+function startRepl(...args) { return getRepl().startRepl(...args); }
+function runTests(...args) { return getTestRunner().runTests(...args); }
+function runDoctor(...args) { return getDoctor().runDoctor(...args); }
+function printDoctorReport(...args) { return getDoctor().printDoctorReport(...args); }
+function listTargetsFormatted(...args) { return getTargets().listTargetsFormatted(...args); }
+function parseTarget(...args) { return getTargets().parseTarget(...args); }
+function resolveProfile(...args) { return getProfiles().resolveProfile(...args); }
+function buildReleaseBundle(...args) { return getRelease().buildReleaseBundle(...args); }
+function verifyArtifact(...args) { return getArtifact().verifyArtifact(...args); }
+function loadEffectiveConfig(...args) { return getEnvConfig().loadEffectiveConfig(...args); }
+function formatConfigReport(...args) { return getEnvConfig().formatConfigReport(...args); }
+function initContainer(...args) { return getContainer().initContainer(...args); }
+function writeSbomJson(...args) { return getSbom().writeSbomJson(...args); }
+function runDeployCheck(...args) { return getDeployCheck().runDeployCheck(...args); }
+function printDeployCheckReport(...args) { return getDeployCheck().printDeployCheckReport(...args); }
+function runDeployDryRun(...args) { return getDeployCheck().runDeployDryRun(...args); }
+function getRuntimeInfo(...args) { return getRuntimeInfoMod().getRuntimeInfo(...args); }
+function printRuntimeInfo(...args) { return getRuntimeInfoMod().printRuntimeInfo(...args); }
+function runMigration(...args) { return getMigrate().runMigration(...args); }
+function runVerifyRelease(...args) { return getVerifyRelease().runVerifyRelease(...args); }
+function printVerifyReleaseReport(...args) { return getVerifyRelease().printVerifyReleaseReport(...args); }
+function explainError(...args) { return getExplain().explainError(...args); }
+function auditProject(...args) { return getAudit().auditProject(...args); }
+function readLockfile(...args) { return getLockfile().readLockfile(...args); }
+const PackageManager = new Proxy(class {
+}, {
+    construct(_, args) { return new (getPackageManager().PackageManager)(...args); }
+});
+const PackageManager2 = new Proxy(class {
+}, {
+    construct(_, args) { return new (getPackageManager2().PackageManager2)(...args); }
+});
+const ContentAddressedCache = new Proxy(class {
+}, {
+    construct(_, args) { return new (getCache().ContentAddressedCache)(...args); }
+});
+const PlatformRegistry = new Proxy(class {
+}, {
+    construct(_, args) { return new (getPlatform().PlatformRegistry)(...args); }
+});
+const GenericServerAdapter = new Proxy(class {
+}, {
+    construct(_, args) { return new (getGenericServer().GenericServerAdapter)(...args); }
+});
+const DockerAdapter = new Proxy(class {
+}, {
+    construct(_, args) { return new (getDocker().DockerAdapter)(...args); }
+});
+const GithubActionsAdapter = new Proxy(class {
+}, {
+    construct(_, args) { return new (getGithubActions().GithubActionsAdapter)(...args); }
+});
+const VercelAdapter = new Proxy(class {
+}, {
+    construct(_, args) { return new (getVercel().VercelAdapter)(...args); }
+});
+const RfcValidator = new Proxy(class {
+}, {
+    construct(_, args) { return new (getRfcValidator().RfcValidator)(...args); }
+});
 // ─── Colour helpers ───────────────────────────────────────────────────────────
 const BOLD = (s) => `\x1b[1m${s}\x1b[0m`;
 const GREEN = (s) => `\x1b[32m${s}\x1b[0m`;
@@ -99,6 +190,10 @@ function main() {
         process.exit(0);
     }
     const command = args[0];
+    if (command === "version" || command === "--version" || command === "-v") {
+        console.log(`HKD ${index_js_1.HKD_VERSION}`);
+        return;
+    }
     switch (command) {
         case "run":
             cmdRun(args.slice(1));
@@ -254,6 +349,9 @@ function main() {
 function getImportSources(filePath) {
     try {
         const source = fs.readFileSync(filePath, "utf-8");
+        if (!source.includes("import")) {
+            return [];
+        }
         const reporter = new index_js_3.ErrorReporter(source, filePath);
         const lexer = new lexer_js_1.Lexer(source, filePath, reporter);
         const tokens = lexer.tokenize();
@@ -288,7 +386,7 @@ function collectProjectModules(entryPath) {
                 if (!fs.existsSync(pkgDir)) {
                     pkgDir = path.join(dir, "vendor", imp);
                 }
-                const manifest = (0, index_js_6.readManifest)(pkgDir);
+                const manifest = readManifest(pkgDir);
                 if (manifest) {
                     const pkgEntry = path.resolve(pkgDir, manifest.main ?? "src/main.hkd");
                     queue.push(pkgEntry);
@@ -378,7 +476,7 @@ function cmdBuild(args) {
             console.error(RED("Error: Specify source file for reproducible build verification"));
             process.exit(1);
         }
-        const result = (0, reproducible_js_1.verifyBuildReproducibility)(fileArg, path.resolve("dist/cli/main.js"));
+        const result = verifyBuildReproducibility(fileArg, path.resolve("dist/cli/main.js"));
         console.log(result.message);
         if (!result.reproducible)
             process.exit(1);
@@ -405,7 +503,7 @@ function cmdBuild(args) {
         console.error(RED("Error: No file or project found to build."));
         process.exit(2);
     }
-    const manifest = (0, index_js_6.readManifest)(projectDir);
+    const manifest = readManifest(projectDir);
     if (!manifest) {
         console.error(RED("Error: Failed to read hkd.toml"));
         process.exit(1);
@@ -482,7 +580,7 @@ function buildStandaloneNative(args) {
     if (!entryHkd) {
         const projectDir = getProjectDir();
         if (projectDir) {
-            const manifest = (0, index_js_6.readManifest)(projectDir);
+            const manifest = readManifest(projectDir);
             const manifestMain = manifest?.main && manifest.main.endsWith(".hkd") ? manifest.main : "src/main.hkd";
             entryHkd = manifest ? path.resolve(projectDir, manifestMain) : undefined;
         }
@@ -609,7 +707,7 @@ function cmdRun(args) {
         compiledPath = cmdBuild(isRelease ? ["--release"] : []);
     }
     if (useReference) {
-        const sourceFile = (firstArg && firstArg.endsWith(".hkd")) ? firstArg : (getProjectDir() ? path.resolve(getProjectDir(), (0, index_js_6.readManifest)(getProjectDir())?.main ?? "src/main.hkd") : firstArg);
+        const sourceFile = (firstArg && firstArg.endsWith(".hkd")) ? firstArg : (getProjectDir() ? path.resolve(getProjectDir(), readManifest(getProjectDir())?.main ?? "src/main.hkd") : firstArg);
         const result = (0, index_js_2.runFile)(sourceFile);
         process.exit(result.ok ? 0 : 1);
     }
@@ -753,14 +851,14 @@ Examples:
         const rawEdition = args[editionIdx + 1];
         if (!rawEdition || rawEdition.startsWith("-")) {
             console.error(RED("Error: Missing value for --edition. Supported editions: \"2026\", \"2027\"."));
-            process.exit(runtime_info_js_1.ExitCode.UsageError);
+            process.exit(exports.ExitCode.UsageError);
         }
         try {
             edition = (0, index_js_1.parseEdition)(rawEdition);
         }
         catch (err) {
             console.error(RED(`Error: ${err.message}`));
-            process.exit(runtime_info_js_1.ExitCode.UsageError);
+            process.exit(exports.ExitCode.UsageError);
         }
     }
     else {
@@ -772,11 +870,11 @@ Examples:
             }
             catch (err) {
                 console.error(RED(`Error: ${err.message}`));
-                process.exit(runtime_info_js_1.ExitCode.UsageError);
+                process.exit(exports.ExitCode.UsageError);
             }
         }
     }
-    (0, repl_js_1.startRepl)(edition);
+    startRepl(edition);
 }
 function findHkdFiles(dir) {
     const results = [];
@@ -818,7 +916,7 @@ function formatHkdSource(filePath, source) {
         console.error(RED(`fmt: ${filePath} has parse errors — cannot format`));
         process.exit(1);
     }
-    return (0, index_js_4.format)(ast);
+    return format(ast);
 }
 function cmdFmt(args) {
     const inPlace = args.includes("--write") || args.includes("-w");
@@ -896,7 +994,7 @@ function applyLintFixes(source, issues) {
     const sortedIssues = [...issues].sort((a, b) => b.span.start.offset - a.span.start.offset);
     let result = source;
     for (const issue of sortedIssues) {
-        if (issue.code === index_js_5.LintCode.L005) {
+        if (issue.code === LintCode.L005) {
             // Unused import: remove the import line/statement
             const start = issue.span.start.offset;
             const end = issue.span.end.offset;
@@ -910,7 +1008,7 @@ function applyLintFixes(source, issues) {
                 lineEnd++;
             result = result.substring(0, lineStart) + result.substring(lineEnd);
         }
-        else if (issue.code === index_js_5.LintCode.L001) {
+        else if (issue.code === LintCode.L001) {
             // Unused variable: rename to _name
             const start = issue.span.start.offset;
             const end = issue.span.end.offset;
@@ -935,7 +1033,7 @@ function applyLintFixes(source, issues) {
         const parser = new parser_js_1.Parser(tokens, result, "fix.hkd", reporter);
         const ast = parser.parse();
         if (!reporter.hasErrors()) {
-            result = (0, index_js_4.format)(ast);
+            result = format(ast);
         }
     }
     catch { }
@@ -965,9 +1063,9 @@ function cmdLint(args) {
         process.exit(1);
     }
     const projectDir = getProjectDir();
-    const manifest = projectDir ? (0, index_js_6.readManifest)(projectDir) : null;
+    const manifest = projectDir ? readManifest(projectDir) : null;
     const ignored = new Set(manifest?.lint?.ignore ?? []);
-    const issues = (0, index_js_5.lint)(ast, ignored);
+    const issues = lint(ast, ignored);
     if (hasFix && issues.length > 0) {
         const fixedSource = applyLintFixes(source, issues);
         fs.writeFileSync(filePath, fixedSource, "utf-8");
@@ -977,9 +1075,9 @@ function cmdLint(args) {
         const newTokens = newLexer.tokenize();
         const newParser = new parser_js_1.Parser(newTokens, fixedSource, fileName, newReporter);
         const newAst = newParser.parse();
-        const remainingIssues = (0, index_js_5.lint)(newAst, ignored);
+        const remainingIssues = lint(newAst, ignored);
         if (remainingIssues.length > 0) {
-            const output = (0, index_js_5.formatLintIssues)(remainingIssues, fixedSource, fileName);
+            const output = formatLintIssues(remainingIssues, fixedSource, fileName);
             console.log(output);
         }
         else {
@@ -987,7 +1085,7 @@ function cmdLint(args) {
         }
         process.exit(0);
     }
-    const output = (0, index_js_5.formatLintIssues)(issues, source, fileName);
+    const output = formatLintIssues(issues, source, fileName);
     console.log(output);
     const errors = issues.filter((i) => i.severity === "error");
     const warnings = issues.filter((i) => i.severity === "warning");
@@ -1022,7 +1120,7 @@ function cmdTest(args) {
         return true;
     });
     const target = conformance ? "tests/conformance" : (cleanArgs[0] ?? ".");
-    (0, test_runner_js_1.runTests)(target, { filter, verbose, quiet, conformance, differential });
+    runTests(target, { filter, verbose, quiet, conformance, differential });
 }
 function cmdCheck(args) {
     const cleanArgs = args.filter((a) => !a.startsWith("-"));
@@ -1033,7 +1131,7 @@ function cmdCheck(args) {
             console.error(RED("hkd check: Expected a file path or an HKD project (no hkd.toml found)"));
             process.exit(2);
         }
-        const manifest = (0, index_js_6.readManifest)(projectDir);
+        const manifest = readManifest(projectDir);
         const entryFile = path.resolve(projectDir, manifest?.main ?? "src/main.hkd");
         if (!fs.existsSync(entryFile)) {
             console.error(RED(`hkd check: Entry file not found: ${entryFile}`));
@@ -1098,14 +1196,14 @@ Examples:
         const rawEdition = args[editionIdx + 1];
         if (!rawEdition || rawEdition.startsWith("-")) {
             console.error(RED("Error: Missing value for --edition. Supported editions: \"2026\", \"2027\"."));
-            process.exit(runtime_info_js_1.ExitCode.UsageError);
+            process.exit(exports.ExitCode.UsageError);
         }
         try {
             edition = (0, index_js_1.parseEdition)(rawEdition);
         }
         catch (err) {
             console.error(RED(`Error: ${err.message}`));
-            process.exit(runtime_info_js_1.ExitCode.UsageError);
+            process.exit(exports.ExitCode.UsageError);
         }
     }
     else {
@@ -1117,7 +1215,7 @@ Examples:
             }
             catch (err) {
                 console.error(RED(`Error: ${err.message}`));
-                process.exit(runtime_info_js_1.ExitCode.UsageError);
+                process.exit(exports.ExitCode.UsageError);
             }
         }
     }
@@ -1136,7 +1234,7 @@ Examples:
     });
     const targetDir = cleanArgs[0] ?? ".";
     const name = cleanArgs[1] ?? "";
-    const pm = new index_js_6.PackageManager();
+    const pm = new PackageManager();
     const result = pm.init(path.resolve(targetDir), name, template, edition);
     if (result.ok) {
         console.log(GREEN(`✓ ${result.message}`));
@@ -1170,7 +1268,7 @@ async function cmdAdd(args) {
         console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
         process.exit(1);
     }
-    const pm = new manager_js_1.PackageManager2();
+    const pm = new PackageManager2();
     const pkgSpec = cleanArgs[0] || "";
     const res = await pm.add(projectDir, pkgSpec, {
         offline: args.includes("--offline"),
@@ -1194,7 +1292,7 @@ async function cmdRemove(args) {
         console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
         process.exit(1);
     }
-    const pm = new manager_js_1.PackageManager2();
+    const pm = new PackageManager2();
     const res = await pm.remove(projectDir, args[0]);
     if (res.ok) {
         console.log(GREEN("✓ ") + res.message);
@@ -1210,7 +1308,7 @@ async function cmdInstall(args) {
         console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
         process.exit(1);
     }
-    const pm = new manager_js_1.PackageManager2();
+    const pm = new PackageManager2();
     const res = await pm.install(projectDir, {
         offline: args.includes("--offline"),
         locked: args.includes("--locked"),
@@ -1232,7 +1330,7 @@ async function cmdUpdate(args) {
     }
     const cleanArgs = args.filter((a) => !a.startsWith("-"));
     const targetPkg = cleanArgs[0];
-    const pm = new manager_js_1.PackageManager2();
+    const pm = new PackageManager2();
     const res = await pm.update(projectDir, targetPkg, { offline: args.includes("--offline") });
     if (res.ok) {
         console.log(GREEN("✓ ") + res.message);
@@ -1248,7 +1346,7 @@ function cmdPack(args) {
         console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
         process.exit(1);
     }
-    const pm = new manager_js_1.PackageManager2();
+    const pm = new PackageManager2();
     try {
         const res = pm.pack(projectDir);
         console.log(GREEN(`✓ Created package archive: ${path.basename(res.path)}`));
@@ -1267,7 +1365,7 @@ async function cmdPublish(args) {
     }
     const tokenIdx = args.indexOf("--token");
     const token = tokenIdx !== -1 ? args[tokenIdx + 1] : undefined;
-    const pm = new manager_js_1.PackageManager2();
+    const pm = new PackageManager2();
     const res = await pm.publish(projectDir, token);
     if (res.ok) {
         console.log(GREEN("✓ ") + res.message);
@@ -1284,7 +1382,7 @@ async function cmdSearch(args) {
         console.error(RED("hkd search: Expected search query"));
         process.exit(1);
     }
-    const pm = new manager_js_1.PackageManager2();
+    const pm = new PackageManager2();
     const results = await pm.search(query);
     if (isJson) {
         console.log(JSON.stringify(results, null, 2));
@@ -1309,7 +1407,7 @@ async function cmdInfo(args) {
         console.error(RED("hkd info: Expected package name"));
         process.exit(1);
     }
-    const pm = new manager_js_1.PackageManager2();
+    const pm = new PackageManager2();
     const meta = await pm.info(pkgName);
     if (!meta) {
         console.error(RED(`Error: Package '${pkgName}' not found in registry.`));
@@ -1332,7 +1430,7 @@ async function cmdVendor(args) {
         console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
         process.exit(1);
     }
-    const pm = new manager_js_1.PackageManager2();
+    const pm = new PackageManager2();
     const res = await pm.vendor(projectDir);
     if (res.ok) {
         console.log(GREEN("✓ Vendored all dependencies into vendor/ directory"));
@@ -1349,7 +1447,7 @@ function cmdAudit(args) {
         console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
         process.exit(1);
     }
-    const res = (0, audit_js_1.auditProject)(projectDir);
+    const res = auditProject(projectDir);
     if (isJson) {
         console.log(JSON.stringify(res, null, 2));
     }
@@ -1378,12 +1476,12 @@ function cmdTree(args) {
         console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
         process.exit(1);
     }
-    const manifest = (0, index_js_6.readManifest)(projectDir);
+    const manifest = readManifest(projectDir);
     if (!manifest) {
         console.error(RED("Error: Could not read hkd.toml"));
         process.exit(1);
     }
-    const lock = (0, lockfile_js_1.readLockfile)(projectDir);
+    const lock = readLockfile(projectDir);
     const pkgMap = new Map();
     if (lock && lock.packages) {
         for (const pkg of lock.packages) {
@@ -1449,7 +1547,7 @@ function cmdTree(args) {
 }
 function cmdCache(args) {
     const sub = args[0] || "list";
-    const cache = new cache_js_1.ContentAddressedCache();
+    const cache = new ContentAddressedCache();
     if (sub === "list") {
         const list = cache.list();
         console.log(BOLD(`\n=== Cached Packages (${list.length}) ===`));
@@ -1484,7 +1582,7 @@ async function cmdCi(args) {
         console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
         process.exit(1);
     }
-    const pm = new manager_js_1.PackageManager2();
+    const pm = new PackageManager2();
     console.log("1. Verifying and installing locked dependencies...");
     const installRes = await pm.install(projectDir, { locked: true });
     if (!installRes.ok) {
@@ -1493,7 +1591,7 @@ async function cmdCi(args) {
     }
     console.log(GREEN("✓ Dependencies verified against hkd.lock"));
     console.log("2. Running security audit...");
-    const auditRes = (0, audit_js_1.auditProject)(projectDir);
+    const auditRes = auditProject(projectDir);
     if (!auditRes.ok) {
         console.error(RED(`Audit failed with ${auditRes.issues.length} issue(s)`));
         process.exit(1);
@@ -1509,7 +1607,7 @@ function cmdDoc() {
         console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
         process.exit(1);
     }
-    const manifest = (0, index_js_6.readManifest)(projectDir);
+    const manifest = readManifest(projectDir);
     const entryFile = path.resolve(projectDir, manifest?.main ?? "src/main.hkd");
     if (!fs.existsSync(entryFile)) {
         console.error(RED(`Error: Entry file not found: ${entryFile}`));
@@ -1548,20 +1646,20 @@ function cmdDoc() {
 }
 function cmdDoctor(args) {
     const asJson = args.includes("--json");
-    const report = (0, doctor_js_1.runDoctor)();
-    (0, doctor_js_1.printDoctorReport)(report, asJson);
+    const report = runDoctor();
+    printDoctorReport(report, asJson);
     if (!report.allOk) {
         process.exit(1);
     }
 }
 function cmdTargets() {
-    console.log((0, targets_js_1.listTargetsFormatted)());
+    console.log(listTargetsFormatted());
 }
 function cmdRelease(args) {
     const projectDir = getProjectDir();
     if (!projectDir) {
         console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
-        process.exit(runtime_info_js_1.ExitCode.UsageError);
+        process.exit(exports.ExitCode.UsageError);
     }
     const targetIdx = args.indexOf("--target");
     const target = targetIdx !== -1 ? args[targetIdx + 1] : undefined;
@@ -1569,7 +1667,7 @@ function cmdRelease(args) {
     const profile = profileIdx !== -1 ? args[profileIdx + 1] : "release";
     console.log(`Building release bundle for target '${target || "host"}' (${profile} profile)...`);
     const nativeBin = buildStandaloneNative(["--quiet"]);
-    const res = (0, release_js_1.buildReleaseBundle)(nativeBin, {
+    const res = buildReleaseBundle(nativeBin, {
         projectDir,
         target,
         profile,
@@ -1579,16 +1677,16 @@ function cmdRelease(args) {
     }
     else {
         console.error(RED(res.message));
-        process.exit(runtime_info_js_1.ExitCode.DeployError);
+        process.exit(exports.ExitCode.DeployError);
     }
 }
 function cmdVerifyArtifact(args) {
     const targetPath = args[0];
     if (!targetPath) {
         console.error(RED("Error: Specify artifact file or directory to verify"));
-        process.exit(runtime_info_js_1.ExitCode.UsageError);
+        process.exit(exports.ExitCode.UsageError);
     }
-    const res = (0, artifact_js_1.verifyArtifact)(targetPath);
+    const res = verifyArtifact(targetPath);
     if (res.valid) {
         console.log(GREEN(`✓ Artifact verified successfully: ${targetPath}`));
         if (res.actualSha256) {
@@ -1600,24 +1698,24 @@ function cmdVerifyArtifact(args) {
         for (const err of res.errors) {
             console.error(RED(`  - ${err}`));
         }
-        process.exit(runtime_info_js_1.ExitCode.DeployError);
+        process.exit(exports.ExitCode.DeployError);
     }
 }
 function cmdConfig(args) {
     const projectDir = getProjectDir() || process.cwd();
-    const cfg = (0, env_config_js_1.loadEffectiveConfig)({ projectDir });
+    const cfg = loadEffectiveConfig({ projectDir });
     if (args.includes("--json")) {
         console.log(JSON.stringify(cfg, null, 2));
     }
     else {
-        console.log((0, env_config_js_1.formatConfigReport)(cfg));
+        console.log(formatConfigReport(cfg));
     }
 }
 function cmdContainer(args) {
     const sub = args[0] || "init";
     const projectDir = getProjectDir() || process.cwd();
     if (sub === "init") {
-        const res = (0, container_js_1.initContainer)(projectDir);
+        const res = initContainer(projectDir);
         console.log(GREEN(`✓ Container configuration initialized:`));
         console.log(`  Dockerfile:    ${res.dockerfile}`);
         console.log(`  .dockerignore: ${res.dockerignore}`);
@@ -1627,17 +1725,17 @@ function cmdContainer(args) {
     }
     else {
         console.error(RED(`Unknown container subcommand: ${sub}. Valid: init, build`));
-        process.exit(runtime_info_js_1.ExitCode.UsageError);
+        process.exit(exports.ExitCode.UsageError);
     }
 }
 function cmdPlatform(args) {
     const sub = args[0] || "detect";
     const projectDir = getProjectDir() || process.cwd();
-    const registry = new platform_manager_js_1.PlatformRegistry();
-    registry.register(new generic_server_js_1.GenericServerAdapter());
-    registry.register(new docker_js_1.DockerAdapter());
-    registry.register(new github_actions_js_1.GithubActionsAdapter());
-    registry.register(new vercel_js_1.VercelAdapter());
+    const registry = new PlatformRegistry();
+    registry.register(new GenericServerAdapter());
+    registry.register(new DockerAdapter());
+    registry.register(new GithubActionsAdapter());
+    registry.register(new VercelAdapter());
     if (sub === "detect" || sub === "list") {
         console.log("\nHKD Platform Adapters Matrix:\n");
         for (const a of registry.getAll()) {
@@ -1647,7 +1745,7 @@ function cmdPlatform(args) {
     }
     else {
         console.error(RED(`Unknown platform subcommand: ${sub}`));
-        process.exit(runtime_info_js_1.ExitCode.UsageError);
+        process.exit(exports.ExitCode.UsageError);
     }
 }
 function cmdDeploy(args) {
@@ -1659,18 +1757,18 @@ function cmdDeploy(args) {
     const profileIdx = args.indexOf("--profile");
     const profile = profileIdx !== -1 ? args[profileIdx + 1] : "release";
     if (isDryRun) {
-        (0, check_js_1.runDeployDryRun)(projectDir, target, profile);
+        runDeployDryRun(projectDir, target, profile);
         return;
     }
     if (sub === "check") {
-        const report = (0, check_js_1.runDeployCheck)(projectDir, target, profile);
-        (0, check_js_1.printDeployCheckReport)(report, args.includes("--json"));
+        const report = runDeployCheck(projectDir, target, profile);
+        printDeployCheckReport(report, args.includes("--json"));
         if (!report.allOk) {
-            process.exit(runtime_info_js_1.ExitCode.DeployError);
+            process.exit(exports.ExitCode.DeployError);
         }
     }
     else if (sub === "manifest") {
-        const adapter = new generic_server_js_1.GenericServerAdapter();
+        const adapter = new GenericServerAdapter();
         const outDir = path.join(projectDir, "target", "deploy");
         adapter.generateBundle(projectDir, outDir).then((files) => {
             console.log(GREEN(`✓ Deployment manifest generated in ${outDir}:`));
@@ -1681,25 +1779,25 @@ function cmdDeploy(args) {
 }
 function cmdSbom(args) {
     const projectDir = getProjectDir() || process.cwd();
-    const outPath = (0, sbom_js_1.writeSbomJson)(projectDir);
+    const outPath = writeSbomJson(projectDir);
     console.log(GREEN(`✓ Generated CycloneDX 1.5 JSON SBOM in ${outPath}`));
 }
 function cmdRuntimeInfo(args) {
-    const info = (0, runtime_info_js_1.getRuntimeInfo)();
-    (0, runtime_info_js_1.printRuntimeInfo)(info, args.includes("--json"));
+    const info = getRuntimeInfo();
+    printRuntimeInfo(info, args.includes("--json"));
 }
 function cmdMigrate(args) {
     const projectDir = getProjectDir() || process.cwd();
     const dryRun = args.includes("--dry-run");
     const editionIdx = args.indexOf("--edition");
     const targetEdition = editionIdx !== -1 && args[editionIdx + 1] === "2027" ? "2027" : "2026";
-    const result = (0, migrate_js_1.runMigration)(projectDir, dryRun, targetEdition);
+    const result = runMigration(projectDir, dryRun, targetEdition);
     if (!result.ok) {
         console.error(RED("Migration failed:"));
         for (const w of result.warnings) {
             console.error(`  - ${w}`);
         }
-        process.exit(runtime_info_js_1.ExitCode.BuildError);
+        process.exit(exports.ExitCode.BuildError);
     }
     console.log(GREEN("✓ Project migration completed successfully"));
     for (const c of result.changes) {
@@ -1733,15 +1831,15 @@ Examples:
     const code = args[0];
     if (!code) {
         console.error(RED("Error: Missing error code. Usage: hkd explain <error_code> (e.g. hkd explain E201)"));
-        process.exit(runtime_info_js_1.ExitCode.UsageError);
+        process.exit(exports.ExitCode.UsageError);
     }
-    const explanation = (0, explain_js_1.explainError)(code);
+    const explanation = explainError(code);
     console.log(explanation);
 }
 function cmdRfc(args) {
     const sub = args[0] || "list";
     const rfcsDir = path.join(getProjectDir() || process.cwd(), "rfcs");
-    const validator = new rfc_validator_js_1.RfcValidator(rfcsDir);
+    const validator = new RfcValidator(rfcsDir);
     if (sub === "list") {
         console.log(validator.listRfcs());
     }
@@ -1753,16 +1851,16 @@ function cmdRfc(args) {
     }
     else {
         console.error(RED(`Unknown rfc subcommand: '${sub}'. Use list, check, or status.`));
-        process.exit(runtime_info_js_1.ExitCode.UsageError);
+        process.exit(exports.ExitCode.UsageError);
     }
 }
 function cmdVerifyRelease(args) {
     const projectDir = getProjectDir() || process.cwd();
     const asJson = args.includes("--json");
-    const report = (0, verify_release_js_1.runVerifyRelease)(projectDir);
-    (0, verify_release_js_1.printVerifyReleaseReport)(report, asJson);
+    const report = runVerifyRelease(projectDir);
+    printVerifyReleaseReport(report, asJson);
     if (!report.allPassed) {
-        process.exit(runtime_info_js_1.ExitCode.BuildError);
+        process.exit(exports.ExitCode.BuildError);
     }
 }
 // ─── Help text ────────────────────────────────────────────────────────────────

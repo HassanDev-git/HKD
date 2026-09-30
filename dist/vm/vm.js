@@ -26,6 +26,7 @@ class VM {
     stack = [];
     frames = [];
     globals = new Map();
+    globalCells = new Map();
     output;
     dbg = null;
     isPaused = false;
@@ -86,6 +87,14 @@ class VM {
             return { ok: false, error: fullMessage, code };
         }
     }
+    getGlobalCell(name) {
+        let cell = this.globalCells.get(name);
+        if (!cell) {
+            cell = { name, value: this.globals.has(name) ? this.globals.get(name) : undefined };
+            this.globalCells.set(name, cell);
+        }
+        return cell;
+    }
     /** Register a native function in the global scope. */
     defineNative(name, arity, fn) {
         const native = {
@@ -95,14 +104,23 @@ class VM {
             call: fn,
         };
         this.globals.set(name, native);
+        const cell = this.globalCells.get(name);
+        if (cell)
+            cell.value = native;
     }
     /** Read a global value. */
     getGlobal(name) {
+        const cell = this.globalCells.get(name);
+        if (cell !== undefined && cell.value !== undefined)
+            return cell.value;
         return this.globals.get(name);
     }
     /** Set a global value. */
     setGlobal(name, value) {
         this.globals.set(name, value);
+        const cell = this.globalCells.get(name);
+        if (cell)
+            cell.value = value;
     }
     resume() {
         this.isPaused = false;
@@ -152,8 +170,13 @@ class VM {
         return locals;
     }
     getAllGlobals() {
+        const map = new Map(this.globals);
+        for (const [k, cell] of this.globalCells.entries()) {
+            if (cell.value !== undefined)
+                map.set(k, cell.value);
+        }
         const list = [];
-        for (const [k, v] of this.globals.entries()) {
+        for (const [k, v] of map.entries()) {
             list.push({ name: k, value: v });
         }
         return list;
@@ -168,6 +191,7 @@ class VM {
     execute(targetFrames = 0) {
         let frame = this.frames[this.frames.length - 1];
         let code = frame.chunk.code;
+        let cells = frame.cells;
         while (true) {
             if (this.dbg) {
                 const currentIp = frame.ip;
@@ -229,26 +253,42 @@ class VM {
                 case 19 /* Op.LoadGlobal */: {
                     const nameIdx = ((code[frame.ip] << 8) | code[frame.ip + 1]) >>> 0;
                     frame.ip += 2;
-                    const name = this.getConstant(frame, nameIdx);
-                    const val = this.globals.get(name);
-                    if (val === undefined && !this.globals.has(name)) {
-                        throw new VmError(`Undefined variable \`${name}\``, index_js_1.ErrorCode.E301);
+                    let cell = cells[nameIdx];
+                    if (!cell) {
+                        const name = this.getConstant(frame, nameIdx);
+                        cell = this.getGlobalCell(name);
+                        cells[nameIdx] = cell;
                     }
-                    this.push(val);
+                    if (cell.value === undefined && !this.globals.has(cell.name)) {
+                        throw new VmError(`Undefined variable \`${cell.name}\``, index_js_1.ErrorCode.E301);
+                    }
+                    this.push(cell.value);
                     break;
                 }
                 case 20 /* Op.StoreGlobal */: {
                     const nameIdx = ((code[frame.ip] << 8) | code[frame.ip + 1]) >>> 0;
                     frame.ip += 2;
-                    const name = this.getConstant(frame, nameIdx);
-                    this.globals.set(name, this.stack[this.stack.length - 1]);
+                    let cell = cells[nameIdx];
+                    if (!cell) {
+                        const name = this.getConstant(frame, nameIdx);
+                        cell = this.getGlobalCell(name);
+                        cells[nameIdx] = cell;
+                    }
+                    cell.value = this.stack[this.stack.length - 1];
                     break;
                 }
                 case 21 /* Op.DefineGlobal */: {
                     const nameIdx = ((code[frame.ip] << 8) | code[frame.ip + 1]) >>> 0;
                     frame.ip += 2;
-                    const name = this.getConstant(frame, nameIdx);
-                    this.globals.set(name, this.pop());
+                    let cell = cells[nameIdx];
+                    if (!cell) {
+                        const name = this.getConstant(frame, nameIdx);
+                        cell = this.getGlobalCell(name);
+                        cells[nameIdx] = cell;
+                    }
+                    const val = this.pop();
+                    cell.value = val;
+                    this.globals.set(cell.name, val);
                     break;
                 }
                 // ── Upvalues ──────────────────────────────────────────────────────
@@ -508,6 +548,7 @@ class VM {
                     this.callValue(callee, argc);
                     frame = this.frames[this.frames.length - 1];
                     code = frame.chunk.code;
+                    cells = frame.cells;
                     break;
                 }
                 case 97 /* Op.Return */: {
@@ -520,6 +561,7 @@ class VM {
                     }
                     frame = this.frames[this.frames.length - 1];
                     code = frame.chunk.code;
+                    cells = frame.cells;
                     this.push(returnValue);
                     break;
                 }
@@ -704,6 +746,7 @@ class VM {
             ip: 0,
             base,
             openUpvalues: [],
+            cells: [],
         });
     }
     // ── Stack helpers ─────────────────────────────────────────────────────────

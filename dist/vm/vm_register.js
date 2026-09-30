@@ -22,6 +22,7 @@ const MAX_CALL_DEPTH = 512;
 class RegisterVM {
     frames = [];
     globals = new Map();
+    globalCells = new Map();
     output;
     futureCallbacks = new WeakMap();
     callbackQueue = [];
@@ -72,6 +73,14 @@ class RegisterVM {
         }
         throw new vm_js_1.VmError("Cannot call non-function", index_js_1.ErrorCode.E408);
     }
+    getGlobalCell(name) {
+        let cell = this.globalCells.get(name);
+        if (!cell) {
+            cell = { name, value: this.globals.has(name) ? this.globals.get(name) : undefined };
+            this.globalCells.set(name, cell);
+        }
+        return cell;
+    }
     defineNative(name, arity, fn) {
         const native = {
             type: "native",
@@ -80,16 +89,30 @@ class RegisterVM {
             call: fn,
         };
         this.globals.set(name, native);
+        const cell = this.globalCells.get(name);
+        if (cell)
+            cell.value = native;
     }
     getGlobal(name) {
+        const cell = this.globalCells.get(name);
+        if (cell !== undefined && cell.value !== undefined)
+            return cell.value;
         return this.globals.get(name);
     }
     setGlobal(name, value) {
         this.globals.set(name, value);
+        const cell = this.globalCells.get(name);
+        if (cell)
+            cell.value = value;
     }
     getAllGlobals() {
+        const map = new Map(this.globals);
+        for (const [k, cell] of this.globalCells.entries()) {
+            if (cell.value !== undefined)
+                map.set(k, cell.value);
+        }
         const list = [];
-        for (const [k, v] of this.globals.entries()) {
+        for (const [k, v] of map.entries()) {
             list.push({ name: k, value: v });
         }
         return list;
@@ -144,6 +167,7 @@ class RegisterVM {
             ip: 0,
             registers,
             destReg,
+            cells: [],
         });
     }
     execute(targetFrames = 0) {
@@ -151,6 +175,7 @@ class RegisterVM {
         let code = frame.chunk.code;
         let registers = frame.registers;
         let constants = frame.chunk.constants;
+        let cells = frame.cells;
         while (true) {
             const ins = code[frame.ip++];
             switch (ins.op) {
@@ -175,22 +200,41 @@ class RegisterVM {
                     registers[ins.dst] = registers[ins.src1];
                     break;
                 case register_chunk_js_1.RegOp.LoadGlobal: {
-                    const name = constants[ins.src1];
-                    const val = this.globals.get(name);
-                    if (val === undefined && !this.globals.has(name)) {
-                        throw new vm_js_1.VmError(`Undefined variable \`${name}\``, index_js_1.ErrorCode.E301);
+                    const idx = ins.src1;
+                    let cell = cells[idx];
+                    if (!cell) {
+                        const name = constants[idx];
+                        cell = this.getGlobalCell(name);
+                        cells[idx] = cell;
                     }
-                    registers[ins.dst] = val;
+                    if (cell.value === undefined && !this.globals.has(cell.name)) {
+                        throw new vm_js_1.VmError(`Undefined variable \`${cell.name}\``, index_js_1.ErrorCode.E301);
+                    }
+                    registers[ins.dst] = cell.value;
                     break;
                 }
                 case register_chunk_js_1.RegOp.StoreGlobal: {
-                    const name = constants[ins.dst];
-                    this.globals.set(name, registers[ins.src1]);
+                    const idx = ins.dst;
+                    let cell = cells[idx];
+                    if (!cell) {
+                        const name = constants[idx];
+                        cell = this.getGlobalCell(name);
+                        cells[idx] = cell;
+                    }
+                    cell.value = registers[ins.src1];
                     break;
                 }
                 case register_chunk_js_1.RegOp.DefineGlobal: {
-                    const name = constants[ins.dst];
-                    this.globals.set(name, registers[ins.src1]);
+                    const idx = ins.dst;
+                    let cell = cells[idx];
+                    if (!cell) {
+                        const name = constants[idx];
+                        cell = this.getGlobalCell(name);
+                        cells[idx] = cell;
+                    }
+                    const val = registers[ins.src1];
+                    cell.value = val;
+                    this.globals.set(cell.name, val);
                     break;
                 }
                 case register_chunk_js_1.RegOp.LoadUpvalue: {
@@ -490,6 +534,7 @@ class RegisterVM {
                     code = frame.chunk.code;
                     registers = frame.registers;
                     constants = frame.chunk.constants;
+                    cells = frame.cells;
                     break;
                 }
                 case register_chunk_js_1.RegOp.Return: {
@@ -505,6 +550,7 @@ class RegisterVM {
                     code = frame.chunk.code;
                     registers = frame.registers;
                     constants = frame.chunk.constants;
+                    cells = frame.cells;
                     registers[returnFrame.destReg] = returnValue;
                     break;
                 }

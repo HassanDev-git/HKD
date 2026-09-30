@@ -12,7 +12,7 @@
  */
 import * as N from "../ast/nodes.js";
 /** Check if an expression or any subexpression is an AwaitExpr. */
-export declare function hasAwait(node: N.AstNode): boolean;
+export declare function hasAwait(node: N.AstNode | null | undefined): boolean;
 /**
  * Desugars an `async fn` AST declaration into a standard synchronous `fn`
  * containing a state-machine `__step__()` closure and returning a `Future`.

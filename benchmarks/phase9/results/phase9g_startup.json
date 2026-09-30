@@ -1,0 +1,39 @@
+{
+  "phase": "Phase 9G",
+  "category": "startup_recovery",
+  "timestamp": "2026-09-30T22:53:08.398Z",
+  "results": {
+    "startup_cli": {
+      "command": "node dist/cli/main.js version",
+      "statistics_ms": {
+        "samples": [
+          370.8747999999998,
+          366.5426,
+          486.9142999999999,
+          664.7482,
+          608.8929000000003
+        ],
+        "median": 486.9142999999999,
+        "min": 366.5426,
+        "max": 664.7482,
+        "mean": 499.59456
+      }
+    },
+    "startup_minimal": {
+      "command": "node dist/cli/main.js run minimal.hkd",
+      "statistics_ms": {
+        "samples": [
+          482.0137000000004,
+          591.8644999999997,
+          523.6316999999999,
+          562.2384000000002,
+          667.4868999999999
+        ],
+        "median": 562.2384000000002,
+        "min": 482.0137000000004,
+        "max": 667.4868999999999,
+        "mean": 565.44704
+      }
+    }
+  }
+}

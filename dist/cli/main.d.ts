@@ -18,5 +18,13 @@
  *   hkd version          Print version
  *   hkd help             Print help
  */
+export declare const ExitCode: {
+    readonly Success: 0;
+    readonly RuntimeError: 1;
+    readonly UsageError: 2;
+    readonly ConfigError: 3;
+    readonly BuildError: 4;
+    readonly DeployError: 5;
+};
 export declare function applyLintFixes(source: string, issues: any[]): string;
 //# sourceMappingURL=main.d.ts.map
