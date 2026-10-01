@@ -45,6 +45,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExitCode = void 0;
 exports.applyLintFixes = applyLintFixes;
+exports.printSubcommandHelp = printSubcommandHelp;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const crypto = __importStar(require("crypto"));
@@ -182,17 +183,123 @@ const RED = (s) => `\x1b[31m${s}\x1b[0m`;
 const CYAN = (s) => `\x1b[36m${s}\x1b[0m`;
 const YELLOW = (s) => `\x1b[33m${s}\x1b[0m`;
 const DIM = (s) => `\x1b[2m${s}\x1b[0m`;
+// ─── Windows Explorer Launch Detection ───────────────────────────────────────
+function isLaunchedFromExplorer() {
+    if (process.platform !== "win32")
+        return false;
+    if (process.env.CI || process.env.HKD_NON_INTERACTIVE)
+        return false;
+    try {
+        const res = (0, child_process_1.spawnSync)("tasklist", ["/fi", `PID eq ${process.ppid}`, "/nh", "/fo", "csv"], {
+            encoding: "utf8",
+            windowsHide: true,
+            timeout: 1200,
+        });
+        const stdout = (res.stdout || "").toLowerCase();
+        return stdout.includes("explorer.exe");
+    }
+    catch {
+        return false;
+    }
+}
+function handleWindowsExplorerLaunch() {
+    console.log(`
+======================================================================
+  HKD Programming Language (v${index_js_1.HKD_VERSION})
+======================================================================
+
+  HKD is a high-performance command-line developer toolchain.
+  To use HKD, open a terminal (PowerShell, Command Prompt, or Terminal)
+  and run commands such as:
+
+    hkd init my-project     Create a new project
+    hkd run                 Run current project or file
+    hkd build               Compile project modules
+    hkd test                Run project tests
+    hkd check               Type-check project
+    hkd --help              View all available commands
+
+  Quick Start on Windows:
+    1. Hold Shift and right-click inside your project or workspace folder.
+    2. Click "Open PowerShell window here" or "Open in Terminal".
+    3. Type: hkd --help
+
+  Documentation & Tutorials: https://hkd-lang.dev/docs
+
+======================================================================
+`);
+    try {
+        process.stdout.write("Press Enter to close this window...");
+        const buf = Buffer.alloc(1024);
+        fs.readSync(0, buf, 0, 1024, null);
+    }
+    catch { }
+    process.exit(0);
+}
+function findClosestCommand(input, candidates) {
+    function distance(a, b) {
+        const dp = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+        for (let i = 0; i <= a.length; i++)
+            dp[i][0] = i;
+        for (let j = 0; j <= b.length; j++)
+            dp[0][j] = j;
+        for (let i = 1; i <= a.length; i++) {
+            for (let j = 1; j <= b.length; j++) {
+                const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+            }
+        }
+        return dp[a.length][b.length];
+    }
+    let bestMatch = null;
+    let bestDist = Infinity;
+    for (const c of candidates) {
+        const d = distance(input.toLowerCase(), c.toLowerCase());
+        if (d < bestDist && d <= 3) {
+            bestDist = d;
+            bestMatch = c;
+        }
+    }
+    return bestMatch;
+}
 // ─── Main ─────────────────────────────────────────────────────────────────────
 function main() {
     const args = process.argv.slice(2);
     if (args.length === 0) {
+        if (isLaunchedFromExplorer()) {
+            handleWindowsExplorerLaunch();
+        }
+        else {
+            printHelp();
+            process.exit(0);
+        }
+    }
+    const command = args[0];
+    if (command === "help") {
+        const sub = args[1];
+        if (sub) {
+            printSubcommandHelp(sub);
+            process.exit(0);
+        }
         printHelp();
         process.exit(0);
     }
-    const command = args[0];
+    if (command === "--help" || command === "-h") {
+        printHelp();
+        process.exit(0);
+    }
+    if (command === "--help-all" || command === "help-all") {
+        printAllHelp();
+        process.exit(0);
+    }
     if (command === "version" || command === "--version" || command === "-v") {
         console.log(`HKD ${index_js_1.HKD_VERSION}`);
         return;
+    }
+    const isHelpFlag = args.includes("--help") || args.includes("-h");
+    if (isHelpFlag) {
+        printSubcommandHelp(command);
+        process.exit(0);
     }
     switch (command) {
         case "run":
@@ -339,9 +446,21 @@ function main() {
                 cmdRun([command]);
             }
             else {
-                console.error(RED(`Unknown command: \`${command}\``));
+                const knownCommands = [
+                    "init", "repl", "run", "build", "test", "fmt", "lint", "check",
+                    "add", "remove", "install", "update", "pack", "publish", "search",
+                    "info", "vendor", "audit", "cache", "tree", "ci", "doc", "version",
+                    "doctor", "release", "verify-release", "targets", "config", "container",
+                    "platform", "deploy", "sbom", "runtime-info", "migrate", "explain", "rfc",
+                    "profile", "bench", "stats", "lsp", "dap"
+                ];
+                const suggestion = findClosestCommand(command, knownCommands);
+                console.error(RED(`Unknown command: '${command}'`));
+                if (suggestion) {
+                    console.error(YELLOW(`Did you mean '${suggestion}'?`));
+                }
                 console.error(`Run ${CYAN("hkd help")} to see available commands.`);
-                process.exit(2);
+                process.exit(exports.ExitCode.UsageError);
             }
     }
 }
@@ -1863,65 +1982,655 @@ function cmdVerifyRelease(args) {
         process.exit(exports.ExitCode.BuildError);
     }
 }
-// ─── Help text ────────────────────────────────────────────────────────────────
+const COMMAND_HELPS = {
+    init: {
+        description: "HKD Project Initializer — Initialize a new HKD project with hkd.toml manifest, main source file, tests, and README.",
+        usage: "hkd init [target_dir] [project_name] [options]",
+        options: [
+            { flag: "--template <cli|lib|server>", desc: "Project template structure (default: cli)" },
+            { flag: "--edition <2026|2027>", desc: "Language edition (default: 2026)" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd init my-app",
+            "hkd init . my-project",
+            "hkd init my-lib --template lib --edition 2027",
+            "hkd init my-api --template server",
+        ],
+    },
+    run: {
+        description: "Compile and execute an HKD project or a standalone .hkd source file.",
+        usage: "hkd run [file.hkd] [options] [-- <args>...]",
+        options: [
+            { flag: "--release", desc: "Run optimized release build (target/release)" },
+            { flag: "--reference, --ts", desc: "Run using reference TypeScript VM rather than native runtime" },
+            { flag: "--native", desc: "Build and run as standalone self-contained native executable" },
+            { flag: "--jit", desc: "Enable tier-1 JIT compilation (native runtime)" },
+            { flag: "--jit-stats", desc: "Print JIT compilation statistics upon process exit" },
+            { flag: "--mem-stats", desc: "Print memory allocation and heap statistics upon process exit" },
+            { flag: "--profile <file>", desc: "Profile execution and record trace to JSON file" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd run",
+            "hkd run src/main.hkd",
+            "hkd run --release",
+            "hkd run --jit benchmarks/fib.hkd",
+            "hkd run --reference app.hkd",
+        ],
+    },
+    build: {
+        description: "Incrementally compile HKD source modules into bytecode (.hkdb) or standalone native binaries.",
+        usage: "hkd build [file.hkd] [options]",
+        options: [
+            { flag: "--release", desc: "Compile in optimized release mode with full bytecode optimization" },
+            { flag: "--native", desc: "Produce a standalone native executable with embedded runtime" },
+            { flag: "--target <triple>", desc: "Target platform triple (e.g. x86_64-pc-windows-msvc)" },
+            { flag: "-o <path>", desc: "Output binary path (used with --native)" },
+            { flag: "--pgo <profile.json>", desc: "Apply Profile-Guided Optimization data" },
+            { flag: "--verify-reproducible", desc: "Verify bit-for-bit build determinism" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd build",
+            "hkd build --release",
+            "hkd build --native src/main.hkd -o bin/app.exe",
+            "hkd build --verify-reproducible src/main.hkd",
+        ],
+    },
+    test: {
+        description: "Discover and execute test blocks across the project or in a specific file/directory.",
+        usage: "hkd test [file/dir] [options]",
+        options: [
+            { flag: "--filter <pattern>", desc: "Run only tests whose names match the given pattern" },
+            { flag: "--verbose", desc: "Display individual test names, status, and duration" },
+            { flag: "--quiet", desc: "Display only test failures and final summary" },
+            { flag: "--differential", desc: "Verify results across both Register VM and Stack VM" },
+            { flag: "--conformance", desc: "Run language conformance test suite" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd test",
+            "hkd test tests/math.test.hkd",
+            "hkd test --filter \"addition\"",
+            "hkd test --verbose",
+            "hkd test --differential",
+        ],
+    },
+    check: {
+        description: "Perform lexical, syntactic, and semantic type checking without compiling or emitting files.",
+        usage: "hkd check [file.hkd] [options]",
+        options: [
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd check",
+            "hkd check src/main.hkd",
+            "hkd check lib/utils.hkd",
+        ],
+    },
+    fmt: {
+        description: "Format HKD source files according to canonical language styling conventions.",
+        usage: "hkd fmt [file/dir] [options]",
+        options: [
+            { flag: "-w, --write", desc: "Format and overwrite source files in-place" },
+            { flag: "--check", desc: "Check formatting without modifying files; exits 1 if unformatted" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd fmt",
+            "hkd fmt -w",
+            "hkd fmt src/main.hkd -w",
+            "hkd fmt --check",
+        ],
+    },
+    lint: {
+        description: "Analyze HKD source files for semantic warnings, unused symbols, and style violations.",
+        usage: "hkd lint <file.hkd> [options]",
+        options: [
+            { flag: "--fix", desc: "Automatically fix safe lint issues (unused imports, unused vars)" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd lint src/main.hkd",
+            "hkd lint src/main.hkd --fix",
+        ],
+    },
+    repl: {
+        description: "HKD Interactive REPL — Start an interactive Read-Eval-Print Loop session for live HKD code evaluation.",
+        usage: "hkd repl [options]",
+        options: [
+            { flag: "--edition <2026|2027>", desc: "Language edition (default: 2026)" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd repl",
+            "hkd repl --edition 2027",
+        ],
+    },
+    doctor: {
+        description: "Run comprehensive system diagnostic (Node, Zig, runtime, compiler, IDE tooling).",
+        usage: "hkd doctor [options]",
+        options: [
+            { flag: "--json", desc: "Output diagnostic report as structured JSON" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd doctor",
+            "hkd doctor --json",
+        ],
+    },
+    add: {
+        description: "Add a dependency to hkd.toml and resolve package requirements.",
+        usage: "hkd add <package> [version] [options]",
+        options: [
+            { flag: "--path <dir>", desc: "Add a local directory path dependency" },
+            { flag: "--offline", desc: "Resolve dependency from local package cache only" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd add http@^1.0.0",
+            "hkd add --path ../shared-library",
+            "hkd add package.hkdpack",
+        ],
+    },
+    remove: {
+        description: "Remove a dependency from hkd.toml.",
+        usage: "hkd remove <package> [options]",
+        options: [
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd remove http",
+        ],
+    },
+    install: {
+        description: "Resolve and install project dependencies into .hkd/deps and update hkd.lock.",
+        usage: "hkd install [options]",
+        options: [
+            { flag: "--locked", desc: "Require exact match against hkd.lock without updating it" },
+            { flag: "--offline", desc: "Install using local package cache only (no network)" },
+            { flag: "--vendor", desc: "Vendor dependencies into vendor/ directory" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd install",
+            "hkd install --locked",
+            "hkd install --offline",
+        ],
+    },
+    update: {
+        description: "Update dependencies to latest versions allowed by hkd.toml semver ranges.",
+        usage: "hkd update [package] [options]",
+        options: [
+            { flag: "--offline", desc: "Update using local package cache only" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd update",
+            "hkd update http",
+        ],
+    },
+    pack: {
+        description: "Pack the current project into a portable, deterministic .hkdpack archive.",
+        usage: "hkd pack [options]",
+        options: [
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd pack",
+        ],
+    },
+    publish: {
+        description: "Publish a package archive to the HKD package registry.",
+        usage: "hkd publish [options]",
+        options: [
+            { flag: "--token <t>", desc: "Registry authentication token" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd publish",
+            "hkd publish --token $HKD_TOKEN",
+        ],
+    },
+    release: {
+        description: "Build, package, and verify a complete production release bundle.",
+        usage: "hkd release [options]",
+        options: [
+            { flag: "--target <triple>", desc: "Target platform triple (e.g. x86_64-pc-windows-msvc)" },
+            { flag: "--profile <p>", desc: "Build profile (release, size, security; default: release)" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd release",
+            "hkd release --target x86_64-pc-windows-msvc",
+            "hkd release --profile size",
+        ],
+    },
+    "verify-release": {
+        description: "Run automated release verification acceptance gates (tests, checksums, determinism).",
+        usage: "hkd verify-release [options]",
+        options: [
+            { flag: "--json", desc: "Output verification gate results as JSON" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd verify-release",
+            "hkd verify-release --json",
+        ],
+    },
+    explain: {
+        description: "HKD Error Explanation Tool — Explain compiler error codes with explanation, bad code example, and fix.",
+        usage: "hkd explain <error_code> [options]",
+        options: [
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd explain E201",
+            "hkd explain E301",
+            "hkd explain E303",
+        ],
+    },
+    rfc: {
+        description: "Inspect, validate, and check status of Language Evolution RFC proposals.",
+        usage: "hkd rfc <list|check|status> [id] [options]",
+        options: [
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd rfc list",
+            "hkd rfc status RFC-0001",
+            "hkd rfc check RFC-0002",
+        ],
+    },
+    bench: {
+        description: "Benchmark execution latency and throughput of an HKD source file across repeated runs.",
+        usage: "hkd bench <file.hkd> [options]",
+        options: [
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd bench benchmarks/fib.hkd",
+        ],
+    },
+    stats: {
+        description: "Display source code metrics (lines, tokens, statements, functions, structs).",
+        usage: "hkd stats <file.hkd> [options]",
+        options: [
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd stats src/main.hkd",
+        ],
+    },
+    tree: {
+        description: "Display the resolved dependency hierarchy tree for the current project.",
+        usage: "hkd tree [options]",
+        options: [
+            { flag: "--json", desc: "Output dependency tree as JSON" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd tree",
+            "hkd tree --json",
+        ],
+    },
+    audit: {
+        description: "Audit package integrity, hash validation, and security vulnerabilities.",
+        usage: "hkd audit [options]",
+        options: [
+            { flag: "--json", desc: "Output audit results as JSON" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd audit",
+            "hkd audit --json",
+        ],
+    },
+    cache: {
+        description: "Inspect, verify, or clean the global content-addressed package cache.",
+        usage: "hkd cache <list|clean|verify> [options]",
+        options: [
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd cache list",
+            "hkd cache verify",
+            "hkd cache clean",
+        ],
+    },
+    config: {
+        description: "Inspect effective runtime configuration with secret masking.",
+        usage: "hkd config [options]",
+        options: [
+            { flag: "--json", desc: "Output config as JSON" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd config",
+            "hkd config --json",
+        ],
+    },
+    container: {
+        description: "Generate and test multi-stage Docker container build files.",
+        usage: "hkd container <init|build> [options]",
+        options: [
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd container init",
+            "hkd container build",
+        ],
+    },
+    platform: {
+        description: "Inspect platform adapter integration status (Docker, Vercel, Generic Server, GitHub Actions).",
+        usage: "hkd platform <detect|list> [options]",
+        options: [
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd platform list",
+            "hkd platform detect",
+        ],
+    },
+    deploy: {
+        description: "Run pre-flight deployment check or generate platform deployment manifests.",
+        usage: "hkd deploy [check|manifest] [options]",
+        options: [
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd deploy check",
+            "hkd deploy manifest",
+        ],
+    },
+    sbom: {
+        description: "Generate CycloneDX 1.5 JSON Software Bill of Materials for dependencies and build.",
+        usage: "hkd sbom [options]",
+        options: [
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd sbom",
+        ],
+    },
+    "runtime-info": {
+        description: "Inspect production runtime environment limits, memory ceilings, and active capabilities.",
+        usage: "hkd runtime-info [options]",
+        options: [
+            { flag: "--json", desc: "Output runtime info as JSON" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd runtime-info",
+            "hkd runtime-info --json",
+        ],
+    },
+    targets: {
+        description: "List supported canonical target triples for cross-compilation.",
+        usage: "hkd targets [options]",
+        options: [
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd targets",
+        ],
+    },
+    "verify-artifact": {
+        description: "Verify release artifact checksum, digital signature, and structural integrity.",
+        usage: "hkd verify-artifact <bundle-path> [options]",
+        options: [
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd verify-artifact dist/releases/app.tar.gz",
+        ],
+    },
+    migrate: {
+        description: "Upgrade project manifest and lockfile to Edition 2026/2027.",
+        usage: "hkd migrate [options]",
+        options: [
+            { flag: "--edition <2026|2027>", desc: "Target edition (default: 2026)" },
+            { flag: "--dry-run", desc: "Preview changes without modifying files" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd migrate --edition 2027",
+            "hkd migrate --dry-run",
+        ],
+    },
+    vendor: {
+        description: "Copy all resolved dependencies into the local vendor/ directory.",
+        usage: "hkd vendor [options]",
+        options: [
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd vendor",
+        ],
+    },
+    ci: {
+        description: "Run deterministic CI pipeline (locked dependency install, audit, test runner).",
+        usage: "hkd ci [options]",
+        options: [
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd ci",
+        ],
+    },
+    doc: {
+        description: "Extract doc comments and generate HTML/Markdown API documentation.",
+        usage: "hkd doc [options]",
+        options: [
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd doc",
+        ],
+    },
+    lsp: {
+        description: "Start Language Server Protocol (LSP 2.0) daemon over stdio for editor integration.",
+        usage: "hkd lsp [options]",
+        options: [
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd lsp",
+        ],
+    },
+    dap: {
+        description: "Start Debug Adapter Protocol (DAP) daemon over stdio for IDE debugging sessions.",
+        usage: "hkd dap [options]",
+        options: [
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd dap",
+        ],
+    },
+    search: {
+        description: "Search for published packages in the HKD package registry.",
+        usage: "hkd search <query> [options]",
+        options: [
+            { flag: "--json", desc: "Output search results as JSON" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd search web",
+            "hkd search json",
+        ],
+    },
+    info: {
+        description: "Display metadata, versions, and dependencies of a package in the registry.",
+        usage: "hkd info <package> [options]",
+        options: [
+            { flag: "--json", desc: "Output package info as JSON" },
+            { flag: "--help, -h", desc: "Show this help message" },
+        ],
+        examples: [
+            "hkd info http",
+        ],
+    },
+    version: {
+        description: "Print HKD compiler and toolchain version.",
+        usage: "hkd version",
+        options: [
+            { flag: "-v, --version", desc: "Show version" },
+        ],
+        examples: [
+            "hkd version",
+            "hkd --version",
+            "hkd -v",
+        ],
+    },
+};
+function printSubcommandHelp(cmd) {
+    const normalized = cmd.toLowerCase().trim();
+    const info = COMMAND_HELPS[normalized];
+    if (!info) {
+        const known = Object.keys(COMMAND_HELPS);
+        const suggestion = findClosestCommand(normalized, known);
+        console.error(RED(`Unknown command: '${cmd}'`));
+        if (suggestion) {
+            console.error(YELLOW(`Did you mean 'hkd help ${suggestion}'?`));
+        }
+        console.error(`Run ${CYAN("hkd help")} to see available commands.`);
+        process.exit(exports.ExitCode.UsageError);
+    }
+    console.log(`
+${BOLD(`HKD Command: ${CYAN(normalized)}`)}
+
+${BOLD("DESCRIPTION:")}
+  ${info.description}
+
+${BOLD("USAGE:")}
+  ${CYAN(info.usage)}
+`);
+    if (info.options && info.options.length > 0) {
+        console.log(BOLD("OPTIONS:"));
+        for (const opt of info.options) {
+            const paddedFlag = opt.flag.padEnd(28, " ");
+            console.log(`  ${CYAN(paddedFlag)} ${opt.desc}`);
+        }
+        console.log();
+    }
+    if (info.examples && info.examples.length > 0) {
+        console.log(BOLD("EXAMPLES:"));
+        for (const ex of info.examples) {
+            console.log(`  ${DIM(ex)}`);
+        }
+        console.log();
+    }
+}
 function printHelp() {
     console.log(`
-${BOLD(`HKD Programming Language — Compiler & Tooling Suite v${index_js_1.HKD_VERSION}`)}
+${BOLD(`HKD Programming Language — Compiler & Toolchain Suite v${index_js_1.HKD_VERSION}`)}
 
 ${BOLD("USAGE:")}
   ${CYAN("hkd")} <command> [options]
 
 ${BOLD("COMMANDS:")}
-  ${CYAN("init")}      [dir] [name] [--edition <2026|2027>] Initialize a new project
-  ${CYAN("repl")}      [--edition <2026|2027>]              Start an interactive REPL session
-  ${CYAN("run")}       [file.hkd]          Run an HKD project or source file
-  ${CYAN("build")}     [options]           Compile project modules incrementally
-  ${CYAN("test")}      [file/dir]          Run tests
-  ${CYAN("fmt")}       [file.hkd] [-w]     Format source code (formats project if no file given)
-  ${CYAN("lint")}      <file.hkd>          Lint source code for issues
-  ${CYAN("check")}     [file.hkd]          Type-check project or source file
-  ${CYAN("tree")}      [--json]            Display the resolved dependency tree
-  ${CYAN("explain")}   <error_code>        Explain compiler error codes with code examples
-  ${CYAN("rfc")}       <list|check|status> Language Evolution RFC proposal inspector & validator
-  ${CYAN("doctor")}    [--json]            Run system and IDE integration diagnostic
-  ${CYAN("lsp")}                           Start Language Server Protocol (LSP 2.0)
-  ${CYAN("dap")}                           Start Debug Adapter Protocol (DAP)
-  ${CYAN("targets")}                       List supported canonical target triples
-  ${CYAN("release")}   [--target <t>]      Build, package, and verify production release bundle
-  ${CYAN("verify-artifact")} <path>        Verify release artifact checksum and integrity
-  ${CYAN("verify-release")}  [--json]      Run automated release acceptance gates
-  ${CYAN("migrate")}   [--edition 2027]    Upgrade project manifest and lockfile to Edition 2026/2027
-  ${CYAN("config")}    [--json]            Inspect effective runtime configuration with secret masking
-  ${CYAN("container")} <init|build>        Generate and test multi-stage Dockerfile
-  ${CYAN("platform")}  <detect|list>       Inspect platform adapter integration status
-  ${CYAN("deploy")}    [check|manifest]    Run pre-flight deployment check or dry-run
-  ${CYAN("sbom")}                          Generate CycloneDX 1.5 JSON Software Bill of Materials
-  ${CYAN("runtime-info")} [--json]         Inspect production runtime environment and limits
-  ${CYAN("add")}       <pkg> [ver]         Add a dependency (registry, path, or archive)
-  ${CYAN("remove")}    <pkg>               Remove a dependency
-  ${CYAN("install")}   [--offline]         Install dependencies and update lockfile
-  ${CYAN("update")}    [pkg]               Update dependencies within version ranges
-  ${CYAN("pack")}                          Create deterministic .hkdpack package archive
-  ${CYAN("publish")}   [--token <t>]       Publish package to registry
-  ${CYAN("search")}    <query> [--json]    Search packages in registry
-  ${CYAN("info")}      <pkg> [--json]      Show package metadata and versions
-  ${CYAN("vendor")}                        Copy resolved dependencies into vendor/ directory
-  ${CYAN("audit")}     [--json]            Audit package integrity and security
-  ${CYAN("cache")}     <list|clean|verify> Manage content-addressed package cache
-  ${CYAN("ci")}                            Deterministic CI pipeline (--locked install, audit, test)
-  ${CYAN("doc")}                           Generate API documentation
-  ${CYAN("version")}                       Print HKD version
-  ${CYAN("help")}                          Show this help message
 
-${BOLD("EXAMPLES:")}
-  ${DIM("hkd init . my-project")}
-  ${DIM("hkd run")}
-  ${DIM("hkd build --release")}
-  ${DIM("hkd test")}
-  ${DIM("hkd doc")}
+${BOLD("GETTING STARTED:")}
+  ${CYAN("init".padEnd(14, " "))} Initialize a new HKD project (e.g. hkd init my-app)
+  ${CYAN("repl".padEnd(14, " "))} Start an interactive REPL session
 
-${BOLD("LEARN MORE:")}
-  Documentation: ${CYAN("https://hkd-lang.dev/docs")}  ${DIM("(coming soon)")}
+${BOLD("BUILD & EXECUTION:")}
+  ${CYAN("run".padEnd(14, " "))} Compile and run an HKD project or source file
+  ${CYAN("build".padEnd(14, " "))} Compile project modules incrementally or natively
+  ${CYAN("bench".padEnd(14, " "))} Benchmark an HKD script across repeated runs
+  ${CYAN("stats".padEnd(14, " "))} Display source code statistics and metrics
+
+${BOLD("CODE QUALITY & TESTING:")}
+  ${CYAN("check".padEnd(14, " "))} Type-check project or source files without emitting code
+  ${CYAN("test".padEnd(14, " "))} Discover and run project tests
+  ${CYAN("fmt".padEnd(14, " "))} Format source code according to canonical conventions
+  ${CYAN("lint".padEnd(14, " "))} Lint source code for semantic warnings and style issues
+  ${CYAN("explain".padEnd(14, " "))} Explain compiler error codes (e.g. hkd explain E201)
+
+${BOLD("PACKAGE MANAGEMENT:")}
+  ${CYAN("add".padEnd(14, " "))} Add a dependency (registry, path, or archive)
+  ${CYAN("remove".padEnd(14, " "))} Remove a dependency
+  ${CYAN("install".padEnd(14, " "))} Install resolved dependencies and update lockfile
+  ${CYAN("update".padEnd(14, " "))} Update dependencies within version ranges
+  ${CYAN("audit".padEnd(14, " "))} Audit package integrity and security
+  ${CYAN("pack".padEnd(14, " "))} Create deterministic .hkdpack package archive
+  ${CYAN("publish".padEnd(14, " "))} Publish package to registry
+  ${CYAN("tree".padEnd(14, " "))} Display the resolved dependency tree
+
+${BOLD("RELEASE & DIAGNOSTICS:")}
+  ${CYAN("doctor".padEnd(14, " "))} Run system and IDE integration diagnostics
+  ${CYAN("release".padEnd(14, " "))} Build, package, and verify production release bundle
+  ${CYAN("verify-release".padEnd(14, " "))} Run automated release acceptance gates
+  ${CYAN("version".padEnd(14, " "))} Print HKD version
+
+${BOLD("DISCOVERY:")}
+  Use ${CYAN("hkd help <command>")} or ${CYAN("hkd <command> --help")} for detailed flags and examples.
+  Use ${CYAN("hkd help all")} or ${CYAN("hkd --help-all")} to view all platform, deployment, and tooling commands.
+
+${BOLD("DOCUMENTATION:")}
+  Guides & References: ${CYAN("https://hkd-lang.dev/docs")}
+`);
+}
+function printAllHelp() {
+    console.log(`
+${BOLD(`HKD Programming Language — Full Toolchain Reference v${index_js_1.HKD_VERSION}`)}
+
+${BOLD("USAGE:")}
+  ${CYAN("hkd")} <command> [options]
+
+${BOLD("CORE COMMANDS:")}
+  ${CYAN("init")}              Initialize a new HKD project (cli, lib, server)
+  ${CYAN("repl")}              Interactive REPL session
+  ${CYAN("run")}               Compile and run an HKD project or file
+  ${CYAN("build")}             Incremental compiler (bytecode or standalone native)
+  ${CYAN("test")}              Automated test runner
+  ${CYAN("check")}             Type checker and semantic validator
+  ${CYAN("fmt")}               Code formatter
+  ${CYAN("lint")}              Linter with automated quick-fix support
+  ${CYAN("explain")}           Diagnostic error explanation tool
+  ${CYAN("bench")}             Performance benchmark runner
+  ${CYAN("stats")}             Code statistics analyzer
+
+${BOLD("PACKAGE MANAGEMENT:")}
+  ${CYAN("add")}               Add dependency (registry, path, archive)
+  ${CYAN("remove")}            Remove dependency
+  ${CYAN("install")}           Install dependencies and update lockfile
+  ${CYAN("update")}            Update dependencies
+  ${CYAN("pack")}              Create .hkdpack archive
+  ${CYAN("publish")}           Publish to package registry
+  ${CYAN("search")}            Search packages in registry
+  ${CYAN("info")}              Show package metadata
+  ${CYAN("vendor")}            Vendor dependencies locally
+  ${CYAN("audit")}             Audit package integrity
+  ${CYAN("cache")}             Manage content-addressed cache
+  ${CYAN("tree")}              Display dependency hierarchy tree
+  ${CYAN("ci")}                Deterministic CI pipeline runner
+
+${BOLD("DEPLOYMENT & PRODUCTION:")}
+  ${CYAN("release")}           Build production release bundle
+  ${CYAN("verify-release")}    Run release acceptance gates
+  ${CYAN("verify-artifact")}   Verify bundle integrity and checksums
+  ${CYAN("targets")}           List supported compilation target triples
+  ${CYAN("config")}            Effective configuration inspector
+  ${CYAN("container")}         Dockerfile generator and container builder
+  ${CYAN("platform")}          Platform adapter detector (Docker, Vercel, etc.)
+  ${CYAN("deploy")}            Deployment pre-flight checker
+  ${CYAN("sbom")}              CycloneDX 1.5 JSON Software Bill of Materials
+  ${CYAN("runtime-info")}      Production runtime limits and capability inspector
+  ${CYAN("migrate")}           Upgrade project to Edition 2026/2027
+
+${BOLD("DEVELOPER TOOLING & PROTOCOLS:")}
+  ${CYAN("doctor")}            System and toolchain diagnostic
+  ${CYAN("lsp")}               Language Server Protocol (LSP 2.0) daemon
+  ${CYAN("dap")}               Debug Adapter Protocol (DAP) daemon
+  ${CYAN("rfc")}               Language RFC inspector and validator
+  ${CYAN("doc")}               API documentation generator
+  ${CYAN("version")}           Print version
+  ${CYAN("help")}              Show help
+
+Run ${CYAN("hkd help <command>")} for detailed documentation on any command.
 `);
 }
 // ─── Run ──────────────────────────────────────────────────────────────────────

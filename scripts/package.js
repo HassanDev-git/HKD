@@ -120,7 +120,15 @@ function generateChecksum() {
 
   const checksumFile = path.join(distDir, "releases", "SHA256SUMS");
   const relativeExePath = path.relative(path.join(distDir, "releases"), releaseExePath).replace(/\\/g, "/");
-  fs.appendFileSync(checksumFile, `${hex}  ${relativeExePath}\n`, "utf-8");
+  let existingLines = [];
+  if (fs.existsSync(checksumFile)) {
+    existingLines = fs.readFileSync(checksumFile, "utf-8")
+      .split("\n")
+      .map(l => l.trim())
+      .filter(l => l.length > 0 && !l.endsWith(relativeExePath));
+  }
+  existingLines.push(`${hex}  ${relativeExePath}`);
+  fs.writeFileSync(checksumFile, existingLines.join("\n") + "\n", "utf-8");
   console.log(`Checksum recorded: ${hex}  ${relativeExePath}`);
 }
 

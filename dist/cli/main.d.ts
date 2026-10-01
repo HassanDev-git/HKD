@@ -27,4 +27,5 @@ export declare const ExitCode: {
     readonly DeployError: 5;
 };
 export declare function applyLintFixes(source: string, issues: any[]): string;
+export declare function printSubcommandHelp(cmd: string): void;
 //# sourceMappingURL=main.d.ts.map

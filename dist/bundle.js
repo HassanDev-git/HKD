@@ -4300,8 +4300,15 @@ var require_chunk = __commonJS({
         return offset;
       }
       writeU16(value, line = 0) {
-        this.writeByte(value >> 8 & 255, line);
-        this.writeByte(value & 255, line);
+        this.code.push(value >> 8 & 255, value & 255);
+        this.lines.push(line, line);
+      }
+      /** Write an opcode and a 16-bit unsigned operand in a single combined push. */
+      writeOpU16(op, operand, line = 0) {
+        const offset = this.code.length;
+        this.code.push(op, operand >> 8 & 255, operand & 255);
+        this.lines.push(line, line, line);
+        return offset;
       }
       /** Write a signed 16-bit offset (for jumps). */
       writeI16(value, line = 0) {
@@ -4324,14 +4331,13 @@ var require_chunk = __commonJS({
       /** Emit LOAD_CONST for a value. */
       emitConstant(value, line = 0) {
         const idx = this.addConstant(value);
-        this.writeByte(1, line);
-        this.writeU16(idx, line);
+        this.writeOpU16(1, idx, line);
       }
       /** Emit a jump instruction and return the offset of the placeholder. */
       emitJump(op, line = 0) {
-        this.writeByte(op, line);
-        const offset = this.code.length;
-        this.writeI16(65535, line);
+        const offset = this.code.length + 1;
+        this.code.push(op, 255, 255);
+        this.lines.push(line, line, line);
         return offset;
       }
       /** Patch a jump placeholder with the actual offset. */
@@ -4347,9 +4353,9 @@ var require_chunk = __commonJS({
       }
       /** Emit a loop jump back to `loopStart`. */
       emitLoop(loopStart, line = 0) {
-        this.writeByte(80, line);
-        const offset = this.code.length;
-        this.writeI16(0, line);
+        const offset = this.code.length + 1;
+        this.code.push(80, 0, 0);
+        this.lines.push(line, line, line);
         const relative = loopStart - this.code.length;
         const u16 = relative & 65535;
         this.code[offset] = u16 >> 8 & 255;
@@ -4522,24 +4528,96 @@ var require_async_lowering = __commonJS({
     function hasAwait(node) {
       if (!node)
         return false;
-      const anyNode = node;
-      if (anyNode.kind === "AwaitExpr")
-        return true;
-      for (const key of Object.keys(anyNode)) {
-        if (key === "span")
-          continue;
-        const val = anyNode[key];
-        if (Array.isArray(val)) {
-          for (const item of val) {
-            if (item && typeof item === "object" && hasAwait(item))
+      const n = node;
+      switch (n.kind) {
+        case "AwaitExpr":
+          return true;
+        case "BinaryExpr":
+          return hasAwait(n.left) || hasAwait(n.right);
+        case "UnaryExpr":
+          return hasAwait(n.operand);
+        case "CallExpr":
+          if (hasAwait(n.callee))
+            return true;
+          for (let i = 0; i < n.args.length; i++) {
+            if (hasAwait(n.args[i]))
               return true;
           }
-        } else if (val && typeof val === "object" && val.kind) {
-          if (hasAwait(val))
+          return false;
+        case "IndexExpr":
+          return hasAwait(n.object) || hasAwait(n.index);
+        case "MemberExpr":
+          return hasAwait(n.object);
+        case "AssignExpr":
+          return hasAwait(n.target) || hasAwait(n.value);
+        case "CompoundAssignExpr":
+          return hasAwait(n.target) || hasAwait(n.value);
+        case "ArrayExpr":
+          for (let i = 0; i < n.elements.length; i++) {
+            if (hasAwait(n.elements[i]))
+              return true;
+          }
+          return false;
+        case "ObjectExpr":
+          for (let i = 0; i < n.fields.length; i++) {
+            if (hasAwait(n.fields[i].value))
+              return true;
+          }
+          return false;
+        case "IfExpr":
+          return hasAwait(n.condition) || hasAwait(n.then) || (n.else_ ? hasAwait(n.else_) : false);
+        case "BlockExpr":
+          for (let i = 0; i < n.body.length; i++) {
+            if (hasAwait(n.body[i]))
+              return true;
+          }
+          return false;
+        case "StructInitExpr":
+          for (let i = 0; i < n.fields.length; i++) {
+            if (hasAwait(n.fields[i].value))
+              return true;
+          }
+          return false;
+        case "RangeExpr":
+          return hasAwait(n.start) || hasAwait(n.end);
+        case "CastExpr":
+          return hasAwait(n.expr);
+        case "MatchExpr":
+          if (hasAwait(n.scrutinee))
             return true;
-        }
+          for (let i = 0; i < n.arms.length; i++) {
+            const arm = n.arms[i];
+            if (arm.guard && hasAwait(arm.guard))
+              return true;
+            if (hasAwait(arm.body))
+              return true;
+          }
+          return false;
+        case "VarDeclStmt":
+          return n.initializer ? hasAwait(n.initializer) : false;
+        case "ConstDeclStmt":
+          return hasAwait(n.initializer);
+        case "ExprStmt":
+          return hasAwait(n.expr);
+        case "ReturnStmt":
+          return n.value ? hasAwait(n.value) : false;
+        case "IfStmt":
+          return hasAwait(n.condition) || hasAwait(n.then) || (n.else_ ? hasAwait(n.else_) : false);
+        case "WhileStmt":
+          return hasAwait(n.condition) || hasAwait(n.body);
+        case "ForStmt":
+          return hasAwait(n.iterable) || hasAwait(n.body);
+        case "BlockStmt":
+          for (let i = 0; i < n.body.length; i++) {
+            if (hasAwait(n.body[i]))
+              return true;
+          }
+          return false;
+        case "AssertStmt":
+          return hasAwait(n.condition) || (n.message ? hasAwait(n.message) : false);
+        default:
+          return false;
       }
-      return false;
     }
     var liftCounter = 0;
     function liftAwaitsFromExpr(expr, liftedStmts) {
@@ -4552,18 +4630,82 @@ var require_async_lowering = __commonJS({
         liftedStmts.push(makeVarDecl(tmpName, { kind: "AwaitExpr", expr: operand, span }, span));
         return makeIdent(tmpName, span);
       }
-      const anyExpr = { ...expr };
-      for (const key of Object.keys(anyExpr)) {
-        if (key === "span")
-          continue;
-        const val = anyExpr[key];
-        if (Array.isArray(val)) {
-          anyExpr[key] = val.map((item) => item && typeof item === "object" && item.kind ? liftAwaitsFromExpr(item, liftedStmts) : item);
-        } else if (val && typeof val === "object" && val.kind) {
-          anyExpr[key] = liftAwaitsFromExpr(val, liftedStmts);
-        }
+      switch (expr.kind) {
+        case "BinaryExpr":
+          return {
+            ...expr,
+            left: liftAwaitsFromExpr(expr.left, liftedStmts),
+            right: liftAwaitsFromExpr(expr.right, liftedStmts)
+          };
+        case "UnaryExpr":
+          return {
+            ...expr,
+            operand: liftAwaitsFromExpr(expr.operand, liftedStmts)
+          };
+        case "CallExpr":
+          return {
+            ...expr,
+            callee: liftAwaitsFromExpr(expr.callee, liftedStmts),
+            args: expr.args.map((a) => liftAwaitsFromExpr(a, liftedStmts))
+          };
+        case "IndexExpr":
+          return {
+            ...expr,
+            object: liftAwaitsFromExpr(expr.object, liftedStmts),
+            index: liftAwaitsFromExpr(expr.index, liftedStmts)
+          };
+        case "MemberExpr":
+          return {
+            ...expr,
+            object: liftAwaitsFromExpr(expr.object, liftedStmts)
+          };
+        case "AssignExpr":
+          return {
+            ...expr,
+            target: liftAwaitsFromExpr(expr.target, liftedStmts),
+            value: liftAwaitsFromExpr(expr.value, liftedStmts)
+          };
+        case "CompoundAssignExpr":
+          return {
+            ...expr,
+            target: liftAwaitsFromExpr(expr.target, liftedStmts),
+            value: liftAwaitsFromExpr(expr.value, liftedStmts)
+          };
+        case "ArrayExpr":
+          return {
+            ...expr,
+            elements: expr.elements.map((e) => liftAwaitsFromExpr(e, liftedStmts))
+          };
+        case "ObjectExpr":
+          return {
+            ...expr,
+            fields: expr.fields.map((f) => ({
+              ...f,
+              value: liftAwaitsFromExpr(f.value, liftedStmts)
+            }))
+          };
+        case "StructInitExpr":
+          return {
+            ...expr,
+            fields: expr.fields.map((f) => ({
+              ...f,
+              value: liftAwaitsFromExpr(f.value, liftedStmts)
+            }))
+          };
+        case "RangeExpr":
+          return {
+            ...expr,
+            start: liftAwaitsFromExpr(expr.start, liftedStmts),
+            end: liftAwaitsFromExpr(expr.end, liftedStmts)
+          };
+        case "CastExpr":
+          return {
+            ...expr,
+            expr: liftAwaitsFromExpr(expr.expr, liftedStmts)
+          };
+        default:
+          return expr;
       }
-      return anyExpr;
     }
     function flattenAndLiftStmts(stmts) {
       const result = [];
@@ -4665,26 +4807,44 @@ var require_async_lowering = __commonJS({
     }
     function collectDeclaredVariables(stmts) {
       const vars = [];
-      function walk(node) {
-        if (!node || typeof node !== "object")
+      function walkStmt(s) {
+        if (!s)
           return;
-        if (node.kind === "VarDeclStmt" && typeof node.name === "string") {
-          vars.push(node.name);
-        }
-        for (const key of Object.keys(node)) {
-          if (key === "span")
-            continue;
-          const child = node[key];
-          if (Array.isArray(child)) {
-            for (const item of child)
-              walk(item);
-          } else if (child && typeof child === "object" && child.kind) {
-            walk(child);
-          }
+        switch (s.kind) {
+          case "VarDeclStmt":
+            if (typeof s.name === "string")
+              vars.push(s.name);
+            break;
+          case "BlockStmt":
+            for (let i = 0; i < s.body.length; i++)
+              walkStmt(s.body[i]);
+            break;
+          case "IfStmt":
+            for (let i = 0; i < s.then.body.length; i++)
+              walkStmt(s.then.body[i]);
+            if (s.else_) {
+              if (s.else_.kind === "BlockStmt") {
+                for (let i = 0; i < s.else_.body.length; i++)
+                  walkStmt(s.else_.body[i]);
+              } else if (s.else_.kind === "IfStmt") {
+                walkStmt(s.else_);
+              }
+            }
+            break;
+          case "WhileStmt":
+            for (let i = 0; i < s.body.body.length; i++)
+              walkStmt(s.body.body[i]);
+            break;
+          case "ForStmt":
+            if (typeof s.variable === "string")
+              vars.push(s.variable);
+            for (let i = 0; i < s.body.body.length; i++)
+              walkStmt(s.body.body[i]);
+            break;
         }
       }
-      for (const s of stmts) {
-        walk(s);
+      for (let i = 0; i < stmts.length; i++) {
+        walkStmt(stmts[i]);
       }
       return Array.from(new Set(vars));
     }
@@ -5112,6 +5272,1296 @@ var require_async_lowering = __commonJS({
   }
 });
 
+// dist/bytecode/register_chunk.js
+var require_register_chunk = __commonJS({
+  "dist/bytecode/register_chunk.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.RegisterChunk = exports2.RegOp = void 0;
+    var RegOp;
+    (function(RegOp2) {
+      RegOp2[RegOp2["Nop"] = 0] = "Nop";
+      RegOp2[RegOp2["LoadConst"] = 1] = "LoadConst";
+      RegOp2[RegOp2["LoadImm"] = 2] = "LoadImm";
+      RegOp2[RegOp2["LoadNull"] = 3] = "LoadNull";
+      RegOp2[RegOp2["LoadTrue"] = 4] = "LoadTrue";
+      RegOp2[RegOp2["LoadFalse"] = 5] = "LoadFalse";
+      RegOp2[RegOp2["Move"] = 6] = "Move";
+      RegOp2[RegOp2["LoadGlobal"] = 7] = "LoadGlobal";
+      RegOp2[RegOp2["StoreGlobal"] = 8] = "StoreGlobal";
+      RegOp2[RegOp2["DefineGlobal"] = 9] = "DefineGlobal";
+      RegOp2[RegOp2["Add"] = 10] = "Add";
+      RegOp2[RegOp2["Sub"] = 11] = "Sub";
+      RegOp2[RegOp2["Mul"] = 12] = "Mul";
+      RegOp2[RegOp2["Div"] = 13] = "Div";
+      RegOp2[RegOp2["Mod"] = 14] = "Mod";
+      RegOp2[RegOp2["Pow"] = 15] = "Pow";
+      RegOp2[RegOp2["Neg"] = 16] = "Neg";
+      RegOp2[RegOp2["Eq"] = 17] = "Eq";
+      RegOp2[RegOp2["Ne"] = 18] = "Ne";
+      RegOp2[RegOp2["Lt"] = 19] = "Lt";
+      RegOp2[RegOp2["Le"] = 20] = "Le";
+      RegOp2[RegOp2["Gt"] = 21] = "Gt";
+      RegOp2[RegOp2["Ge"] = 22] = "Ge";
+      RegOp2[RegOp2["Not"] = 23] = "Not";
+      RegOp2[RegOp2["BitAnd"] = 24] = "BitAnd";
+      RegOp2[RegOp2["BitOr"] = 25] = "BitOr";
+      RegOp2[RegOp2["BitXor"] = 26] = "BitXor";
+      RegOp2[RegOp2["BitNot"] = 27] = "BitNot";
+      RegOp2[RegOp2["Shl"] = 28] = "Shl";
+      RegOp2[RegOp2["Shr"] = 29] = "Shr";
+      RegOp2[RegOp2["Jump"] = 30] = "Jump";
+      RegOp2[RegOp2["JumpIf"] = 31] = "JumpIf";
+      RegOp2[RegOp2["JumpIfNot"] = 32] = "JumpIfNot";
+      RegOp2[RegOp2["JumpNull"] = 33] = "JumpNull";
+      RegOp2[RegOp2["Call"] = 34] = "Call";
+      RegOp2[RegOp2["Return"] = 35] = "Return";
+      RegOp2[RegOp2["MakeClosure"] = 36] = "MakeClosure";
+      RegOp2[RegOp2["LoadUpvalue"] = 37] = "LoadUpvalue";
+      RegOp2[RegOp2["StoreUpvalue"] = 38] = "StoreUpvalue";
+      RegOp2[RegOp2["CloseUpvalue"] = 39] = "CloseUpvalue";
+      RegOp2[RegOp2["MakeArray"] = 40] = "MakeArray";
+      RegOp2[RegOp2["GetIndex"] = 41] = "GetIndex";
+      RegOp2[RegOp2["SetIndex"] = 42] = "SetIndex";
+      RegOp2[RegOp2["ArrayLen"] = 43] = "ArrayLen";
+      RegOp2[RegOp2["MakeObject"] = 44] = "MakeObject";
+      RegOp2[RegOp2["GetField"] = 45] = "GetField";
+      RegOp2[RegOp2["SetField"] = 46] = "SetField";
+      RegOp2[RegOp2["MakeIter"] = 47] = "MakeIter";
+      RegOp2[RegOp2["IterNext"] = 48] = "IterNext";
+      RegOp2[RegOp2["Concat"] = 49] = "Concat";
+      RegOp2[RegOp2["Halt"] = 50] = "Halt";
+    })(RegOp || (exports2.RegOp = RegOp = {}));
+    var RegisterChunk = class {
+      code = [];
+      constants = [];
+      registerCount = 0;
+      arity = 0;
+      name = "<script>";
+      constructor(name = "<script>", arity = 0) {
+        this.name = name;
+        this.arity = arity;
+      }
+      emit(op, dst, src1 = 0, src2 = 0, line = 0, extra) {
+        const idx = this.code.length;
+        this.code.push({ op, dst, src1, src2, line, extra });
+        if (dst >= this.registerCount)
+          this.registerCount = dst + 1;
+        if (src1 >= this.registerCount)
+          this.registerCount = src1 + 1;
+        if (op === RegOp.Call) {
+          const maxReg = src1 + (extra?.argc || 0);
+          if (maxReg > this.registerCount)
+            this.registerCount = maxReg;
+        } else if (op === RegOp.MakeArray || op === RegOp.Concat) {
+          const maxReg = src1 + src2;
+          if (maxReg > this.registerCount)
+            this.registerCount = maxReg;
+        } else if (op === RegOp.MakeObject) {
+          const maxReg = src1 + src2 * 2;
+          if (maxReg > this.registerCount)
+            this.registerCount = maxReg;
+        } else if (op !== RegOp.LoadConst && op !== RegOp.LoadGlobal && op !== RegOp.StoreGlobal && op !== RegOp.DefineGlobal && op !== RegOp.GetField && op !== RegOp.SetField && op !== RegOp.Jump && op !== RegOp.JumpIf && op !== RegOp.JumpIfNot && op !== RegOp.JumpNull && op !== RegOp.IterNext) {
+          if (src2 >= this.registerCount)
+            this.registerCount = src2 + 1;
+        }
+        return idx;
+      }
+      disassemble() {
+        const lines = [];
+        lines.push(`== [RegisterChunk] ${this.name} ==`);
+        lines.push(`  arity: ${this.arity}  registers: ${this.registerCount}  constants: ${this.constants.length}`);
+        for (let i = 0; i < this.code.length; i++) {
+          const ins = this.code[i];
+          lines.push(`${String(i).padStart(5, "0")}  ${RegOp[ins.op].padEnd(14)} dst=r${ins.dst} src1=r${ins.src1} src2=${ins.src2}`);
+        }
+        return lines.join("\n");
+      }
+    };
+    exports2.RegisterChunk = RegisterChunk;
+  }
+});
+
+// dist/compiler/optimizer_passes.js
+var require_optimizer_passes = __commonJS({
+  "dist/compiler/optimizer_passes.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.foldAstConstants = foldAstConstants;
+    exports2.optimizeBytecodeChunk = optimizeBytecodeChunk;
+    exports2.optimizeRegisterChunk = optimizeRegisterChunk;
+    var register_chunk_js_1 = require_register_chunk();
+    function foldAstConstants(program, stats, options) {
+      if (!options.constantFolding)
+        return program;
+      const mutatedVars = /* @__PURE__ */ new Set();
+      function scanMutations(node) {
+        if (!node || typeof node !== "object")
+          return;
+        switch (node.kind) {
+          case "Program": {
+            const stmts = node.statements;
+            if (stmts)
+              for (let i = 0; i < stmts.length; i++)
+                scanMutations(stmts[i]);
+            return;
+          }
+          case "BlockStmt": {
+            const body = node.body;
+            if (body)
+              for (let i = 0; i < body.length; i++)
+                scanMutations(body[i]);
+            return;
+          }
+          case "FunctionDeclStmt":
+            scanMutations(node.body);
+            return;
+          case "WhileStmt":
+            scanMutations(node.condition);
+            scanMutations(node.body);
+            return;
+          case "ForStmt":
+            scanMutations(node.iterable);
+            scanMutations(node.body);
+            return;
+          case "IfStmt":
+            scanMutations(node.condition);
+            scanMutations(node.then);
+            if (node.else_)
+              scanMutations(node.else_);
+            return;
+          case "VarDeclStmt":
+          case "ConstDeclStmt":
+            if (node.initializer)
+              scanMutations(node.initializer);
+            return;
+          case "ReturnStmt":
+            if (node.value)
+              scanMutations(node.value);
+            return;
+          case "ExprStmt":
+            scanMutations(node.expr);
+            return;
+          case "AssignExpr":
+          case "CompoundAssignExpr":
+            if (node.target?.kind === "IdentExpr") {
+              mutatedVars.add(node.target.name);
+            }
+            scanMutations(node.target);
+            scanMutations(node.value);
+            return;
+          case "BinaryExpr":
+            scanMutations(node.left);
+            scanMutations(node.right);
+            return;
+          case "UnaryExpr":
+            scanMutations(node.operand);
+            return;
+          case "IfExpr":
+            scanMutations(node.condition);
+            scanMutations(node.then);
+            if (node.else_)
+              scanMutations(node.else_);
+            return;
+          case "BlockExpr": {
+            const body = node.body;
+            if (body)
+              for (let i = 0; i < body.length; i++)
+                scanMutations(body[i]);
+            return;
+          }
+          case "CallExpr": {
+            scanMutations(node.callee);
+            const args = node.args;
+            if (args)
+              for (let i = 0; i < args.length; i++)
+                scanMutations(args[i]);
+            return;
+          }
+          case "MemberExpr":
+            scanMutations(node.object);
+            return;
+          case "IndexExpr":
+            scanMutations(node.object);
+            scanMutations(node.index);
+            return;
+          case "ArrayLiteralExpr":
+          case "ArrayExpr": {
+            const elements = node.elements;
+            if (elements)
+              for (let i = 0; i < elements.length; i++)
+                scanMutations(elements[i]);
+            return;
+          }
+          case "ObjectLiteralExpr":
+          case "ObjectExpr":
+          case "StructInitExpr": {
+            const fields = node.fields;
+            if (fields) {
+              for (let i = 0; i < fields.length; i++)
+                if (fields[i].value)
+                  scanMutations(fields[i].value);
+            }
+            return;
+          }
+          case "ImplBlockStmt": {
+            const methods = node.methods;
+            if (methods)
+              for (let i = 0; i < methods.length; i++)
+                scanMutations(methods[i]);
+            return;
+          }
+          case "ExportStmt":
+            scanMutations(node.declaration);
+            return;
+          case "TestStmt":
+            scanMutations(node.body);
+            return;
+          case "AssertStmt":
+            scanMutations(node.condition);
+            if (node.message)
+              scanMutations(node.message);
+            return;
+          case "StructDeclStmt":
+          case "TraitDeclStmt":
+          case "TypeAliasStmt":
+          case "ImportStmt":
+          case "BreakStmt":
+          case "ContinueStmt":
+          case "IntLiteral":
+          case "FloatLiteral":
+          case "StringLiteral":
+          case "BoolLiteral":
+          case "NullLiteral":
+          case "IdentExpr":
+            return;
+          default: {
+            for (const key of Object.keys(node)) {
+              if (key !== "span")
+                scanMutations(node[key]);
+            }
+            return;
+          }
+        }
+      }
+      scanMutations(program);
+      const constEnv = /* @__PURE__ */ new Map();
+      function isLiteral(expr) {
+        return expr.kind === "IntLiteral" || expr.kind === "FloatLiteral" || expr.kind === "StringLiteral" || expr.kind === "BoolLiteral" || expr.kind === "NullLiteral";
+      }
+      function getLiteralValue(expr) {
+        switch (expr.kind) {
+          case "IntLiteral":
+          case "FloatLiteral":
+          case "StringLiteral":
+          case "BoolLiteral":
+            return expr.value;
+          case "NullLiteral":
+            return null;
+          default:
+            return void 0;
+        }
+      }
+      function makeLiteralNode(val, span) {
+        if (val === null)
+          return { kind: "NullLiteral", span };
+        if (typeof val === "boolean")
+          return { kind: "BoolLiteral", value: val, span };
+        if (typeof val === "number") {
+          if (Number.isInteger(val)) {
+            return { kind: "IntLiteral", value: val, raw: String(val), span };
+          }
+          return { kind: "FloatLiteral", value: val, raw: String(val), span };
+        }
+        if (typeof val === "string") {
+          return { kind: "StringLiteral", value: val, span };
+        }
+        return { kind: "NullLiteral", span };
+      }
+      function isTruthy(val) {
+        if (val === null || val === false || val === 0 || val === "")
+          return false;
+        return true;
+      }
+      function foldExpr(expr) {
+        switch (expr.kind) {
+          case "IdentExpr": {
+            if (constEnv.has(expr.name)) {
+              const folded = constEnv.get(expr.name);
+              stats.constantsFolded++;
+              return { ...folded, span: expr.span };
+            }
+            return expr;
+          }
+          case "BinaryExpr": {
+            const left = foldExpr(expr.left);
+            const right = foldExpr(expr.right);
+            if (expr.op === "&&") {
+              if (left.kind === "BoolLiteral") {
+                stats.constantsFolded++;
+                return left.value ? right : left;
+              }
+              if (left === expr.left && right === expr.right)
+                return expr;
+              return { ...expr, left, right };
+            }
+            if (expr.op === "||") {
+              if (left.kind === "BoolLiteral") {
+                stats.constantsFolded++;
+                return left.value ? left : right;
+              }
+              if (left === expr.left && right === expr.right)
+                return expr;
+              return { ...expr, left, right };
+            }
+            if (isLiteral(left) && isLiteral(right)) {
+              const lVal = getLiteralValue(left);
+              const rVal = getLiteralValue(right);
+              if (typeof lVal === "number" && typeof rVal === "number") {
+                if (expr.op === "+") {
+                  stats.constantsFolded++;
+                  return makeLiteralNode(lVal + rVal, expr.span);
+                }
+                if (expr.op === "-") {
+                  stats.constantsFolded++;
+                  return makeLiteralNode(lVal - rVal, expr.span);
+                }
+                if (expr.op === "*") {
+                  stats.constantsFolded++;
+                  return makeLiteralNode(lVal * rVal, expr.span);
+                }
+                if (expr.op === "/") {
+                  if (rVal !== 0) {
+                    stats.constantsFolded++;
+                    return makeLiteralNode(lVal / rVal, expr.span);
+                  }
+                  if (left === expr.left && right === expr.right)
+                    return expr;
+                  return { ...expr, left, right };
+                }
+                if (expr.op === "%") {
+                  if (rVal !== 0) {
+                    stats.constantsFolded++;
+                    return makeLiteralNode(lVal % rVal, expr.span);
+                  }
+                  if (left === expr.left && right === expr.right)
+                    return expr;
+                  return { ...expr, left, right };
+                }
+                if (expr.op === "**") {
+                  stats.constantsFolded++;
+                  return makeLiteralNode(Math.pow(lVal, rVal), expr.span);
+                }
+                if (expr.op === "==") {
+                  stats.constantsFolded++;
+                  return makeLiteralNode(lVal === rVal, expr.span);
+                }
+                if (expr.op === "!=") {
+                  stats.constantsFolded++;
+                  return makeLiteralNode(lVal !== rVal, expr.span);
+                }
+                if (expr.op === "<") {
+                  stats.constantsFolded++;
+                  return makeLiteralNode(lVal < rVal, expr.span);
+                }
+                if (expr.op === "<=") {
+                  stats.constantsFolded++;
+                  return makeLiteralNode(lVal <= rVal, expr.span);
+                }
+                if (expr.op === ">") {
+                  stats.constantsFolded++;
+                  return makeLiteralNode(lVal > rVal, expr.span);
+                }
+                if (expr.op === ">=") {
+                  stats.constantsFolded++;
+                  return makeLiteralNode(lVal >= rVal, expr.span);
+                }
+                if (Number.isInteger(lVal) && Number.isInteger(rVal)) {
+                  if (expr.op === "&") {
+                    stats.constantsFolded++;
+                    return makeLiteralNode(lVal & rVal | 0, expr.span);
+                  }
+                  if (expr.op === "|") {
+                    stats.constantsFolded++;
+                    return makeLiteralNode(lVal | rVal | 0, expr.span);
+                  }
+                  if (expr.op === "^") {
+                    stats.constantsFolded++;
+                    return makeLiteralNode(lVal ^ rVal | 0, expr.span);
+                  }
+                  if (expr.op === "<<") {
+                    stats.constantsFolded++;
+                    return makeLiteralNode(lVal << rVal | 0, expr.span);
+                  }
+                  if (expr.op === ">>") {
+                    stats.constantsFolded++;
+                    return makeLiteralNode(lVal >> rVal | 0, expr.span);
+                  }
+                }
+              }
+              if (expr.op === "+" && (typeof lVal === "string" || typeof rVal === "string")) {
+                stats.constantsFolded++;
+                return makeLiteralNode(String(lVal) + String(rVal), expr.span);
+              }
+              if (expr.op === "==") {
+                stats.constantsFolded++;
+                return makeLiteralNode(lVal === rVal, expr.span);
+              }
+              if (expr.op === "!=") {
+                stats.constantsFolded++;
+                return makeLiteralNode(lVal !== rVal, expr.span);
+              }
+            }
+            if (left === expr.left && right === expr.right)
+              return expr;
+            return { ...expr, left, right };
+          }
+          case "UnaryExpr": {
+            const operand = foldExpr(expr.operand);
+            if (isLiteral(operand)) {
+              const val = getLiteralValue(operand);
+              if (expr.op === "-" && typeof val === "number") {
+                stats.constantsFolded++;
+                return makeLiteralNode(-val, expr.span);
+              }
+              if (expr.op === "!") {
+                stats.constantsFolded++;
+                return makeLiteralNode(!isTruthy(val), expr.span);
+              }
+              if (expr.op === "~" && typeof val === "number" && Number.isInteger(val)) {
+                stats.constantsFolded++;
+                return makeLiteralNode(~val, expr.span);
+              }
+            }
+            if (operand === expr.operand)
+              return expr;
+            return { ...expr, operand };
+          }
+          case "IfExpr": {
+            const cond = foldExpr(expr.condition);
+            if (isLiteral(cond)) {
+              const val = getLiteralValue(cond);
+              stats.branchesSimplified++;
+              if (isTruthy(val)) {
+                return {
+                  kind: "BlockExpr",
+                  span: expr.span,
+                  body: expr.then.body.map(foldStmt).filter(Boolean)
+                };
+              } else if (expr.else_) {
+                if (expr.else_.kind === "BlockStmt") {
+                  return {
+                    kind: "BlockExpr",
+                    span: expr.span,
+                    body: expr.else_.body.map(foldStmt).filter(Boolean)
+                  };
+                } else {
+                  return foldExpr(expr.else_);
+                }
+              } else {
+                return { kind: "NullLiteral", span: expr.span };
+              }
+            }
+            return {
+              ...expr,
+              condition: cond,
+              then: foldBlock(expr.then),
+              else_: expr.else_ ? expr.else_.kind === "BlockStmt" ? foldBlock(expr.else_) : foldExpr(expr.else_) : null
+            };
+          }
+          case "ArrayExpr":
+            return { ...expr, elements: expr.elements.map(foldExpr) };
+          case "ObjectExpr":
+            return {
+              ...expr,
+              fields: expr.fields.map((f) => ({ ...f, value: foldExpr(f.value) }))
+            };
+          case "CallExpr":
+            return {
+              ...expr,
+              callee: foldExpr(expr.callee),
+              args: expr.args.map(foldExpr)
+            };
+          case "AssignExpr": {
+            const val = foldExpr(expr.value);
+            if (val === expr.value)
+              return expr;
+            return { ...expr, value: val };
+          }
+          case "CompoundAssignExpr": {
+            const val = foldExpr(expr.value);
+            if (val === expr.value)
+              return expr;
+            return { ...expr, value: val };
+          }
+          case "ReturnStmt":
+            return expr;
+          default:
+            return expr;
+        }
+      }
+      function foldBlock(block) {
+        const savedEnv = new Map(constEnv);
+        let changed2 = false;
+        const body = [];
+        for (let i = 0; i < block.body.length; i++) {
+          const s = block.body[i];
+          const folded = foldStmt(s);
+          if (folded !== s)
+            changed2 = true;
+          if (folded)
+            body.push(folded);
+        }
+        constEnv.clear();
+        for (const [k, v] of savedEnv)
+          constEnv.set(k, v);
+        if (!changed2 && body.length === block.body.length)
+          return block;
+        return {
+          ...block,
+          body
+        };
+      }
+      function foldStmt(stmt) {
+        switch (stmt.kind) {
+          case "VarDeclStmt": {
+            const init = stmt.initializer ? foldExpr(stmt.initializer) : null;
+            if (init && isLiteral(init) && !mutatedVars.has(stmt.name)) {
+              constEnv.set(stmt.name, init);
+            } else {
+              constEnv.delete(stmt.name);
+            }
+            if (init === stmt.initializer)
+              return stmt;
+            return { ...stmt, initializer: init };
+          }
+          case "ConstDeclStmt": {
+            const value = foldExpr(stmt.initializer);
+            if (isLiteral(value) && !mutatedVars.has(stmt.name)) {
+              constEnv.set(stmt.name, value);
+            }
+            if (value === stmt.initializer)
+              return stmt;
+            return { ...stmt, initializer: value };
+          }
+          case "ExprStmt": {
+            const expr = foldExpr(stmt.expr);
+            if (expr === stmt.expr)
+              return stmt;
+            return { ...stmt, expr };
+          }
+          case "IfStmt": {
+            const cond = foldExpr(stmt.condition);
+            if (isLiteral(cond)) {
+              const val = getLiteralValue(cond);
+              stats.branchesSimplified++;
+              if (isTruthy(val)) {
+                stats.deadInstructionsRemoved++;
+                return foldBlock(stmt.then);
+              } else {
+                stats.deadInstructionsRemoved++;
+                if (stmt.else_) {
+                  return stmt.else_.kind === "BlockStmt" ? foldBlock(stmt.else_) : foldStmt(stmt.else_);
+                }
+                return null;
+              }
+            }
+            return {
+              ...stmt,
+              condition: cond,
+              then: foldBlock(stmt.then),
+              else_: stmt.else_ ? stmt.else_.kind === "BlockStmt" ? foldBlock(stmt.else_) : foldStmt(stmt.else_) : null
+            };
+          }
+          case "WhileStmt": {
+            const cond = foldExpr(stmt.condition);
+            if (isLiteral(cond) && !isTruthy(getLiteralValue(cond))) {
+              stats.branchesSimplified++;
+              stats.deadInstructionsRemoved++;
+              return null;
+            }
+            const body = foldBlock(stmt.body);
+            if (cond === stmt.condition && body === stmt.body)
+              return stmt;
+            return { ...stmt, condition: cond, body };
+          }
+          case "ForStmt": {
+            const iter = foldExpr(stmt.iterable);
+            const body = foldBlock(stmt.body);
+            if (iter === stmt.iterable && body === stmt.body)
+              return stmt;
+            return { ...stmt, iterable: iter, body };
+          }
+          case "ReturnStmt": {
+            const val = stmt.value ? foldExpr(stmt.value) : null;
+            if (val === stmt.value)
+              return stmt;
+            return { ...stmt, value: val };
+          }
+          case "BlockStmt":
+            return foldBlock(stmt);
+          case "FunctionDeclStmt": {
+            const savedEnv = new Map(constEnv);
+            const foldedBody = foldBlock(stmt.body);
+            constEnv.clear();
+            for (const [k, v] of savedEnv)
+              constEnv.set(k, v);
+            if (foldedBody === stmt.body)
+              return stmt;
+            return { ...stmt, body: foldedBody };
+          }
+          default:
+            return stmt;
+        }
+      }
+      let changed = false;
+      const optimizedStmts = [];
+      for (let i = 0; i < program.statements.length; i++) {
+        const s = program.statements[i];
+        const folded = foldStmt(s);
+        if (folded !== s)
+          changed = true;
+        if (folded)
+          optimizedStmts.push(folded);
+      }
+      if (!changed && optimizedStmts.length === program.statements.length)
+        return program;
+      return { ...program, statements: optimizedStmts };
+    }
+    function optimizeBytecodeChunk(chunk, stats, options) {
+      return chunk;
+    }
+    function optimizeRegisterChunk(regChunk, stats, options) {
+      if (!options.registerOptimization)
+        return regChunk;
+      const code = regChunk.code;
+      const n = code.length;
+      if (n === 0)
+        return regChunk;
+      const isJumpTarget = /* @__PURE__ */ new Set();
+      for (const ins of code) {
+        if (ins.op === register_chunk_js_1.RegOp.Jump) {
+          isJumpTarget.add(ins.dst);
+        } else if (ins.op === register_chunk_js_1.RegOp.JumpIf || ins.op === register_chunk_js_1.RegOp.JumpIfNot || ins.op === register_chunk_js_1.RegOp.JumpNull || ins.op === register_chunk_js_1.RegOp.IterNext) {
+          isJumpTarget.add(ins.src2);
+        }
+      }
+      for (let i = 0; i < n; i++) {
+        const ins = code[i];
+        if (ins.op === register_chunk_js_1.RegOp.Move && ins.dst === ins.src1) {
+          ins.op = register_chunk_js_1.RegOp.Nop;
+          stats.movesEliminated++;
+          stats.registerMovesRemoved++;
+        }
+      }
+      for (let i = 0; i < n - 1; i++) {
+        if (isJumpTarget.has(i + 1))
+          continue;
+        const ins1 = code[i];
+        const ins2 = code[i + 1];
+        if (ins1.op === register_chunk_js_1.RegOp.Move && ins2.op === register_chunk_js_1.RegOp.Move && ins1.dst === ins2.src1 && ins1.dst >= 64) {
+          ins2.src1 = ins1.src1;
+          stats.movesEliminated++;
+          stats.registerMovesRemoved++;
+        }
+      }
+      for (let i = 0; i < n - 1; i++) {
+        if (isJumpTarget.has(i + 1))
+          continue;
+        const ins1 = code[i];
+        const ins2 = code[i + 1];
+        if (ins2.op === register_chunk_js_1.RegOp.Move && ins1.dst === ins2.src1 && ins1.dst >= 64 && ins1.op !== register_chunk_js_1.RegOp.Nop && ins1.op !== register_chunk_js_1.RegOp.Jump && ins1.op !== register_chunk_js_1.RegOp.JumpIf && ins1.op !== register_chunk_js_1.RegOp.JumpIfNot && ins1.op !== register_chunk_js_1.RegOp.JumpNull && ins1.op !== register_chunk_js_1.RegOp.IterNext && ins1.op !== register_chunk_js_1.RegOp.Call && ins1.op !== register_chunk_js_1.RegOp.Halt) {
+          ins1.dst = ins2.dst;
+          ins2.op = register_chunk_js_1.RegOp.Nop;
+          stats.movesEliminated++;
+          stats.registerMovesRemoved++;
+        }
+      }
+      for (let i = 0; i < n - 1; i++) {
+        if (isJumpTarget.has(i))
+          continue;
+        const ins1 = code[i];
+        if (ins1.op === register_chunk_js_1.RegOp.Move && ins1.dst >= 64) {
+          const rTemp = ins1.dst;
+          const rSrc = ins1.src1;
+          for (let j = i + 1; j < Math.min(i + 5, n); j++) {
+            if (isJumpTarget.has(j))
+              break;
+            const ins2 = code[j];
+            if (ins2.op === register_chunk_js_1.RegOp.Nop)
+              continue;
+            if (ins2.op === register_chunk_js_1.RegOp.Jump || ins2.op === register_chunk_js_1.RegOp.JumpIf || ins2.op === register_chunk_js_1.RegOp.JumpIfNot || ins2.op === register_chunk_js_1.RegOp.JumpNull || ins2.op === register_chunk_js_1.RegOp.Call || ins2.dst === rSrc) {
+              break;
+            }
+            if (ins2.op === register_chunk_js_1.RegOp.Return && ins2.dst === rTemp) {
+              ins2.dst = rSrc;
+              ins1.op = register_chunk_js_1.RegOp.Nop;
+              stats.movesEliminated++;
+              stats.registerMovesRemoved++;
+              break;
+            } else if (ins2.op === register_chunk_js_1.RegOp.Add || ins2.op === register_chunk_js_1.RegOp.Sub || ins2.op === register_chunk_js_1.RegOp.Mul || ins2.op === register_chunk_js_1.RegOp.Div || ins2.op === register_chunk_js_1.RegOp.Mod || ins2.op === register_chunk_js_1.RegOp.Pow || ins2.op === register_chunk_js_1.RegOp.BitAnd || ins2.op === register_chunk_js_1.RegOp.BitOr || ins2.op === register_chunk_js_1.RegOp.BitXor || ins2.op === register_chunk_js_1.RegOp.Shl || ins2.op === register_chunk_js_1.RegOp.Shr || ins2.op === register_chunk_js_1.RegOp.Eq || ins2.op === register_chunk_js_1.RegOp.Ne || ins2.op === register_chunk_js_1.RegOp.Lt || ins2.op === register_chunk_js_1.RegOp.Le || ins2.op === register_chunk_js_1.RegOp.Gt || ins2.op === register_chunk_js_1.RegOp.Ge) {
+              let forwarded = false;
+              if (ins2.src1 === rTemp) {
+                ins2.src1 = rSrc;
+                forwarded = true;
+              }
+              if (ins2.src2 === rTemp) {
+                ins2.src2 = rSrc;
+                forwarded = true;
+              }
+              if (forwarded) {
+                ins1.op = register_chunk_js_1.RegOp.Nop;
+                stats.movesEliminated++;
+                stats.registerMovesRemoved++;
+                break;
+              }
+            }
+            if (ins2.dst === rTemp) {
+              break;
+            }
+          }
+        }
+      }
+      for (let i = 0; i < n; i++) {
+        const ins = code[i];
+        if (ins.op === register_chunk_js_1.RegOp.Jump && ins.dst === i + 1) {
+          ins.op = register_chunk_js_1.RegOp.Nop;
+          stats.deadInstructionsRemoved++;
+        }
+      }
+      for (let i = 0; i < n - 1; i++) {
+        const ins1 = code[i];
+        if (ins1.op === register_chunk_js_1.RegOp.LoadGlobal) {
+          const globalIdx = ins1.src1;
+          const loadedReg = ins1.dst;
+          for (let j = i + 1; j < Math.min(i + 8, n); j++) {
+            const ins2 = code[j];
+            if (ins2.op === register_chunk_js_1.RegOp.Nop)
+              continue;
+            if (ins2.op === register_chunk_js_1.RegOp.Call || ins2.op === register_chunk_js_1.RegOp.StoreGlobal || ins2.op === register_chunk_js_1.RegOp.DefineGlobal || ins2.op === register_chunk_js_1.RegOp.Jump || ins2.op === register_chunk_js_1.RegOp.JumpIf || ins2.op === register_chunk_js_1.RegOp.JumpIfNot || ins2.op === register_chunk_js_1.RegOp.JumpNull || ins2.op === register_chunk_js_1.RegOp.Return || ins2.dst === loadedReg) {
+              break;
+            }
+            if (ins2.op === register_chunk_js_1.RegOp.LoadGlobal && ins2.src1 === globalIdx) {
+              ins2.op = register_chunk_js_1.RegOp.Move;
+              ins2.src1 = loadedReg;
+              stats.movesEliminated++;
+              break;
+            }
+          }
+        }
+      }
+      let hasNops = false;
+      for (let i = 0; i < n; i++) {
+        if (code[i].op === register_chunk_js_1.RegOp.Nop) {
+          hasNops = true;
+          break;
+        }
+      }
+      if (hasNops) {
+        const oldToNew = /* @__PURE__ */ new Map();
+        const newCode = [];
+        for (let i = 0; i < n; i++) {
+          if (code[i].op !== register_chunk_js_1.RegOp.Nop) {
+            oldToNew.set(i, newCode.length);
+            newCode.push(code[i]);
+          } else {
+            stats.deadInstructionsRemoved++;
+          }
+        }
+        oldToNew.set(n, newCode.length);
+        for (const ins of newCode) {
+          if (ins.op === register_chunk_js_1.RegOp.Jump) {
+            const newTarget = oldToNew.get(ins.dst);
+            if (newTarget !== void 0)
+              ins.dst = newTarget;
+          } else if (ins.op === register_chunk_js_1.RegOp.JumpIf || ins.op === register_chunk_js_1.RegOp.JumpIfNot || ins.op === register_chunk_js_1.RegOp.JumpNull || ins.op === register_chunk_js_1.RegOp.IterNext) {
+            const newTarget = oldToNew.get(ins.src2);
+            if (newTarget !== void 0)
+              ins.src2 = newTarget;
+          }
+        }
+        regChunk.code = newCode;
+      }
+      return regChunk;
+    }
+  }
+});
+
+// dist/compiler/profitability.js
+var require_profitability = __commonJS({
+  "dist/compiler/profitability.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.OptimizationTier = void 0;
+    exports2.analyzeAstProfitability = analyzeAstProfitability;
+    exports2.computeProfitabilityDecision = computeProfitabilityDecision;
+    var OptimizationTier;
+    (function(OptimizationTier2) {
+      OptimizationTier2[OptimizationTier2["Tier0_AlwaysCheap"] = 0] = "Tier0_AlwaysCheap";
+      OptimizationTier2[OptimizationTier2["Tier1_Structural"] = 1] = "Tier1_Structural";
+      OptimizationTier2[OptimizationTier2["Tier2_Expensive"] = 2] = "Tier2_Expensive";
+    })(OptimizationTier || (exports2.OptimizationTier = OptimizationTier = {}));
+    function analyzeAstProfitability(program) {
+      let statementCount = 0;
+      let expressionCount = 0;
+      let functionCount = 0;
+      let loopCount = 0;
+      let branchCount = 0;
+      let hasMutations = false;
+      let hasAsync = false;
+      let hasFoldableCandidates = false;
+      function scan(node) {
+        if (!node || typeof node !== "object")
+          return;
+        switch (node.kind) {
+          // ── Statements ──────────────────────────────────────────────────────────
+          case "Program": {
+            const stmts = node.statements;
+            if (stmts) {
+              for (let i = 0; i < stmts.length; i++)
+                scan(stmts[i]);
+            }
+            return;
+          }
+          case "BlockStmt": {
+            statementCount++;
+            const body = node.body;
+            if (body) {
+              for (let i = 0; i < body.length; i++)
+                scan(body[i]);
+            }
+            return;
+          }
+          case "FunctionDeclStmt": {
+            statementCount++;
+            functionCount++;
+            if (node.isAsync)
+              hasAsync = true;
+            scan(node.body);
+            return;
+          }
+          case "WhileStmt": {
+            statementCount++;
+            loopCount++;
+            scan(node.condition);
+            scan(node.body);
+            return;
+          }
+          case "ForStmt": {
+            statementCount++;
+            loopCount++;
+            scan(node.iterable);
+            scan(node.body);
+            return;
+          }
+          case "IfStmt": {
+            statementCount++;
+            branchCount++;
+            scan(node.condition);
+            scan(node.then);
+            if (node.else_)
+              scan(node.else_);
+            return;
+          }
+          case "VarDeclStmt":
+          case "ConstDeclStmt": {
+            statementCount++;
+            if (node.initializer)
+              scan(node.initializer);
+            return;
+          }
+          case "ReturnStmt": {
+            statementCount++;
+            if (node.value)
+              scan(node.value);
+            return;
+          }
+          case "ExprStmt": {
+            statementCount++;
+            scan(node.expr);
+            return;
+          }
+          case "ImplBlockStmt": {
+            statementCount++;
+            const methods = node.methods;
+            if (methods) {
+              for (let i = 0; i < methods.length; i++)
+                scan(methods[i]);
+            }
+            return;
+          }
+          case "ExportStmt": {
+            statementCount++;
+            scan(node.declaration);
+            return;
+          }
+          case "TestStmt": {
+            statementCount++;
+            scan(node.body);
+            return;
+          }
+          case "AssertStmt": {
+            statementCount++;
+            scan(node.condition);
+            if (node.message)
+              scan(node.message);
+            return;
+          }
+          case "StructDeclStmt":
+          case "TraitDeclStmt":
+          case "TypeAliasStmt":
+          case "ImportStmt":
+          case "BreakStmt":
+          case "ContinueStmt": {
+            statementCount++;
+            return;
+          }
+          // ── Expressions ─────────────────────────────────────────────────────────
+          case "AssignExpr":
+          case "CompoundAssignExpr": {
+            expressionCount++;
+            hasMutations = true;
+            scan(node.target);
+            scan(node.value);
+            return;
+          }
+          case "BinaryExpr": {
+            expressionCount++;
+            const l = node.left?.kind;
+            const r = node.right?.kind;
+            if (l === "IntLiteral" || l === "FloatLiteral" || l === "StringLiteral" || l === "BoolLiteral" || r === "IntLiteral" || r === "FloatLiteral" || r === "StringLiteral" || r === "BoolLiteral") {
+              hasFoldableCandidates = true;
+            }
+            scan(node.left);
+            scan(node.right);
+            return;
+          }
+          case "UnaryExpr": {
+            expressionCount++;
+            scan(node.operand);
+            return;
+          }
+          case "IfExpr": {
+            expressionCount++;
+            branchCount++;
+            scan(node.condition);
+            scan(node.then);
+            if (node.else_)
+              scan(node.else_);
+            return;
+          }
+          case "BlockExpr": {
+            expressionCount++;
+            const body = node.body;
+            if (body) {
+              for (let i = 0; i < body.length; i++)
+                scan(body[i]);
+            }
+            return;
+          }
+          case "CallExpr": {
+            expressionCount++;
+            scan(node.callee);
+            const args = node.args;
+            if (args) {
+              for (let i = 0; i < args.length; i++)
+                scan(args[i]);
+            }
+            return;
+          }
+          case "MemberExpr": {
+            expressionCount++;
+            scan(node.object);
+            return;
+          }
+          case "IndexExpr": {
+            expressionCount++;
+            scan(node.object);
+            scan(node.index);
+            return;
+          }
+          case "ArrayLiteralExpr":
+          case "ArrayExpr": {
+            expressionCount++;
+            const elements = node.elements;
+            if (elements) {
+              for (let i = 0; i < elements.length; i++)
+                scan(elements[i]);
+            }
+            return;
+          }
+          case "ObjectLiteralExpr":
+          case "ObjectExpr":
+          case "StructInitExpr": {
+            expressionCount++;
+            const fields = node.fields;
+            if (fields) {
+              for (let i = 0; i < fields.length; i++) {
+                if (fields[i].value)
+                  scan(fields[i].value);
+              }
+            }
+            return;
+          }
+          case "MatchExpr": {
+            expressionCount++;
+            scan(node.scrutinee);
+            const arms = node.arms;
+            if (arms) {
+              for (let i = 0; i < arms.length; i++) {
+                if (arms[i].guard)
+                  scan(arms[i].guard);
+                scan(arms[i].body);
+              }
+            }
+            return;
+          }
+          case "RangeExpr": {
+            expressionCount++;
+            scan(node.start);
+            scan(node.end);
+            return;
+          }
+          case "CastExpr": {
+            expressionCount++;
+            scan(node.expr);
+            return;
+          }
+          case "AwaitExpr": {
+            expressionCount++;
+            hasAsync = true;
+            scan(node.expr);
+            return;
+          }
+          case "FunctionExpr": {
+            expressionCount++;
+            if (node.isAsync)
+              hasAsync = true;
+            scan(node.body);
+            return;
+          }
+          case "IntLiteral":
+          case "FloatLiteral":
+          case "StringLiteral":
+          case "BoolLiteral":
+          case "NullLiteral":
+          case "IdentExpr": {
+            expressionCount++;
+            return;
+          }
+          default: {
+            for (const key of Object.keys(node)) {
+              if (key !== "span")
+                scan(node[key]);
+            }
+            return;
+          }
+        }
+      }
+      scan(program);
+      const estimatedComplexity = statementCount + expressionCount + loopCount * 10 + branchCount * 3 + functionCount * 5;
+      const budget = Math.max(10, Math.floor(estimatedComplexity * 1.5));
+      return {
+        statementCount,
+        expressionCount,
+        functionCount,
+        loopCount,
+        branchCount,
+        hasMutations,
+        hasAsync,
+        hasFoldableCandidates,
+        estimatedComplexity,
+        budget
+      };
+    }
+    function computeProfitabilityDecision(metrics, explicitTier) {
+      if (explicitTier !== void 0) {
+        return {
+          isSmallProgram: false,
+          allowedTier: explicitTier,
+          enableAstPass: explicitTier >= OptimizationTier.Tier1_Structural,
+          enableDce: explicitTier >= OptimizationTier.Tier1_Structural,
+          enableRegisterOpt: true,
+          budget: metrics.budget,
+          metrics
+        };
+      }
+      const isSmallProgram = metrics.statementCount <= 5 && metrics.loopCount === 0 && metrics.functionCount === 0 && !metrics.hasFoldableCandidates;
+      if (isSmallProgram) {
+        return {
+          isSmallProgram: true,
+          allowedTier: OptimizationTier.Tier0_AlwaysCheap,
+          enableAstPass: false,
+          enableDce: false,
+          enableRegisterOpt: true,
+          // Register cleanup is sub-millisecond
+          budget: metrics.budget,
+          metrics
+        };
+      }
+      const allowedTier = metrics.loopCount > 0 || metrics.statementCount > 20 || metrics.hasFoldableCandidates ? OptimizationTier.Tier2_Expensive : OptimizationTier.Tier1_Structural;
+      return {
+        isSmallProgram: false,
+        allowedTier,
+        enableAstPass: metrics.hasFoldableCandidates || metrics.loopCount > 0 || metrics.branchCount > 0,
+        enableDce: metrics.branchCount > 0 || metrics.loopCount > 0,
+        enableRegisterOpt: true,
+        budget: metrics.budget,
+        metrics
+      };
+    }
+  }
+});
+
+// dist/compiler/optimizer.js
+var require_optimizer = __commonJS({
+  "dist/compiler/optimizer.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.OptimizerPipeline = void 0;
+    var optimizer_passes_js_1 = require_optimizer_passes();
+    var profitability_js_1 = require_profitability();
+    var OptimizerPipeline = class {
+      stats = {
+        passesAttempted: 0,
+        passesApplied: 0,
+        passesSkipped: 0,
+        constantsFolded: 0,
+        branchesSimplified: 0,
+        jumpsThreaded: 0,
+        deadInstructionsRemoved: 0,
+        movesEliminated: 0,
+        registerMovesRemoved: 0,
+        instructionsBefore: 0,
+        instructionsAfter: 0,
+        instructionDelta: 0,
+        registersBefore: 0,
+        registersAfter: 0,
+        optimizationTimeMs: 0
+      };
+      options;
+      decision = null;
+      constructor(options = {}) {
+        this.options = {
+          enabled: options.enabled !== void 0 ? options.enabled : process.env.HKD_OPT_ENABLED !== "0",
+          tier: options.tier ?? profitability_js_1.OptimizationTier.Tier1_Structural,
+          constantFolding: options.constantFolding !== void 0 ? options.constantFolding : process.env.HKD_OPT_CONST_FOLD !== "0",
+          deadCodeElimination: options.deadCodeElimination !== void 0 ? options.deadCodeElimination : process.env.HKD_OPT_DCE !== "0",
+          jumpThreading: options.jumpThreading !== void 0 ? options.jumpThreading : process.env.HKD_OPT_JUMP_THREAD !== "0",
+          peephole: options.peephole !== void 0 ? options.peephole : process.env.HKD_OPT_PEEPHOLE !== "0",
+          registerOptimization: options.registerOptimization !== void 0 ? options.registerOptimization : process.env.HKD_OPT_REG_OPT !== "0"
+        };
+      }
+      getStats() {
+        return { ...this.stats };
+      }
+      getDecision() {
+        return this.decision;
+      }
+      resetStats() {
+        this.stats = {
+          passesAttempted: 0,
+          passesApplied: 0,
+          passesSkipped: 0,
+          constantsFolded: 0,
+          branchesSimplified: 0,
+          jumpsThreaded: 0,
+          deadInstructionsRemoved: 0,
+          movesEliminated: 0,
+          registerMovesRemoved: 0,
+          instructionsBefore: 0,
+          instructionsAfter: 0,
+          instructionDelta: 0,
+          registersBefore: 0,
+          registersAfter: 0,
+          optimizationTimeMs: 0
+        };
+      }
+      /**
+       * Pass 1: Optimize AST before bytecode emission.
+       * Evaluates profitability; if small program fast path applies, skips AST pass.
+       */
+      optimizeAst(program) {
+        if (!this.options.enabled)
+          return program;
+        const t0 = typeof performance !== "undefined" ? performance.now() : 0;
+        this.stats.passesAttempted++;
+        const metrics = (0, profitability_js_1.analyzeAstProfitability)(program);
+        this.decision = (0, profitability_js_1.computeProfitabilityDecision)(metrics, this.options.tier);
+        if (!this.decision.enableAstPass || !this.options.constantFolding) {
+          this.stats.passesSkipped++;
+          return program;
+        }
+        this.stats.passesApplied++;
+        const optimized = (0, optimizer_passes_js_1.foldAstConstants)(program, this.stats, {
+          ...this.options,
+          constantFolding: this.decision.enableAstPass,
+          deadCodeElimination: this.decision.enableDce && this.options.deadCodeElimination
+        });
+        if (t0 > 0) {
+          this.stats.optimizationTimeMs += performance.now() - t0;
+        }
+        return optimized;
+      }
+      /**
+       * Pass 2: Optimize stack-based bytecode Chunk.
+       */
+      optimizeChunk(chunk) {
+        if (!this.options.enabled)
+          return chunk;
+        return (0, optimizer_passes_js_1.optimizeBytecodeChunk)(chunk, this.stats, this.options);
+      }
+      /**
+       * Pass 3: Optimize register-based bytecode RegisterChunk.
+       */
+      optimizeRegister(regChunk) {
+        if (!this.options.enabled || !this.options.registerOptimization)
+          return regChunk;
+        const t0 = typeof performance !== "undefined" ? performance.now() : 0;
+        this.stats.passesAttempted++;
+        this.stats.passesApplied++;
+        this.stats.instructionsBefore += regChunk.code.length;
+        this.stats.registersBefore = Math.max(this.stats.registersBefore, regChunk.registerCount);
+        const optimized = (0, optimizer_passes_js_1.optimizeRegisterChunk)(regChunk, this.stats, this.options);
+        this.stats.instructionsAfter += optimized.code.length;
+        this.stats.instructionDelta = this.stats.instructionsBefore - this.stats.instructionsAfter;
+        this.stats.registersAfter = Math.max(this.stats.registersAfter, optimized.registerCount);
+        if (t0 > 0) {
+          this.stats.optimizationTimeMs += performance.now() - t0;
+        }
+        return optimized;
+      }
+    };
+    exports2.OptimizerPipeline = OptimizerPipeline;
+  }
+});
+
+// dist/bytecode/optimizer.js
+var require_optimizer2 = __commonJS({
+  "dist/bytecode/optimizer.js"(exports2) {
+    "use strict";
+    var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
+      if (k2 === void 0) k2 = k;
+      var desc = Object.getOwnPropertyDescriptor(m, k);
+      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+        desc = { enumerable: true, get: function() {
+          return m[k];
+        } };
+      }
+      Object.defineProperty(o, k2, desc);
+    }) : (function(o, m, k, k2) {
+      if (k2 === void 0) k2 = k;
+      o[k2] = m[k];
+    }));
+    var __exportStar = exports2 && exports2.__exportStar || function(m, exports3) {
+      for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports3, p)) __createBinding2(exports3, m, p);
+    };
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    __exportStar(require_optimizer(), exports2);
+    __exportStar(require_optimizer_passes(), exports2);
+  }
+});
+
 // dist/bytecode/compiler.js
 var require_compiler = __commonJS({
   "dist/bytecode/compiler.js"(exports2) {
@@ -5153,6 +6603,7 @@ var require_compiler = __commonJS({
     var lexer_js_12 = require_lexer();
     var parser_js_12 = require_parser();
     var async_lowering_js_1 = require_async_lowering();
+    var optimizer_js_1 = require_optimizer2();
     var CompilerFrame = class {
       chunk;
       locals = [];
@@ -5231,9 +6682,14 @@ var require_compiler = __commonJS({
       currentSpecializedReceiverStruct = null;
       currentStruct = null;
       loadedImportPaths = /* @__PURE__ */ new Set();
-      constructor(reporter, isModule = false) {
+      optimizer;
+      constructor(reporter, isModule = false, optimizerOptions) {
         this.reporter = reporter;
         this.isModule = isModule;
+        this.optimizer = new optimizer_js_1.OptimizerPipeline(optimizerOptions);
+      }
+      getOptimizer() {
+        return this.optimizer;
       }
       loadImportedAst(sourcePath) {
         try {
@@ -5299,7 +6755,8 @@ var require_compiler = __commonJS({
       }
       // ── Public API ─────────────────────────────────────────────────────────────
       compile(program) {
-        for (const stmt of program.statements) {
+        const optProgram = this.optimizer.optimizeAst(program);
+        for (const stmt of optProgram.statements) {
           if (stmt.kind === "ImportStmt") {
             this.scanImportedAst(stmt.source);
           }
@@ -5319,11 +6776,11 @@ var require_compiler = __commonJS({
         }
         const frame = new CompilerFrame("<script>", 0);
         this.frames.push(frame);
-        for (const stmt of program.statements) {
+        for (const stmt of optProgram.statements) {
           this.compileStmt(stmt);
         }
         this.emit(255, 0);
-        const result = frame.chunk;
+        const result = this.optimizer.optimizeChunk(frame.chunk);
         this.frames.pop();
         return result;
       }
@@ -5338,8 +6795,7 @@ var require_compiler = __commonJS({
         this.chunk.writeByte(op, line);
       }
       emitU16(op, operand, line) {
-        this.chunk.writeByte(op, line);
-        this.chunk.writeU16(operand, line);
+        this.chunk.writeOpU16(op, operand, line);
       }
       emitConst(value, line) {
         this.chunk.emitConstant(value, line);
@@ -5481,8 +6937,7 @@ var require_compiler = __commonJS({
           return;
         }
         const fnIdx = this.chunk.addConstant(fn);
-        this.chunk.writeByte(98, line);
-        this.chunk.writeU16(fnIdx, line);
+        this.chunk.writeOpU16(98, fnIdx, line);
         this.chunk.writeByte(upvalues.length, line);
         for (const uv of upvalues) {
           this.chunk.writeByte(uv.isLocal ? 1 : 0, line);
@@ -6193,6 +7648,7 @@ var require_vm = __commonJS({
       stack = [];
       frames = [];
       globals = /* @__PURE__ */ new Map();
+      globalCells = /* @__PURE__ */ new Map();
       output;
       dbg = null;
       isPaused = false;
@@ -6250,6 +7706,14 @@ var require_vm = __commonJS({
           return { ok: false, error: fullMessage, code };
         }
       }
+      getGlobalCell(name) {
+        let cell = this.globalCells.get(name);
+        if (!cell) {
+          cell = { name, value: this.globals.has(name) ? this.globals.get(name) : void 0 };
+          this.globalCells.set(name, cell);
+        }
+        return cell;
+      }
       /** Register a native function in the global scope. */
       defineNative(name, arity, fn) {
         const native = {
@@ -6259,14 +7723,23 @@ var require_vm = __commonJS({
           call: fn
         };
         this.globals.set(name, native);
+        const cell = this.globalCells.get(name);
+        if (cell)
+          cell.value = native;
       }
       /** Read a global value. */
       getGlobal(name) {
+        const cell = this.globalCells.get(name);
+        if (cell !== void 0 && cell.value !== void 0)
+          return cell.value;
         return this.globals.get(name);
       }
       /** Set a global value. */
       setGlobal(name, value) {
         this.globals.set(name, value);
+        const cell = this.globalCells.get(name);
+        if (cell)
+          cell.value = value;
       }
       resume() {
         this.isPaused = false;
@@ -6316,8 +7789,13 @@ var require_vm = __commonJS({
         return locals;
       }
       getAllGlobals() {
+        const map = new Map(this.globals);
+        for (const [k, cell] of this.globalCells.entries()) {
+          if (cell.value !== void 0)
+            map.set(k, cell.value);
+        }
         const list = [];
-        for (const [k, v] of this.globals.entries()) {
+        for (const [k, v] of map.entries()) {
           list.push({ name: k, value: v });
         }
         return list;
@@ -6330,23 +7808,30 @@ var require_vm = __commonJS({
       }
       // ── Main execution loop ────────────────────────────────────────────────────
       execute(targetFrames = 0) {
+        let frame = this.frames[this.frames.length - 1];
+        let code = frame.chunk.code;
+        let cells = frame.cells;
         while (true) {
-          const frame = this.currentFrame();
-          const currentIp = frame.ip;
-          const line = frame.chunk.lines[currentIp] || 0;
           if (this.dbg) {
-            const action = this.dbg.onBeforeInstruction?.(this, frame, frame.chunk.code[currentIp], line);
+            const currentIp = frame.ip;
+            const line = frame.chunk.lines[currentIp] || 0;
+            const action = this.dbg.onBeforeInstruction?.(this, frame, code[currentIp], line);
             if (action === "pause") {
               this.isPaused = true;
               return { ok: true, value: null };
             }
           }
-          const op = frame.chunk.readByte(frame.ip++);
+          const op = code[frame.ip++];
           switch (op) {
             // ── Stack ─────────────────────────────────────────────────────────
             case 1: {
-              const idx = this.readU16();
-              this.push(this.getConstant(frame, idx));
+              const idx = (code[frame.ip] << 8 | code[frame.ip + 1]) >>> 0;
+              frame.ip += 2;
+              const constants = frame.chunk.constants;
+              if (idx >= constants.length) {
+                throw new VmError(`Bytecode safety violation: constant index ${idx} out of bounds (constant pool size: ${constants.length})`, index_js_12.ErrorCode.E401);
+              }
+              this.push(constants[idx]);
               break;
             }
             case 2:
@@ -6362,44 +7847,67 @@ var require_vm = __commonJS({
               this.pop();
               break;
             case 6:
-              this.push(this.peek(0));
+              this.push(this.stack[this.stack.length - 1]);
               break;
             // ── Locals ────────────────────────────────────────────────────────
             case 16: {
-              const slot = this.readU16();
+              const slot = (code[frame.ip] << 8 | code[frame.ip + 1]) >>> 0;
+              frame.ip += 2;
               this.push(this.stack[frame.base + slot]);
               break;
             }
             case 17: {
-              const slot = this.readU16();
-              this.stack[frame.base + slot] = this.peek(0);
+              const slot = (code[frame.ip] << 8 | code[frame.ip + 1]) >>> 0;
+              frame.ip += 2;
+              this.stack[frame.base + slot] = this.stack[this.stack.length - 1];
               break;
             }
             case 18: {
-              const slot = this.readU16();
+              const slot = (code[frame.ip] << 8 | code[frame.ip + 1]) >>> 0;
+              frame.ip += 2;
               this.stack[frame.base + slot] = this.pop();
               break;
             }
             // ── Globals ───────────────────────────────────────────────────────
             case 19: {
-              const nameIdx = this.readU16();
-              const name = this.getConstant(frame, nameIdx);
-              if (!this.globals.has(name)) {
-                throw new VmError(`Undefined variable \`${name}\``, index_js_12.ErrorCode.E301);
+              const nameIdx = (code[frame.ip] << 8 | code[frame.ip + 1]) >>> 0;
+              frame.ip += 2;
+              let cell = cells[nameIdx];
+              if (!cell) {
+                const name = this.getConstant(frame, nameIdx);
+                cell = this.getGlobalCell(name);
+                cells[nameIdx] = cell;
               }
-              this.push(this.globals.get(name));
+              if (cell.value === void 0 && !this.globals.has(cell.name)) {
+                throw new VmError(`Undefined variable \`${cell.name}\``, index_js_12.ErrorCode.E301);
+              }
+              this.push(cell.value);
               break;
             }
             case 20: {
-              const nameIdx = this.readU16();
-              const name = this.getConstant(frame, nameIdx);
-              this.globals.set(name, this.peek(0));
+              const nameIdx = (code[frame.ip] << 8 | code[frame.ip + 1]) >>> 0;
+              frame.ip += 2;
+              let cell = cells[nameIdx];
+              if (!cell) {
+                const name = this.getConstant(frame, nameIdx);
+                cell = this.getGlobalCell(name);
+                cells[nameIdx] = cell;
+              }
+              cell.value = this.stack[this.stack.length - 1];
               break;
             }
             case 21: {
-              const nameIdx = this.readU16();
-              const name = this.getConstant(frame, nameIdx);
-              this.globals.set(name, this.pop());
+              const nameIdx = (code[frame.ip] << 8 | code[frame.ip + 1]) >>> 0;
+              frame.ip += 2;
+              let cell = cells[nameIdx];
+              if (!cell) {
+                const name = this.getConstant(frame, nameIdx);
+                cell = this.getGlobalCell(name);
+                cells[nameIdx] = cell;
+              }
+              const val = this.pop();
+              cell.value = val;
+              this.globals.set(cell.name, val);
               break;
             }
             // ── Upvalues ──────────────────────────────────────────────────────
@@ -6424,21 +7932,35 @@ var require_vm = __commonJS({
             case 32: {
               const b = this.pop();
               const a = this.pop();
-              if (typeof a === "string" || typeof b === "string") {
-                this.push(this.hkdToString(a) + this.hkdToString(b));
-              } else if (typeof a === "number" && typeof b === "number") {
+              if (typeof a === "number" && typeof b === "number") {
                 this.push(a + b);
+              } else if (typeof a === "string" || typeof b === "string") {
+                this.push(this.hkdToString(a) + this.hkdToString(b));
               } else {
                 throw new VmError(`Cannot add ${typeof a} and ${typeof b}`, index_js_12.ErrorCode.E405);
               }
               break;
             }
-            case 33:
-              this.numericOp("-");
+            case 33: {
+              const b = this.pop();
+              const a = this.pop();
+              if (typeof a === "number" && typeof b === "number") {
+                this.push(a - b);
+              } else {
+                throw new VmError("Operator '-' requires numbers", index_js_12.ErrorCode.E405);
+              }
               break;
-            case 34:
-              this.numericOp("*");
+            }
+            case 34: {
+              const b = this.pop();
+              const a = this.pop();
+              if (typeof a === "number" && typeof b === "number") {
+                this.push(a * b);
+              } else {
+                throw new VmError("Operator '*' requires numbers", index_js_12.ErrorCode.E405);
+              }
               break;
+            }
             case 35: {
               const b = this.pop();
               const a = this.pop();
@@ -6475,41 +7997,70 @@ var require_vm = __commonJS({
             }
             case 38: {
               const a = this.pop();
-              if (typeof a === "number")
+              if (typeof a === "number") {
                 this.push(-a);
-              else
+              } else {
                 throw new VmError("Negation requires a number", index_js_12.ErrorCode.E405);
+              }
               break;
             }
             // ── Comparison ────────────────────────────────────────────────────
             case 48: {
               const b = this.pop(), a = this.pop();
-              this.push(this.hkdEquals(a, b));
+              if (typeof a === "number" && typeof b === "number") {
+                this.push(a === b);
+              } else if (typeof a === "boolean" && typeof b === "boolean") {
+                this.push(a === b);
+              } else {
+                this.push(this.hkdEquals(a, b));
+              }
               break;
             }
             case 49: {
               const b = this.pop(), a = this.pop();
-              this.push(!this.hkdEquals(a, b));
+              if (typeof a === "number" && typeof b === "number") {
+                this.push(a !== b);
+              } else if (typeof a === "boolean" && typeof b === "boolean") {
+                this.push(a !== b);
+              } else {
+                this.push(!this.hkdEquals(a, b));
+              }
               break;
             }
             case 50: {
               const b = this.pop(), a = this.pop();
-              this.push(this.compareValues(a, b) < 0);
+              if (typeof a === "number" && typeof b === "number") {
+                this.push(a < b);
+              } else {
+                this.push(this.compareValues(a, b) < 0);
+              }
               break;
             }
             case 51: {
               const b = this.pop(), a = this.pop();
-              this.push(this.compareValues(a, b) <= 0);
+              if (typeof a === "number" && typeof b === "number") {
+                this.push(a <= b);
+              } else {
+                this.push(this.compareValues(a, b) <= 0);
+              }
               break;
             }
             case 52: {
               const b = this.pop(), a = this.pop();
-              this.push(this.compareValues(a, b) > 0);
+              if (typeof a === "number" && typeof b === "number") {
+                this.push(a > b);
+              } else {
+                this.push(this.compareValues(a, b) > 0);
+              }
               break;
             }
             case 53: {
               const b = this.pop(), a = this.pop();
-              this.push(this.compareValues(a, b) >= 0);
+              if (typeof a === "number" && typeof b === "number") {
+                this.push(a >= b);
+              } else {
+                this.push(this.compareValues(a, b) >= 0);
+              }
               break;
             }
             // ── Logical ───────────────────────────────────────────────────────
@@ -6547,36 +8098,42 @@ var require_vm = __commonJS({
             }
             // ── Jumps ─────────────────────────────────────────────────────────
             case 80: {
-              const offset = frame.chunk.readI16(frame.ip);
+              const raw = code[frame.ip] << 8 | code[frame.ip + 1];
+              const offset = raw > 32767 ? raw - 65536 : raw;
               frame.ip += 2 + offset;
               break;
             }
             case 81: {
-              const offset = frame.chunk.readI16(frame.ip);
+              const raw = code[frame.ip] << 8 | code[frame.ip + 1];
+              const offset = raw > 32767 ? raw - 65536 : raw;
               frame.ip += 2;
-              if (!this.isTruthy(this.peek(0)))
+              const top = this.stack[this.stack.length - 1];
+              if (top === false || top === null || top === 0 || top === "")
                 frame.ip += offset;
               break;
             }
             case 82: {
-              const offset = frame.chunk.readI16(frame.ip);
+              const raw = code[frame.ip] << 8 | code[frame.ip + 1];
+              const offset = raw > 32767 ? raw - 65536 : raw;
               frame.ip += 2;
-              if (this.isTruthy(this.peek(0)))
+              const top = this.stack[this.stack.length - 1];
+              if (top !== false && top !== null && top !== 0 && top !== "")
                 frame.ip += offset;
               break;
             }
             case 83: {
-              const offset = frame.chunk.readI16(frame.ip);
+              const raw = code[frame.ip] << 8 | code[frame.ip + 1];
+              const offset = raw > 32767 ? raw - 65536 : raw;
               frame.ip += 2;
-              if (this.peek(0) === null)
+              if (this.stack[this.stack.length - 1] === null)
                 frame.ip += offset;
               break;
             }
             // ── Functions ─────────────────────────────────────────────────────
             case 96: {
-              const argc = frame.chunk.readByte(frame.ip++);
+              const argc = code[frame.ip++];
               const callee = this.peek(argc);
-              if (frame.ip < frame.chunk.code.length && frame.chunk.code[frame.ip] === 97) {
+              if (frame.ip < code.length && code[frame.ip] === 97) {
                 const isSelf = callee && typeof callee === "object" && "type" in callee && (callee.type === "function" ? callee.chunk === frame.chunk : callee.type === "closure" ? callee.fn.chunk === frame.chunk : false);
                 const arity = callee && typeof callee === "object" && "type" in callee && (callee.type === "function" ? callee.arity : callee.type === "closure" ? callee.fn.arity : -1);
                 if (isSelf && arity === argc) {
@@ -6590,6 +8147,9 @@ var require_vm = __commonJS({
                 }
               }
               this.callValue(callee, argc);
+              frame = this.frames[this.frames.length - 1];
+              code = frame.chunk.code;
+              cells = frame.cells;
               break;
             }
             case 97: {
@@ -6599,6 +8159,9 @@ var require_vm = __commonJS({
               if (this.frames.length === targetFrames) {
                 return { ok: true, value: returnValue };
               }
+              frame = this.frames[this.frames.length - 1];
+              code = frame.chunk.code;
+              cells = frame.cells;
               this.push(returnValue);
               break;
             }
@@ -6776,7 +8339,8 @@ var require_vm = __commonJS({
           chunk: closure.fn.chunk,
           ip: 0,
           base,
-          openUpvalues: []
+          openUpvalues: [],
+          cells: []
         });
       }
       // ── Stack helpers ─────────────────────────────────────────────────────────
@@ -6804,11 +8368,12 @@ var require_vm = __commonJS({
       currentFrame() {
         return this.frames[this.frames.length - 1];
       }
-      readU16() {
-        const frame = this.currentFrame();
-        const val = frame.chunk.readU16(frame.ip);
+      readU16(f) {
+        const frame = f ?? this.frames[this.frames.length - 1];
+        const code = frame.chunk.code;
+        const ip = frame.ip;
         frame.ip += 2;
-        return val;
+        return (code[ip] << 8 | code[ip + 1]) >>> 0;
       }
       // ── Value operations ──────────────────────────────────────────────────────
       numericOp(op) {
@@ -7240,6 +8805,1556 @@ var require_vm = __commonJS({
   }
 });
 
+// dist/bytecode/register_lowering.js
+var require_register_lowering = __commonJS({
+  "dist/bytecode/register_lowering.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.lowerToRegisterChunk = lowerToRegisterChunk;
+    var register_chunk_js_1 = require_register_chunk();
+    var optimizer_js_1 = require_optimizer2();
+    function lowerToRegisterChunk(chunk, optPipeline) {
+      const regChunk = new register_chunk_js_1.RegisterChunk(chunk.name, chunk.arity);
+      regChunk.constants = [...chunk.constants];
+      const opt = optPipeline ?? new optimizer_js_1.OptimizerPipeline();
+      for (let i = 0; i < regChunk.constants.length; i++) {
+        const c = regChunk.constants[i];
+        if (c && typeof c === "object" && c.type === "function") {
+          const fn = c;
+          if (!fn.registerChunk) {
+            fn.registerChunk = lowerToRegisterChunk(fn.chunk, opt);
+          }
+        }
+      }
+      const numLocals = Math.max(chunk.localCount, chunk.arity, 64);
+      const code = chunk.code;
+      const lines = chunk.lines;
+      const codeLen = code.length;
+      const ipToReg = new Int32Array(codeLen + 1);
+      ipToReg.fill(-1);
+      const jumpFixups = [];
+      let sp = 0;
+      let ip = 0;
+      function reg(slot) {
+        return numLocals + slot;
+      }
+      while (ip < codeLen) {
+        ipToReg[ip] = regChunk.code.length;
+        const line = lines[ip] || 0;
+        const op = code[ip++];
+        switch (op) {
+          case 1: {
+            const idx = (code[ip] << 8 | code[ip + 1]) >>> 0;
+            ip += 2;
+            const dst = reg(sp++);
+            regChunk.emit(register_chunk_js_1.RegOp.LoadConst, dst, idx, 0, line);
+            break;
+          }
+          case 2: {
+            const dst = reg(sp++);
+            regChunk.emit(register_chunk_js_1.RegOp.LoadNull, dst, 0, 0, line);
+            break;
+          }
+          case 3: {
+            const dst = reg(sp++);
+            regChunk.emit(register_chunk_js_1.RegOp.LoadTrue, dst, 0, 0, line);
+            break;
+          }
+          case 4: {
+            const dst = reg(sp++);
+            regChunk.emit(register_chunk_js_1.RegOp.LoadFalse, dst, 0, 0, line);
+            break;
+          }
+          case 5: {
+            if (sp > 0)
+              sp--;
+            break;
+          }
+          case 6: {
+            const src = reg(sp - 1);
+            const dst = reg(sp++);
+            regChunk.emit(register_chunk_js_1.RegOp.Move, dst, src, 0, line);
+            break;
+          }
+          case 16: {
+            const slot = (code[ip] << 8 | code[ip + 1]) >>> 0;
+            ip += 2;
+            const dst = reg(sp++);
+            regChunk.emit(register_chunk_js_1.RegOp.Move, dst, slot, 0, line);
+            break;
+          }
+          case 17: {
+            const slot = (code[ip] << 8 | code[ip + 1]) >>> 0;
+            ip += 2;
+            const src = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.Move, slot, src, 0, line);
+            break;
+          }
+          case 18: {
+            const slot = (code[ip] << 8 | code[ip + 1]) >>> 0;
+            ip += 2;
+            const src = reg(--sp);
+            regChunk.emit(register_chunk_js_1.RegOp.Move, slot, src, 0, line);
+            break;
+          }
+          case 19: {
+            const nameIdx = (code[ip] << 8 | code[ip + 1]) >>> 0;
+            ip += 2;
+            const dst = reg(sp++);
+            regChunk.emit(register_chunk_js_1.RegOp.LoadGlobal, dst, nameIdx, 0, line);
+            break;
+          }
+          case 20: {
+            const nameIdx = (code[ip] << 8 | code[ip + 1]) >>> 0;
+            ip += 2;
+            const src = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.StoreGlobal, nameIdx, src, 0, line);
+            break;
+          }
+          case 21: {
+            const nameIdx = (code[ip] << 8 | code[ip + 1]) >>> 0;
+            ip += 2;
+            const src = reg(--sp);
+            regChunk.emit(register_chunk_js_1.RegOp.DefineGlobal, nameIdx, src, 0, line);
+            break;
+          }
+          case 22: {
+            const uvIdx = (code[ip] << 8 | code[ip + 1]) >>> 0;
+            ip += 2;
+            const dst = reg(sp++);
+            regChunk.emit(register_chunk_js_1.RegOp.LoadUpvalue, dst, uvIdx, 0, line);
+            break;
+          }
+          case 23: {
+            const uvIdx = (code[ip] << 8 | code[ip + 1]) >>> 0;
+            ip += 2;
+            const src = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.StoreUpvalue, uvIdx, src, 0, line);
+            break;
+          }
+          case 24: {
+            if (sp > 0)
+              sp--;
+            break;
+          }
+          case 32: {
+            const src2 = reg(--sp);
+            const src1 = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.Add, src1, src1, src2, line);
+            break;
+          }
+          case 33: {
+            const src2 = reg(--sp);
+            const src1 = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.Sub, src1, src1, src2, line);
+            break;
+          }
+          case 34: {
+            const src2 = reg(--sp);
+            const src1 = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.Mul, src1, src1, src2, line);
+            break;
+          }
+          case 35: {
+            const src2 = reg(--sp);
+            const src1 = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.Div, src1, src1, src2, line);
+            break;
+          }
+          case 36: {
+            const src2 = reg(--sp);
+            const src1 = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.Mod, src1, src1, src2, line);
+            break;
+          }
+          case 37: {
+            const src2 = reg(--sp);
+            const src1 = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.Pow, src1, src1, src2, line);
+            break;
+          }
+          case 38: {
+            const src = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.Neg, src, src, 0, line);
+            break;
+          }
+          case 48: {
+            const src2 = reg(--sp);
+            const src1 = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.Eq, src1, src1, src2, line);
+            break;
+          }
+          case 49: {
+            const src2 = reg(--sp);
+            const src1 = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.Ne, src1, src1, src2, line);
+            break;
+          }
+          case 50: {
+            const src2 = reg(--sp);
+            const src1 = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.Lt, src1, src1, src2, line);
+            break;
+          }
+          case 51: {
+            const src2 = reg(--sp);
+            const src1 = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.Le, src1, src1, src2, line);
+            break;
+          }
+          case 52: {
+            const src2 = reg(--sp);
+            const src1 = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.Gt, src1, src1, src2, line);
+            break;
+          }
+          case 53: {
+            const src2 = reg(--sp);
+            const src1 = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.Ge, src1, src1, src2, line);
+            break;
+          }
+          case 64: {
+            const src = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.Not, src, src, 0, line);
+            break;
+          }
+          case 65: {
+            const src2 = reg(--sp);
+            const src1 = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.BitAnd, src1, src1, src2, line);
+            break;
+          }
+          case 66: {
+            const src2 = reg(--sp);
+            const src1 = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.BitOr, src1, src1, src2, line);
+            break;
+          }
+          case 67: {
+            const src2 = reg(--sp);
+            const src1 = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.BitXor, src1, src1, src2, line);
+            break;
+          }
+          case 68: {
+            const src = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.BitNot, src, src, 0, line);
+            break;
+          }
+          case 69: {
+            const src2 = reg(--sp);
+            const src1 = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.Shl, src1, src1, src2, line);
+            break;
+          }
+          case 70: {
+            const src2 = reg(--sp);
+            const src1 = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.Shr, src1, src1, src2, line);
+            break;
+          }
+          case 80: {
+            const raw = code[ip] << 8 | code[ip + 1];
+            const offset = raw > 32767 ? raw - 65536 : raw;
+            ip += 2;
+            const targetStackIp = ip + offset;
+            const rIdx = regChunk.emit(register_chunk_js_1.RegOp.Jump, 0, 0, 0, line);
+            jumpFixups.push({ regIdx: rIdx, targetStackIp });
+            break;
+          }
+          case 81: {
+            const raw = code[ip] << 8 | code[ip + 1];
+            const offset = raw > 32767 ? raw - 65536 : raw;
+            ip += 2;
+            const targetStackIp = ip + offset;
+            const cond = reg(sp - 1);
+            const rIdx = regChunk.emit(register_chunk_js_1.RegOp.JumpIfNot, cond, 0, 0, line);
+            jumpFixups.push({ regIdx: rIdx, targetStackIp });
+            break;
+          }
+          case 82: {
+            const raw = code[ip] << 8 | code[ip + 1];
+            const offset = raw > 32767 ? raw - 65536 : raw;
+            ip += 2;
+            const targetStackIp = ip + offset;
+            const cond = reg(sp - 1);
+            const rIdx = regChunk.emit(register_chunk_js_1.RegOp.JumpIf, cond, 0, 0, line);
+            jumpFixups.push({ regIdx: rIdx, targetStackIp });
+            break;
+          }
+          case 83: {
+            const raw = code[ip] << 8 | code[ip + 1];
+            const offset = raw > 32767 ? raw - 65536 : raw;
+            ip += 2;
+            const targetStackIp = ip + offset;
+            const cond = reg(sp - 1);
+            const rIdx = regChunk.emit(register_chunk_js_1.RegOp.JumpNull, cond, 0, 0, line);
+            jumpFixups.push({ regIdx: rIdx, targetStackIp });
+            break;
+          }
+          case 96: {
+            const argc = code[ip++];
+            const callee = reg(sp - 1 - argc);
+            const argStart = callee + 1;
+            const dst = callee;
+            regChunk.emit(register_chunk_js_1.RegOp.Call, dst, callee, argStart, line, { argc });
+            sp = sp - argc;
+            break;
+          }
+          case 97: {
+            const src = reg(--sp);
+            regChunk.emit(register_chunk_js_1.RegOp.Return, src, 0, 0, line);
+            break;
+          }
+          case 98: {
+            const fnIdx = (code[ip] << 8 | code[ip + 1]) >>> 0;
+            ip += 2;
+            const upCount = code[ip++];
+            const upvaluesData = [];
+            for (let i = 0; i < upCount; i++) {
+              const isLocal = code[ip++] === 1;
+              const idx = (code[ip] << 8 | code[ip + 1]) >>> 0;
+              ip += 2;
+              upvaluesData.push({ isLocal, index: idx });
+            }
+            const dst = reg(sp++);
+            regChunk.emit(register_chunk_js_1.RegOp.MakeClosure, dst, fnIdx, upCount, line, { upvaluesData });
+            break;
+          }
+          case 112: {
+            const count = (code[ip] << 8 | code[ip + 1]) >>> 0;
+            ip += 2;
+            const startReg = reg(sp - count);
+            const dst = startReg;
+            regChunk.emit(register_chunk_js_1.RegOp.MakeArray, dst, startReg, count, line);
+            sp = sp - count + 1;
+            break;
+          }
+          case 113: {
+            const indexReg = reg(--sp);
+            const objReg = reg(sp - 1);
+            const dst = objReg;
+            regChunk.emit(register_chunk_js_1.RegOp.GetIndex, dst, objReg, indexReg, line);
+            break;
+          }
+          case 114: {
+            const indexReg = reg(--sp);
+            const objReg = reg(--sp);
+            const valReg = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.SetIndex, objReg, indexReg, valReg, line);
+            break;
+          }
+          case 115: {
+            const arrReg = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.ArrayLen, arrReg, arrReg, 0, line);
+            break;
+          }
+          case 128: {
+            const pairCount = (code[ip] << 8 | code[ip + 1]) >>> 0;
+            ip += 2;
+            const startReg = reg(sp - pairCount * 2);
+            const dst = startReg;
+            regChunk.emit(register_chunk_js_1.RegOp.MakeObject, dst, startReg, pairCount, line);
+            sp = sp - pairCount * 2 + 1;
+            break;
+          }
+          case 129: {
+            const nameIdx = (code[ip] << 8 | code[ip + 1]) >>> 0;
+            ip += 2;
+            const objReg = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.GetField, objReg, objReg, nameIdx, line);
+            break;
+          }
+          case 130: {
+            const nameIdx = (code[ip] << 8 | code[ip + 1]) >>> 0;
+            ip += 2;
+            const objReg = reg(--sp);
+            const valReg = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.SetField, objReg, nameIdx, valReg, line);
+            break;
+          }
+          case 144: {
+            const src = reg(sp - 1);
+            regChunk.emit(register_chunk_js_1.RegOp.MakeIter, src, src, 0, line);
+            break;
+          }
+          case 145: {
+            const raw = code[ip] << 8 | code[ip + 1];
+            const offset = raw > 32767 ? raw - 65536 : raw;
+            ip += 2;
+            const targetStackIp = ip + offset;
+            const iterReg = reg(sp - 1);
+            const dst = reg(sp++);
+            const rIdx = regChunk.emit(register_chunk_js_1.RegOp.IterNext, dst, iterReg, 0, line);
+            jumpFixups.push({ regIdx: rIdx, targetStackIp });
+            break;
+          }
+          case 160: {
+            const count = (code[ip] << 8 | code[ip + 1]) >>> 0;
+            ip += 2;
+            const startReg = reg(sp - count);
+            const dst = startReg;
+            regChunk.emit(register_chunk_js_1.RegOp.Concat, dst, startReg, count, line);
+            sp = sp - count + 1;
+            break;
+          }
+          case 240: {
+            ip += 2;
+            break;
+          }
+          case 255: {
+            const resultReg = sp > 0 ? reg(sp - 1) : -1;
+            regChunk.emit(register_chunk_js_1.RegOp.Halt, resultReg, 0, 0, line);
+            break;
+          }
+          default:
+            break;
+        }
+      }
+      ipToReg[codeLen] = regChunk.code.length;
+      for (let i = 0; i < jumpFixups.length; i++) {
+        const fix = jumpFixups[i];
+        const targetRegIdx = ipToReg[fix.targetStackIp];
+        if (targetRegIdx !== -1) {
+          const ins = regChunk.code[fix.regIdx];
+          if (ins.op === register_chunk_js_1.RegOp.Jump) {
+            ins.dst = targetRegIdx;
+          } else {
+            ins.src2 = targetRegIdx;
+          }
+        }
+      }
+      return opt.optimizeRegister(regChunk);
+    }
+  }
+});
+
+// dist/vm/vm_register.js
+var require_vm_register = __commonJS({
+  "dist/vm/vm_register.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.RegisterVM = void 0;
+    var chunk_js_1 = require_chunk();
+    var register_chunk_js_1 = require_register_chunk();
+    var register_lowering_js_1 = require_register_lowering();
+    var index_js_12 = require_errors();
+    var vm_js_1 = require_vm();
+    var MAX_CALL_DEPTH = 512;
+    var EMPTY_ARGS = [];
+    var RegisterVM = class {
+      frames = [];
+      globals = /* @__PURE__ */ new Map();
+      globalCells = /* @__PURE__ */ new Map();
+      output;
+      futureCallbacks = /* @__PURE__ */ new WeakMap();
+      callbackQueue = [];
+      isDispatchingCallbacks = false;
+      regArrayPool = [];
+      framePool = [];
+      constructor(output = (s) => process.stdout.write(s + "\n")) {
+        this.output = output;
+        this.registerBuiltins();
+      }
+      dispatchCallback(cb, args) {
+        this.callbackQueue.push([cb, args]);
+        if (this.isDispatchingCallbacks)
+          return;
+        this.isDispatchingCallbacks = true;
+        try {
+          while (this.callbackQueue.length > 0) {
+            const [nextCb, nextArgs] = this.callbackQueue.shift();
+            this.runCallable(nextCb, nextArgs);
+          }
+        } finally {
+          this.isDispatchingCallbacks = false;
+        }
+      }
+      runCallable(callee, args) {
+        if (!callee || typeof callee !== "object") {
+          throw new vm_js_1.VmError("Cannot call non-function", index_js_12.ErrorCode.E408);
+        }
+        const c = callee;
+        if (c.type === "native") {
+          return c.call(args);
+        }
+        if (c.type === "closure" || c.type === "function") {
+          const fn = c.type === "closure" ? c.fn : c;
+          const regChunk = fn.registerChunk ?? (0, register_lowering_js_1.lowerToRegisterChunk)(fn.chunk);
+          fn.registerChunk = regChunk;
+          const targetFrames = this.frames.length;
+          const closure = c.type === "closure" ? c : { type: "closure", fn, upvalues: [] };
+          const regSize = Math.max(regChunk.registerCount + 32, 128);
+          const registers = new Array(regSize);
+          for (let i = 0; i < args.length; i++)
+            registers[i] = args[i];
+          this.pushFrame(closure, regChunk, registers, 0);
+          const res = this.execute(targetFrames);
+          if (!res.ok)
+            throw new vm_js_1.VmError(res.error, res.code);
+          return res.value;
+        }
+        throw new vm_js_1.VmError("Cannot call non-function", index_js_12.ErrorCode.E408);
+      }
+      getGlobalCell(name) {
+        let cell = this.globalCells.get(name);
+        if (!cell) {
+          cell = { name, value: this.globals.has(name) ? this.globals.get(name) : void 0 };
+          this.globalCells.set(name, cell);
+        }
+        return cell;
+      }
+      defineNative(name, arity, fn, call1, call2) {
+        const native = {
+          type: "native",
+          name,
+          arity,
+          call: fn,
+          call1,
+          call2
+        };
+        this.globals.set(name, native);
+        const cell = this.globalCells.get(name);
+        if (cell)
+          cell.value = native;
+      }
+      getGlobal(name) {
+        const cell = this.globalCells.get(name);
+        if (cell !== void 0 && cell.value !== void 0)
+          return cell.value;
+        return this.globals.get(name);
+      }
+      setGlobal(name, value) {
+        this.globals.set(name, value);
+        const cell = this.globalCells.get(name);
+        if (cell)
+          cell.value = value;
+      }
+      getAllGlobals() {
+        const map = new Map(this.globals);
+        for (const [k, cell] of this.globalCells.entries()) {
+          if (cell.value !== void 0)
+            map.set(k, cell.value);
+        }
+        const list = [];
+        for (const [k, v] of map.entries()) {
+          list.push({ name: k, value: v });
+        }
+        return list;
+      }
+      run(chunk) {
+        let regChunk;
+        if (chunk instanceof register_chunk_js_1.RegisterChunk) {
+          regChunk = chunk;
+        } else {
+          regChunk = (0, register_lowering_js_1.lowerToRegisterChunk)(chunk);
+        }
+        const scriptFn = {
+          type: "function",
+          name: "<script>",
+          arity: 0,
+          chunk: null,
+          upvalueCount: 0
+        };
+        scriptFn.registerChunk = regChunk;
+        const closure = {
+          type: "closure",
+          fn: scriptFn,
+          upvalues: []
+        };
+        const regSize = Math.max(regChunk.registerCount + 32, 128);
+        const registers = new Array(regSize);
+        this.pushFrame(closure, regChunk, registers, 0);
+        try {
+          return this.execute(0);
+        } catch (e) {
+          const code = e instanceof vm_js_1.VmError ? e.code : index_js_12.ErrorCode.E405;
+          const backtrace = [];
+          for (let i = this.frames.length - 1; i >= 0; i--) {
+            const frame = this.frames[i];
+            const ip = frame.ip;
+            const line = ip > 0 && ip - 1 < frame.chunk.code.length ? frame.chunk.code[ip - 1].line : 0;
+            backtrace.push(`  at ${frame.closure?.fn.name ?? "<unknown>"} (line: ${line})`);
+          }
+          const fullMessage = (e?.message || String(e)) + (backtrace.length > 0 ? "\n" + backtrace.join("\n") : "");
+          return { ok: false, error: fullMessage, code };
+        }
+      }
+      pushFrame(closure, chunk, registers, destReg) {
+        if (this.frames.length >= MAX_CALL_DEPTH) {
+          throw new vm_js_1.VmError("Stack overflow (call depth limit reached)", index_js_12.ErrorCode.E404);
+        }
+        let frame;
+        if (this.framePool.length > 0) {
+          frame = this.framePool.pop();
+          frame.closure = closure;
+          frame.chunk = chunk;
+          frame.ip = 0;
+          frame.registers = registers;
+          frame.destReg = destReg;
+          frame.cells.length = 0;
+        } else {
+          frame = {
+            closure,
+            chunk,
+            ip: 0,
+            registers,
+            destReg,
+            cells: []
+          };
+        }
+        this.frames.push(frame);
+      }
+      execute(targetFrames = 0) {
+        let frame = this.frames[this.frames.length - 1];
+        let code = frame.chunk.code;
+        let registers = frame.registers;
+        let constants = frame.chunk.constants;
+        let cells = frame.cells;
+        while (true) {
+          const ins = code[frame.ip++];
+          switch (ins.op) {
+            case register_chunk_js_1.RegOp.Nop:
+              break;
+            case register_chunk_js_1.RegOp.LoadConst:
+              registers[ins.dst] = constants[ins.src1];
+              break;
+            case register_chunk_js_1.RegOp.LoadImm:
+              registers[ins.dst] = ins.src1;
+              break;
+            case register_chunk_js_1.RegOp.LoadNull:
+              registers[ins.dst] = null;
+              break;
+            case register_chunk_js_1.RegOp.LoadTrue:
+              registers[ins.dst] = true;
+              break;
+            case register_chunk_js_1.RegOp.LoadFalse:
+              registers[ins.dst] = false;
+              break;
+            case register_chunk_js_1.RegOp.Move:
+              registers[ins.dst] = registers[ins.src1];
+              break;
+            case register_chunk_js_1.RegOp.LoadGlobal: {
+              const idx = ins.src1;
+              let cell = cells[idx];
+              if (!cell) {
+                const name = constants[idx];
+                cell = this.getGlobalCell(name);
+                cells[idx] = cell;
+              }
+              const val = cell.value;
+              if (val === void 0 && !this.globals.has(cell.name)) {
+                throw new vm_js_1.VmError(`Undefined variable \`${cell.name}\``, index_js_12.ErrorCode.E301);
+              }
+              registers[ins.dst] = val;
+              break;
+            }
+            case register_chunk_js_1.RegOp.StoreGlobal: {
+              const idx = ins.dst;
+              let cell = cells[idx];
+              if (!cell) {
+                const name = constants[idx];
+                cell = this.getGlobalCell(name);
+                cells[idx] = cell;
+              }
+              cell.value = registers[ins.src1];
+              break;
+            }
+            case register_chunk_js_1.RegOp.DefineGlobal: {
+              const idx = ins.dst;
+              let cell = cells[idx];
+              if (!cell) {
+                const name = constants[idx];
+                cell = this.getGlobalCell(name);
+                cells[idx] = cell;
+              }
+              const val = registers[ins.src1];
+              cell.value = val;
+              this.globals.set(cell.name, val);
+              break;
+            }
+            case register_chunk_js_1.RegOp.LoadUpvalue: {
+              const uv = frame.closure?.upvalues[ins.src1];
+              registers[ins.dst] = uv ? uv.value : null;
+              break;
+            }
+            case register_chunk_js_1.RegOp.StoreUpvalue: {
+              const uv = frame.closure?.upvalues[ins.dst];
+              if (uv)
+                uv.value = registers[ins.src1];
+              break;
+            }
+            case register_chunk_js_1.RegOp.CloseUpvalue:
+              break;
+            // ── Arithmetic ───────────────────────────────────────────────────────
+            case register_chunk_js_1.RegOp.Add: {
+              const a = registers[ins.src1];
+              const b = registers[ins.src2];
+              if (typeof a === "number" && typeof b === "number") {
+                registers[ins.dst] = a + b;
+              } else if (typeof a === "string" && typeof b === "string") {
+                registers[ins.dst] = a + b;
+              } else if (typeof a === "string" || typeof b === "string") {
+                registers[ins.dst] = this.hkdToString(a) + this.hkdToString(b);
+              } else {
+                throw new vm_js_1.VmError(`Cannot add ${typeof a} and ${typeof b}`, index_js_12.ErrorCode.E405);
+              }
+              break;
+            }
+            case register_chunk_js_1.RegOp.Sub: {
+              const a = registers[ins.src1];
+              const b = registers[ins.src2];
+              if (typeof a === "number" && typeof b === "number") {
+                registers[ins.dst] = a - b;
+              } else {
+                throw new vm_js_1.VmError("Operator '-' requires numbers", index_js_12.ErrorCode.E405);
+              }
+              break;
+            }
+            case register_chunk_js_1.RegOp.Mul: {
+              const a = registers[ins.src1];
+              const b = registers[ins.src2];
+              if (typeof a === "number" && typeof b === "number") {
+                registers[ins.dst] = a * b;
+              } else {
+                throw new vm_js_1.VmError("Operator '*' requires numbers", index_js_12.ErrorCode.E405);
+              }
+              break;
+            }
+            case register_chunk_js_1.RegOp.Div: {
+              const a = registers[ins.src1];
+              const b = registers[ins.src2];
+              if (typeof a === "number" && typeof b === "number") {
+                if (b === 0)
+                  throw new vm_js_1.VmError("Division by zero", index_js_12.ErrorCode.E401);
+                registers[ins.dst] = a / b;
+              } else {
+                throw new vm_js_1.VmError("Division requires numbers", index_js_12.ErrorCode.E405);
+              }
+              break;
+            }
+            case register_chunk_js_1.RegOp.Mod: {
+              const a = registers[ins.src1];
+              const b = registers[ins.src2];
+              if (typeof a === "number" && typeof b === "number") {
+                if (b === 0)
+                  throw new vm_js_1.VmError("Modulo by zero", index_js_12.ErrorCode.E401);
+                registers[ins.dst] = a % b;
+              } else {
+                throw new vm_js_1.VmError("Modulo requires numbers", index_js_12.ErrorCode.E405);
+              }
+              break;
+            }
+            case register_chunk_js_1.RegOp.Pow: {
+              const a = registers[ins.src1];
+              const b = registers[ins.src2];
+              if (typeof a === "number" && typeof b === "number") {
+                registers[ins.dst] = Math.pow(a, b);
+              } else {
+                throw new vm_js_1.VmError("Exponentiation requires numbers", index_js_12.ErrorCode.E405);
+              }
+              break;
+            }
+            case register_chunk_js_1.RegOp.Neg: {
+              const a = registers[ins.src1];
+              if (typeof a === "number") {
+                registers[ins.dst] = -a;
+              } else {
+                throw new vm_js_1.VmError("Negation requires a number", index_js_12.ErrorCode.E405);
+              }
+              break;
+            }
+            // ── Comparison ───────────────────────────────────────────────────────
+            case register_chunk_js_1.RegOp.Eq: {
+              const a = registers[ins.src1];
+              const b = registers[ins.src2];
+              if (typeof a === "number" && typeof b === "number") {
+                registers[ins.dst] = a === b;
+              } else if (typeof a === "boolean" && typeof b === "boolean") {
+                registers[ins.dst] = a === b;
+              } else {
+                registers[ins.dst] = this.hkdEquals(a, b);
+              }
+              break;
+            }
+            case register_chunk_js_1.RegOp.Ne: {
+              const a = registers[ins.src1];
+              const b = registers[ins.src2];
+              if (typeof a === "number" && typeof b === "number") {
+                registers[ins.dst] = a !== b;
+              } else if (typeof a === "boolean" && typeof b === "boolean") {
+                registers[ins.dst] = a !== b;
+              } else {
+                registers[ins.dst] = !this.hkdEquals(a, b);
+              }
+              break;
+            }
+            case register_chunk_js_1.RegOp.Lt: {
+              const a = registers[ins.src1];
+              const b = registers[ins.src2];
+              if (typeof a === "number" && typeof b === "number") {
+                registers[ins.dst] = a < b;
+              } else {
+                registers[ins.dst] = this.compareValues(a, b) < 0;
+              }
+              break;
+            }
+            case register_chunk_js_1.RegOp.Le: {
+              const a = registers[ins.src1];
+              const b = registers[ins.src2];
+              if (typeof a === "number" && typeof b === "number") {
+                registers[ins.dst] = a <= b;
+              } else {
+                registers[ins.dst] = this.compareValues(a, b) <= 0;
+              }
+              break;
+            }
+            case register_chunk_js_1.RegOp.Gt: {
+              const a = registers[ins.src1];
+              const b = registers[ins.src2];
+              if (typeof a === "number" && typeof b === "number") {
+                registers[ins.dst] = a > b;
+              } else {
+                registers[ins.dst] = this.compareValues(a, b) > 0;
+              }
+              break;
+            }
+            case register_chunk_js_1.RegOp.Ge: {
+              const a = registers[ins.src1];
+              const b = registers[ins.src2];
+              if (typeof a === "number" && typeof b === "number") {
+                registers[ins.dst] = a >= b;
+              } else {
+                registers[ins.dst] = this.compareValues(a, b) >= 0;
+              }
+              break;
+            }
+            // ── Logical & Bitwise ────────────────────────────────────────────────
+            case register_chunk_js_1.RegOp.Not:
+              registers[ins.dst] = !this.isTruthy(registers[ins.src1]);
+              break;
+            case register_chunk_js_1.RegOp.BitAnd: {
+              const a = this.toInt(registers[ins.src1]);
+              const b = this.toInt(registers[ins.src2]);
+              registers[ins.dst] = a & b;
+              break;
+            }
+            case register_chunk_js_1.RegOp.BitOr: {
+              const a = this.toInt(registers[ins.src1]);
+              const b = this.toInt(registers[ins.src2]);
+              registers[ins.dst] = a | b;
+              break;
+            }
+            case register_chunk_js_1.RegOp.BitXor: {
+              const a = this.toInt(registers[ins.src1]);
+              const b = this.toInt(registers[ins.src2]);
+              registers[ins.dst] = a ^ b;
+              break;
+            }
+            case register_chunk_js_1.RegOp.BitNot:
+              registers[ins.dst] = ~this.toInt(registers[ins.src1]);
+              break;
+            case register_chunk_js_1.RegOp.Shl: {
+              const a = this.toInt(registers[ins.src1]);
+              const b = this.toInt(registers[ins.src2]);
+              registers[ins.dst] = a << b;
+              break;
+            }
+            case register_chunk_js_1.RegOp.Shr: {
+              const a = this.toInt(registers[ins.src1]);
+              const b = this.toInt(registers[ins.src2]);
+              registers[ins.dst] = a >> b;
+              break;
+            }
+            // ── Jumps ────────────────────────────────────────────────────────────
+            case register_chunk_js_1.RegOp.Jump:
+              frame.ip = ins.dst;
+              break;
+            case register_chunk_js_1.RegOp.JumpIf: {
+              const cond = registers[ins.dst];
+              if (cond === true || cond && cond !== 0 && cond !== "") {
+                frame.ip = ins.src2;
+              }
+              break;
+            }
+            case register_chunk_js_1.RegOp.JumpIfNot: {
+              const cond = registers[ins.dst];
+              if (cond !== true && (!cond || cond === 0 || cond === "")) {
+                frame.ip = ins.src2;
+              }
+              break;
+            }
+            case register_chunk_js_1.RegOp.JumpNull: {
+              if (registers[ins.dst] === null) {
+                frame.ip = ins.src2;
+              }
+              break;
+            }
+            // ── Functions & Calls ────────────────────────────────────────────────
+            case register_chunk_js_1.RegOp.Call: {
+              const callee = registers[ins.src1];
+              const argc = ins.extra?.argc ?? 0;
+              const argStart = ins.src2;
+              if (callee === null || callee === void 0) {
+                throw new vm_js_1.VmError("Cannot call null", index_js_12.ErrorCode.E408);
+              }
+              const c = callee;
+              if (c.type === "native") {
+                const native = c;
+                if (native.arity >= 0 && native.arity !== argc) {
+                  throw new vm_js_1.VmError(`${native.name}() expects ${native.arity} argument(s), got ${argc}`, index_js_12.ErrorCode.E307);
+                }
+                if (argc === 1 && native.call1) {
+                  registers[ins.dst] = native.call1(registers[argStart]);
+                } else if (argc === 2 && native.call2) {
+                  registers[ins.dst] = native.call2(registers[argStart], registers[argStart + 1]);
+                } else if (argc === 0) {
+                  registers[ins.dst] = native.call(EMPTY_ARGS);
+                } else {
+                  registers[ins.dst] = native.call(registers.slice(argStart, argStart + argc));
+                }
+                break;
+              }
+              let fn;
+              let closure;
+              if (c.type === "function") {
+                fn = c;
+                closure = fn._defaultClosure;
+                if (!closure) {
+                  closure = { type: "closure", fn, upvalues: [] };
+                  fn._defaultClosure = closure;
+                }
+              } else if (c.type === "closure") {
+                closure = c;
+                fn = closure.fn;
+              } else {
+                throw new vm_js_1.VmError(`\`${(0, chunk_js_1.formatValue)(callee)}\` is not callable`, index_js_12.ErrorCode.E408);
+              }
+              if (fn.arity !== argc) {
+                throw new vm_js_1.VmError(`${fn.name}() expects ${fn.arity} argument(s), got ${argc}`, index_js_12.ErrorCode.E307);
+              }
+              let targetChunk = fn.registerChunk;
+              if (!targetChunk) {
+                targetChunk = (0, register_lowering_js_1.lowerToRegisterChunk)(fn.chunk);
+                fn.registerChunk = targetChunk;
+              }
+              if (frame.ip < code.length && code[frame.ip].op === register_chunk_js_1.RegOp.Return && targetChunk === frame.chunk) {
+                for (let i = 0; i < argc; i++) {
+                  registers[i] = registers[argStart + i];
+                }
+                frame.ip = 0;
+                break;
+              }
+              const regSize = Math.max(targetChunk.registerCount + 32, 128);
+              let newRegs;
+              if (this.regArrayPool.length > 0 && this.regArrayPool[this.regArrayPool.length - 1].length >= regSize) {
+                newRegs = this.regArrayPool.pop();
+              } else {
+                newRegs = new Array(regSize);
+              }
+              for (let i = 0; i < argc; i++) {
+                newRegs[i] = registers[argStart + i];
+              }
+              this.pushFrame(closure, targetChunk, newRegs, ins.dst);
+              frame = this.frames[this.frames.length - 1];
+              code = frame.chunk.code;
+              registers = frame.registers;
+              constants = frame.chunk.constants;
+              cells = frame.cells;
+              break;
+            }
+            case register_chunk_js_1.RegOp.Return: {
+              const returnValue = registers[ins.dst];
+              const returnFrame = this.frames.pop();
+              if (this.regArrayPool.length < 256) {
+                this.regArrayPool.push(returnFrame.registers);
+              }
+              if (this.framePool.length < 256) {
+                returnFrame.closure = null;
+                returnFrame.registers = null;
+                returnFrame.cells.length = 0;
+                this.framePool.push(returnFrame);
+              }
+              if (this.frames.length === targetFrames) {
+                return { ok: true, value: returnValue };
+              }
+              frame = this.frames[this.frames.length - 1];
+              code = frame.chunk.code;
+              registers = frame.registers;
+              constants = frame.chunk.constants;
+              cells = frame.cells;
+              registers[returnFrame.destReg] = returnValue;
+              break;
+            }
+            case register_chunk_js_1.RegOp.MakeClosure: {
+              const fn = constants[ins.src1];
+              const upvaluesData = ins.extra?.upvaluesData ?? [];
+              const upvalues = [];
+              for (const u of upvaluesData) {
+                if (u.isLocal) {
+                  upvalues.push({
+                    value: registers[u.index],
+                    closed: false,
+                    stackIndex: u.index
+                  });
+                } else {
+                  upvalues.push(frame.closure?.upvalues[u.index] ?? {
+                    value: null,
+                    closed: true,
+                    stackIndex: -1
+                  });
+                }
+              }
+              registers[ins.dst] = { type: "closure", fn, upvalues };
+              break;
+            }
+            // ── Arrays & Objects ─────────────────────────────────────────────────
+            case register_chunk_js_1.RegOp.MakeArray: {
+              const elements = registers.slice(ins.src1, ins.src1 + ins.src2);
+              registers[ins.dst] = { type: "array", elements };
+              break;
+            }
+            case register_chunk_js_1.RegOp.GetIndex: {
+              const obj = registers[ins.src1];
+              const idx = registers[ins.src2];
+              if (typeof idx === "number" && obj !== null && typeof obj === "object" && obj.type === "array") {
+                const arr = obj.elements;
+                const i = idx < 0 ? arr.length + idx : idx;
+                if (i >= 0 && i < arr.length) {
+                  registers[ins.dst] = arr[i];
+                  break;
+                }
+              }
+              registers[ins.dst] = this.getIndex(obj, idx);
+              break;
+            }
+            case register_chunk_js_1.RegOp.SetIndex: {
+              const obj = registers[ins.dst];
+              const idx = registers[ins.src1];
+              if (typeof idx === "number" && obj !== null && typeof obj === "object" && obj.type === "array") {
+                obj.elements[idx] = registers[ins.src2];
+                break;
+              }
+              this.setIndex(obj, idx, registers[ins.src2]);
+              break;
+            }
+            case register_chunk_js_1.RegOp.ArrayLen: {
+              const obj = registers[ins.src1];
+              if (obj !== null && typeof obj === "object" && obj.type === "array") {
+                registers[ins.dst] = obj.elements.length;
+                break;
+              }
+              registers[ins.dst] = this.getArrayLen(obj);
+              break;
+            }
+            case register_chunk_js_1.RegOp.MakeObject: {
+              const pairCount = ins.src2;
+              const startReg = ins.src1;
+              const fields = /* @__PURE__ */ new Map();
+              for (let i = 0; i < pairCount; i++) {
+                const k = registers[startReg + i * 2];
+                const v = registers[startReg + i * 2 + 1];
+                fields.set(k, v);
+              }
+              registers[ins.dst] = { type: "object", fields };
+              break;
+            }
+            case register_chunk_js_1.RegOp.GetField: {
+              const obj = registers[ins.src1];
+              const fieldName = constants[ins.src2];
+              if (obj !== null && typeof obj === "object" && obj.type === "object") {
+                const val = obj.fields.get(fieldName);
+                if (val !== void 0) {
+                  registers[ins.dst] = val;
+                  break;
+                }
+              }
+              registers[ins.dst] = this.getField(obj, fieldName);
+              break;
+            }
+            case register_chunk_js_1.RegOp.SetField: {
+              const obj = registers[ins.dst];
+              const fieldName = constants[ins.src1];
+              if (obj !== null && typeof obj === "object" && obj.type === "object") {
+                obj.fields.set(fieldName, registers[ins.src2]);
+                break;
+              }
+              this.setField(obj, fieldName, registers[ins.src2]);
+              break;
+            }
+            // ── Iterators & String ───────────────────────────────────────────────
+            case register_chunk_js_1.RegOp.MakeIter:
+              registers[ins.dst] = this.makeIterator(registers[ins.src1]);
+              break;
+            case register_chunk_js_1.RegOp.IterNext: {
+              const iter = registers[ins.src1];
+              if (!iter || iter.type !== "iterator") {
+                throw new vm_js_1.VmError("IterNext requires an iterator", index_js_12.ErrorCode.E405);
+              }
+              const result = iter.next();
+              if (result.done) {
+                frame.ip = ins.src2;
+              } else {
+                registers[ins.dst] = result.value;
+              }
+              break;
+            }
+            case register_chunk_js_1.RegOp.Concat: {
+              const parts = registers.slice(ins.src1, ins.src1 + ins.src2);
+              registers[ins.dst] = parts.map((p) => this.hkdToString(p)).join("");
+              break;
+            }
+            case register_chunk_js_1.RegOp.Halt:
+              return { ok: true, value: ins.dst >= 0 ? registers[ins.dst] ?? null : null };
+            default:
+              throw new vm_js_1.VmError(`Unknown register opcode: ${ins.op}`, index_js_12.ErrorCode.E503);
+          }
+        }
+      }
+      // ── Value Helpers ──────────────────────────────────────────────────────────
+      toInt(v) {
+        if (typeof v !== "number")
+          throw new vm_js_1.VmError("Expected integer", index_js_12.ErrorCode.E405);
+        return v | 0;
+      }
+      isTruthy(v) {
+        if (v === null || v === false)
+          return false;
+        if (v === 0 || v === "")
+          return false;
+        return true;
+      }
+      hkdEquals(a, b) {
+        if (a === null && b === null)
+          return true;
+        if (a === null || b === null)
+          return false;
+        if (typeof a !== typeof b)
+          return false;
+        if (typeof a === "number" || typeof a === "string" || typeof a === "boolean") {
+          return a === b;
+        }
+        if (a.type === "array" && b.type === "array") {
+          const aa = a.elements;
+          const ba = b.elements;
+          if (aa.length !== ba.length)
+            return false;
+          return aa.every((v, i) => this.hkdEquals(v, ba[i]));
+        }
+        return a === b;
+      }
+      compareValues(a, b) {
+        if (typeof a === "number" && typeof b === "number")
+          return a - b;
+        if (typeof a === "string" && typeof b === "string")
+          return a < b ? -1 : a > b ? 1 : 0;
+        throw new vm_js_1.VmError(`Cannot compare ${typeof a} and ${typeof b}`, index_js_12.ErrorCode.E405);
+      }
+      hkdToString(v) {
+        if (v === null)
+          return "null";
+        if (typeof v === "boolean")
+          return String(v);
+        if (typeof v === "number") {
+          if (Number.isInteger(v))
+            return String(v);
+          return String(v);
+        }
+        if (typeof v === "string")
+          return v;
+        return (0, chunk_js_1.formatValue)(v);
+      }
+      getIndex(obj, index) {
+        if (obj?.type === "array") {
+          const arr = obj;
+          if (typeof index !== "number")
+            throw new vm_js_1.VmError("Array index must be an Int", index_js_12.ErrorCode.E405);
+          const i = index < 0 ? arr.elements.length + index : index;
+          if (i < 0 || i >= arr.elements.length) {
+            throw new vm_js_1.VmError(`Index ${index} out of bounds for array of length ${arr.elements.length}`, index_js_12.ErrorCode.E402);
+          }
+          return arr.elements[i];
+        }
+        if (typeof obj === "string") {
+          if (typeof index !== "number")
+            throw new vm_js_1.VmError("String index must be an Int", index_js_12.ErrorCode.E405);
+          return obj[index] ?? null;
+        }
+        if (obj?.type === "object") {
+          if (typeof index !== "string")
+            throw new vm_js_1.VmError("Object key must be a String", index_js_12.ErrorCode.E405);
+          return obj.fields.get(index) ?? null;
+        }
+        throw new vm_js_1.VmError(`Cannot index ${typeof obj}`, index_js_12.ErrorCode.E405);
+      }
+      setIndex(obj, index, value) {
+        if (obj?.type === "array") {
+          const arr = obj;
+          if (typeof index !== "number")
+            throw new vm_js_1.VmError("Array index must be an Int", index_js_12.ErrorCode.E405);
+          arr.elements[index] = value;
+          return;
+        }
+        if (obj?.type === "object") {
+          if (typeof index !== "string")
+            throw new vm_js_1.VmError("Object key must be a String", index_js_12.ErrorCode.E405);
+          obj.fields.set(index, value);
+          return;
+        }
+        throw new vm_js_1.VmError(`Cannot index-assign ${typeof obj}`, index_js_12.ErrorCode.E405);
+      }
+      getArrayLen(arr) {
+        if (arr?.type === "array")
+          return arr.elements.length;
+        if (typeof arr === "string")
+          return arr.length;
+        throw new vm_js_1.VmError("len() requires an array or string", index_js_12.ErrorCode.E405);
+      }
+      getField(obj, field) {
+        if (obj?.type === "object") {
+          const val = obj.fields.get(field);
+          if (val !== void 0)
+            return val;
+          const typeName = obj.fields.get("__type__");
+          if (typeof typeName === "string") {
+            const methodGlobal = this.globals.get(`${typeName}__${field}`);
+            if (methodGlobal) {
+              return {
+                type: "native",
+                name: `${typeName}.${field}`,
+                arity: -1,
+                call: (args) => {
+                  return this.runCallable(methodGlobal, [obj, ...args]);
+                }
+              };
+            }
+          }
+          return null;
+        }
+        if (obj?.type === "array") {
+          if (field === "length")
+            return obj.elements.length;
+          if (field === "push") {
+            const arr = obj;
+            return {
+              type: "native",
+              name: "push",
+              arity: 1,
+              call: (args) => {
+                arr.elements.push(args[0]);
+                return null;
+              }
+            };
+          }
+          if (field === "pop") {
+            const arr = obj;
+            return {
+              type: "native",
+              name: "pop",
+              arity: 0,
+              call: () => arr.elements.pop() ?? null
+            };
+          }
+          if (field === "join") {
+            const arr = obj;
+            return {
+              type: "native",
+              name: "join",
+              arity: 1,
+              call: (args) => arr.elements.map((e) => this.hkdToString(e)).join(args[0] ?? "")
+            };
+          }
+        }
+        if (typeof obj === "string") {
+          if (field === "length")
+            return obj.length;
+          if (field === "upper")
+            return { type: "native", name: "upper", arity: 0, call: () => obj.toUpperCase() };
+          if (field === "lower")
+            return { type: "native", name: "lower", arity: 0, call: () => obj.toLowerCase() };
+          if (field === "trim")
+            return { type: "native", name: "trim", arity: 0, call: () => obj.trim() };
+          if (field === "split")
+            return { type: "native", name: "split", arity: 1, call: (a) => ({ type: "array", elements: obj.split(a[0]) }) };
+          if (field === "contains")
+            return { type: "native", name: "contains", arity: 1, call: (a) => obj.includes(a[0]) };
+          if (field === "starts_with")
+            return { type: "native", name: "starts_with", arity: 1, call: (a) => obj.startsWith(a[0]) };
+          if (field === "ends_with")
+            return { type: "native", name: "ends_with", arity: 1, call: (a) => obj.endsWith(a[0]) };
+          if (field === "replace")
+            return { type: "native", name: "replace", arity: 2, call: (a) => obj.replace(a[0], a[1]) };
+        }
+        return null;
+      }
+      setField(obj, field, value) {
+        if (obj?.type === "object") {
+          obj.fields.set(field, value);
+          return;
+        }
+        throw new vm_js_1.VmError(`Cannot set field on ${typeof obj}`, index_js_12.ErrorCode.E405);
+      }
+      makeIterator(value) {
+        if (value?.type === "array") {
+          const elements = value.elements;
+          let i = 0;
+          return {
+            type: "iterator",
+            next: () => {
+              if (i < elements.length)
+                return { value: elements[i++], done: false };
+              return { value: null, done: true };
+            }
+          };
+        }
+        if (typeof value === "string") {
+          const chars = [...value];
+          let i = 0;
+          return {
+            type: "iterator",
+            next: () => {
+              if (i < chars.length)
+                return { value: chars[i++], done: false };
+              return { value: null, done: true };
+            }
+          };
+        }
+        throw new vm_js_1.VmError(`Value is not iterable`, index_js_12.ErrorCode.E405);
+      }
+      registerBuiltins() {
+        const output = this.output;
+        this.defineNative("print", -1, (args) => {
+          output(args.map((a) => this.hkdToString(a)).join(" "));
+          return null;
+        });
+        this.defineNative("println", -1, (args) => {
+          output(args.map((a) => this.hkdToString(a)).join(" "));
+          return null;
+        });
+        this.defineNative("input", 1, (_args) => "");
+        this.defineNative("len", 1, (args) => {
+          const v = args[0];
+          if (v?.type === "array")
+            return v.elements.length;
+          if (typeof v === "string")
+            return v.length;
+          if (v?.type === "object")
+            return v.fields.size;
+          throw new vm_js_1.VmError(`len() not supported for ${typeof v}`, index_js_12.ErrorCode.E405);
+        }, (v) => {
+          if (v?.type === "array")
+            return v.elements.length;
+          if (typeof v === "string")
+            return v.length;
+          if (v?.type === "object")
+            return v.fields.size;
+          throw new vm_js_1.VmError(`len() not supported for ${typeof v}`, index_js_12.ErrorCode.E405);
+        });
+        this.defineNative("type_of", 1, (args) => {
+          const v = args[0];
+          if (v === null)
+            return "null";
+          if (typeof v === "boolean")
+            return "Bool";
+          if (typeof v === "number")
+            return Number.isInteger(v) ? "Int" : "Float";
+          if (typeof v === "string")
+            return "String";
+          if (v?.type === "array")
+            return "Array";
+          if (v?.type === "function")
+            return "Function";
+          if (v?.type === "closure")
+            return "Function";
+          if (v?.type === "native")
+            return "Function";
+          return "Object";
+        }, (v) => {
+          if (v === null)
+            return "null";
+          if (typeof v === "boolean")
+            return "Bool";
+          if (typeof v === "number")
+            return Number.isInteger(v) ? "Int" : "Float";
+          if (typeof v === "string")
+            return "String";
+          if (v?.type === "array")
+            return "Array";
+          if (v?.type === "function")
+            return "Function";
+          if (v?.type === "closure")
+            return "Function";
+          if (v?.type === "native")
+            return "Function";
+          return "Object";
+        });
+        this.defineNative("to_string", 1, (args) => this.hkdToString(args[0]), (a) => this.hkdToString(a));
+        this.defineNative("to_int", 1, (args) => {
+          const v = args[0];
+          if (typeof v === "number")
+            return Math.trunc(v);
+          if (typeof v === "string") {
+            const n = parseInt(v, 10);
+            if (isNaN(n))
+              throw new vm_js_1.VmError(`Cannot convert "${v}" to Int`, index_js_12.ErrorCode.E405);
+            return n;
+          }
+          if (typeof v === "boolean")
+            return v ? 1 : 0;
+          throw new vm_js_1.VmError(`Cannot convert to Int`, index_js_12.ErrorCode.E405);
+        });
+        this.defineNative("to_float", 1, (args) => {
+          const v = args[0];
+          if (typeof v === "number")
+            return v;
+          if (typeof v === "string") {
+            const n = parseFloat(v);
+            if (isNaN(n))
+              throw new vm_js_1.VmError(`Cannot convert "${v}" to Float`, index_js_12.ErrorCode.E405);
+            return n;
+          }
+          throw new vm_js_1.VmError(`Cannot convert to Float`, index_js_12.ErrorCode.E405);
+        });
+        this.defineNative("to_bool", 1, (args) => this.isTruthy(args[0]));
+        this.defineNative("exit", 1, (args) => {
+          process.exit(typeof args[0] === "number" ? args[0] : 0);
+        });
+        this.defineNative("range", 2, (args) => {
+          const start = args[0];
+          const end = args[1];
+          const elements = [];
+          for (let i = start; i < end; i++)
+            elements.push(i);
+          return { type: "array", elements };
+        });
+        this.defineNative("panic", 1, (args) => {
+          throw new vm_js_1.VmError(this.hkdToString(args[0]), index_js_12.ErrorCode.E405);
+        });
+        this.defineNative("__assert__", 2, (args) => {
+          if (!this.isTruthy(args[0])) {
+            throw new vm_js_1.VmError(`Assertion failed: ${this.hkdToString(args[1])}`, index_js_12.ErrorCode.E405);
+          }
+          return null;
+        });
+        this.defineNative("assert", -1, (args) => {
+          if (!this.isTruthy(args[0])) {
+            const msg = args[1] ? this.hkdToString(args[1]) : "Assertion failed";
+            throw new vm_js_1.VmError(msg, index_js_12.ErrorCode.E405);
+          }
+          return null;
+        });
+        this.defineNative("__register_test__", 2, (_args) => null);
+        this.defineNative("__import__", 1, (_args) => null);
+        this.defineNative("__hkd_future", 1, (args) => {
+          const initVal = args[0] !== void 0 ? args[0] : null;
+          const isResolved = initVal !== null && initVal !== void 0;
+          const fields = /* @__PURE__ */ new Map();
+          fields.set("__type__", "Future");
+          fields.set("state", isResolved ? "resolved" : "pending");
+          fields.set("value", initVal);
+          fields.set("error", null);
+          const fut = { type: "object", fields };
+          this.futureCallbacks.set(fut, []);
+          return fut;
+        });
+        this.defineNative("__hkd_is_pending", 1, (args) => {
+          const v = args[0];
+          if (v && typeof v === "object" && v.type === "object") {
+            return v.fields.get("state") === "pending";
+          }
+          return false;
+        });
+        this.defineNative("__hkd_is_rejected", 1, (args) => {
+          const v = args[0];
+          if (v && typeof v === "object" && v.type === "object") {
+            return v.fields.get("state") === "rejected";
+          }
+          return false;
+        });
+        this.defineNative("__hkd_error", 1, (args) => {
+          const v = args[0];
+          if (v && typeof v === "object" && v.type === "object") {
+            return v.fields.get("error") ?? null;
+          }
+          return null;
+        });
+        this.defineNative("__hkd_unwrap", 1, (args) => {
+          const v = args[0];
+          if (v && typeof v === "object" && v.type === "object" && v.fields.get("__type__") === "Future") {
+            const obj = v;
+            const state = obj.fields.get("state");
+            if (state === "rejected") {
+              const err = obj.fields.get("error");
+              throw new Error(`TaskFailure: Future rejected with error: ${err !== null ? String(err) : "Unknown error"}`);
+            }
+            return obj.fields.get("value") ?? null;
+          }
+          return v;
+        });
+        this.defineNative("__hkd_resolve", 2, (args) => {
+          const fut = args[0];
+          const val = args[1] !== void 0 ? args[1] : null;
+          if (fut && typeof fut === "object" && fut.type === "object") {
+            const obj = fut;
+            if (obj.fields.get("state") !== "pending")
+              return fut;
+            obj.fields.set("state", "resolved");
+            obj.fields.set("value", val);
+            const cbs = this.futureCallbacks.get(obj);
+            if (cbs) {
+              this.futureCallbacks.delete(obj);
+              for (const cb of cbs)
+                this.dispatchCallback(cb, [val]);
+            }
+          }
+          return fut;
+        });
+        this.defineNative("__hkd_reject", 2, (args) => {
+          const fut = args[0];
+          const err = args[1] !== void 0 ? args[1] : null;
+          if (fut && typeof fut === "object" && fut.type === "object") {
+            const obj = fut;
+            if (obj.fields.get("state") !== "pending")
+              return fut;
+            obj.fields.set("state", "rejected");
+            obj.fields.set("error", err);
+            const cbs = this.futureCallbacks.get(obj);
+            if (cbs) {
+              this.futureCallbacks.delete(obj);
+              for (const cb of cbs)
+                this.dispatchCallback(cb, [null]);
+            }
+          }
+          return fut;
+        });
+        this.defineNative("__hkd_on_complete", 2, (args) => {
+          const fut = args[0];
+          const cb = args[1];
+          if (fut && typeof fut === "object" && fut.type === "object") {
+            const obj = fut;
+            const state = obj.fields.get("state");
+            if (state === "resolved") {
+              this.dispatchCallback(cb, [obj.fields.get("value") ?? null]);
+            } else if (state === "rejected") {
+              this.dispatchCallback(cb, [null]);
+            } else {
+              let cbs = this.futureCallbacks.get(obj);
+              if (!cbs) {
+                cbs = [];
+                this.futureCallbacks.set(obj, cbs);
+              }
+              cbs.push(cb);
+            }
+          }
+          return null;
+        });
+      }
+    };
+    exports2.RegisterVM = RegisterVM;
+  }
+});
+
 // dist/stdlib/index.js
 var require_stdlib = __commonJS({
   "dist/stdlib/index.js"(exports2) {
@@ -7411,7 +10526,7 @@ var require_stdlib = __commonJS({
       m.set("upper", native("upper", 1, (a) => a[0].toUpperCase()));
       m.set("lower", native("lower", 1, (a) => a[0].toLowerCase()));
       m.set("trim", native("trim", 1, (a) => a[0].trim()));
-      m.set("len", native("len", 1, (a) => a[0].length));
+      m.set("len", native("len", 1, (a) => a[0].length, (a) => a.length));
       m.set("split", native("split", 2, (a) => arr(a[0].split(a[1]))));
       m.set("join", native("join", 2, (a) => a[0].elements.join(a[1])));
       m.set("replace", native("replace", 3, (a) => a[0].replace(a[1], a[2])));
@@ -7435,15 +10550,21 @@ var require_stdlib = __commonJS({
     }
     function buildArray() {
       const m = /* @__PURE__ */ new Map();
-      m.set("len", native("len", 1, (a) => a[0].elements.length));
+      m.set("len", native("len", 1, (a) => a[0].elements.length, (a) => a.elements.length));
       m.set("push", native("push", 2, (a) => {
         a[0].elements.push(a[1]);
         return null;
+      }, void 0, (a, b) => {
+        a.elements.push(b);
+        return null;
       }));
-      m.set("pop", native("pop", 1, (a) => a[0].elements.pop() ?? null));
-      m.set("shift", native("shift", 1, (a) => a[0].elements.shift() ?? null));
+      m.set("pop", native("pop", 1, (a) => a[0].elements.pop() ?? null, (a) => a.elements.pop() ?? null));
+      m.set("shift", native("shift", 1, (a) => a[0].elements.shift() ?? null, (a) => a.elements.shift() ?? null));
       m.set("unshift", native("unshift", 2, (a) => {
         a[0].elements.unshift(a[1]);
+        return null;
+      }, void 0, (a, b) => {
+        a.elements.unshift(b);
         return null;
       }));
       m.set("join", native("join", 2, (a) => a[0].elements.map(String).join(a[1])));
@@ -8294,8 +11415,8 @@ var require_stdlib = __commonJS({
       fields.set("error", err);
       return { type: "object", fields };
     }
-    function native(name, arity, call) {
-      return { type: "native", name, arity, call };
+    function native(name, arity, call, call1, call2) {
+      return { type: "native", name, arity, call, call1, call2 };
     }
     function arr(elements) {
       return { type: "array", elements };
@@ -8383,6 +11504,8 @@ var require_runtime = __commonJS({
     var analyser_js_12 = require_analyser();
     var compiler_js_12 = require_compiler();
     var vm_js_1 = require_vm();
+    var vm_register_js_1 = require_vm_register();
+    var register_lowering_js_1 = require_register_lowering();
     var index_js_22 = require_stdlib();
     var index_js_32 = require_utils();
     var moduleCache = /* @__PURE__ */ new Map();
@@ -8433,14 +11556,21 @@ var require_runtime = __commonJS({
           printDiagnostics(diags);
         return { ok: false, error: "Compile error", diagnostics: diags };
       }
-      const vm = new vm_js_1.VM(opts.output ?? ((s) => process.stdout.write(s + "\n")));
+      const vmKind = opts.vm ?? (process.env.HKD_VM === "register" ? "register" : "stack");
+      const outputHandler = opts.output ?? ((s) => process.stdout.write(s + "\n"));
+      const vm = vmKind === "register" ? new vm_register_js_1.RegisterVM(outputHandler) : new vm_js_1.VM(outputHandler);
       vm.defineNative("__import__", 1, (args) => {
         return loadModule(args[0], vm, opts);
       });
       (0, index_js_22.setCurrentVm)(vm);
       let result;
       try {
-        result = vm.run(chunk);
+        if (vmKind === "register") {
+          const regChunk = (0, register_lowering_js_1.lowerToRegisterChunk)(chunk);
+          result = vm.run(regChunk);
+        } else {
+          result = vm.run(chunk);
+        }
       } finally {
         (0, index_js_22.setCurrentVm)(null);
       }
@@ -8537,15 +11667,20 @@ ${reporter.format()}`, index_js_12.ErrorCode.E405);
           throw new vm_js_1.VmError(`Compile error in module "${modulePath}":
 ${reporter.format()}`, index_js_12.ErrorCode.E405);
         }
+        const vmKind = opts.vm ?? (process.env.HKD_VM === "register" ? "register" : "stack");
         const outputHandler = vm.output ?? ((s) => process.stdout.write(s + "\n"));
-        const subVm = new vm_js_1.VM(outputHandler);
+        const subVm = vmKind === "register" ? new vm_register_js_1.RegisterVM(outputHandler) : new vm_js_1.VM(outputHandler);
         subVm.defineNative("__import__", 1, (subArgs) => {
           return loadModule(subArgs[0], subVm, { ...opts, fileName: canonicalPath });
         });
         (0, index_js_22.setCurrentVm)(subVm);
         let runResult;
         try {
-          runResult = subVm.run(chunk);
+          if (vmKind === "register") {
+            runResult = subVm.run((0, register_lowering_js_1.lowerToRegisterChunk)(chunk));
+          } else {
+            runResult = subVm.run(chunk);
+          }
         } finally {
           (0, index_js_22.setCurrentVm)(vm);
         }
@@ -8585,6 +11720,228 @@ ${reporter.format()}`, index_js_12.ErrorCode.E405);
   }
 });
 
+// dist/bytecode/serializer.js
+var require_serializer = __commonJS({
+  "dist/bytecode/serializer.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.serialize = serialize;
+    exports2.serializeProgram = serializeProgram;
+    exports2.deserializeProgram = deserializeProgram;
+    var buffer_1 = require("buffer");
+    var chunk_js_1 = require_chunk();
+    var FastBufferWriter = class {
+      buffer;
+      offset;
+      constructor(initialCapacity = 16384) {
+        this.buffer = buffer_1.Buffer.allocUnsafe(initialCapacity);
+        this.offset = 0;
+      }
+      ensure(extra) {
+        if (this.offset + extra > this.buffer.length) {
+          const newCap = Math.max(this.buffer.length * 2, this.offset + extra + 1024);
+          const newBuf = buffer_1.Buffer.allocUnsafe(newCap);
+          this.buffer.copy(newBuf, 0, 0, this.offset);
+          this.buffer = newBuf;
+        }
+      }
+      writeByte(b) {
+        this.ensure(1);
+        this.buffer[this.offset++] = b;
+      }
+      writeU16(val) {
+        this.ensure(2);
+        this.buffer.writeUInt16BE(val, this.offset);
+        this.offset += 2;
+      }
+      writeU32(val) {
+        this.ensure(4);
+        this.buffer.writeUInt32BE(val, this.offset);
+        this.offset += 4;
+      }
+      writeF64(val) {
+        this.ensure(8);
+        this.buffer.writeDoubleBE(val, this.offset);
+        this.offset += 8;
+      }
+      writeString(str) {
+        const len = buffer_1.Buffer.byteLength(str, "utf-8");
+        this.writeU16(len);
+        this.ensure(len);
+        this.buffer.write(str, this.offset, len, "utf-8");
+        this.offset += len;
+      }
+      writeBytes(bytes) {
+        const len = bytes.length;
+        this.ensure(len);
+        for (let i = 0; i < len; i++) {
+          this.buffer[this.offset + i] = bytes[i];
+        }
+        this.offset += len;
+      }
+      toBuffer() {
+        const result = buffer_1.Buffer.allocUnsafe(this.offset);
+        this.buffer.copy(result, 0, 0, this.offset);
+        return result;
+      }
+    };
+    function serializeChunk(chunk, writer) {
+      writer.writeString(chunk.name);
+      writer.writeByte(chunk.arity);
+      writer.writeU16(chunk.localCount);
+      writer.writeU16(chunk.upvalueCount);
+      writer.writeU32(chunk.code.length);
+      writer.writeBytes(chunk.code);
+      const lineCount = chunk.lines.length;
+      writer.writeU32(lineCount);
+      writer.ensure(lineCount * 2);
+      for (let i = 0; i < lineCount; i++) {
+        writer.buffer.writeUInt16BE(chunk.lines[i], writer.offset);
+        writer.offset += 2;
+      }
+      writer.writeU16(chunk.constants.length);
+      for (const val of chunk.constants) {
+        if (val === null) {
+          writer.writeByte(0);
+        } else if (typeof val === "boolean") {
+          writer.writeByte(val ? 2 : 1);
+        } else if (typeof val === "number") {
+          writer.writeByte(3);
+          writer.writeF64(val);
+        } else if (typeof val === "string") {
+          writer.writeByte(4);
+          writer.writeString(val);
+        } else if (typeof val === "object" && val.type === "function") {
+          writer.writeByte(5);
+          serializeChunk(val.chunk, writer);
+        } else {
+          throw new Error(`Unsupported constant type: ${typeof val}`);
+        }
+      }
+    }
+    function serialize(chunk) {
+      const writer = new FastBufferWriter();
+      serializeChunk(chunk, writer);
+      return writer.toBuffer();
+    }
+    function serializeProgram(chunk) {
+      const writer = new FastBufferWriter(32768);
+      writer.ensure(8);
+      writer.buffer.write("HKDB", 0, "ascii");
+      writer.buffer[4] = 1;
+      writer.buffer[5] = 0;
+      writer.buffer[6] = 1;
+      writer.buffer[7] = 1;
+      writer.offset = 8;
+      serializeChunk(chunk, writer);
+      return writer.toBuffer();
+    }
+    function deserializeProgram(buffer) {
+      if (buffer.length < 8) {
+        throw new Error(`Malformed HKDB bytecode: buffer length ${buffer.length} is shorter than 8-byte header`);
+      }
+      const magic = buffer.toString("ascii", 0, 4);
+      if (magic !== "HKDB") {
+        throw new Error(`Invalid HKDB magic bytes: expected 'HKDB', found '${magic}'`);
+      }
+      const formatVersion = buffer.readUInt8(4);
+      if (formatVersion !== 1) {
+        throw new Error(`Unsupported HKDB bytecode format version: ${formatVersion}`);
+      }
+      let offset = 8;
+      const readResult = deserializeChunk(buffer, offset);
+      return readResult.chunk;
+    }
+    function deserializeChunk(buffer, startOffset) {
+      let offset = startOffset;
+      const checkAvailable = (bytes) => {
+        if (offset + bytes > buffer.length) {
+          throw new Error(`Corrupted HKDB bytecode: unexpected end of buffer at offset ${offset}`);
+        }
+      };
+      checkAvailable(2);
+      const nameLen = buffer.readUInt16BE(offset);
+      offset += 2;
+      checkAvailable(nameLen);
+      const name = buffer.toString("utf-8", offset, offset + nameLen);
+      offset += nameLen;
+      checkAvailable(1);
+      const arity = buffer.readUInt8(offset);
+      offset += 1;
+      const chunk = new chunk_js_1.Chunk(name, arity);
+      checkAvailable(2);
+      chunk.localCount = buffer.readUInt16BE(offset);
+      offset += 2;
+      checkAvailable(2);
+      chunk.upvalueCount = buffer.readUInt16BE(offset);
+      offset += 2;
+      checkAvailable(4);
+      const codeLen = buffer.readUInt32BE(offset);
+      offset += 4;
+      checkAvailable(codeLen);
+      chunk.code = Array.from(buffer.subarray(offset, offset + codeLen));
+      offset += codeLen;
+      checkAvailable(4);
+      const linesLen = buffer.readUInt32BE(offset);
+      offset += 4;
+      checkAvailable(linesLen * 2);
+      chunk.lines = [];
+      for (let i = 0; i < linesLen; i++) {
+        chunk.lines.push(buffer.readUInt16BE(offset + i * 2));
+      }
+      offset += linesLen * 2;
+      checkAvailable(2);
+      const constCount = buffer.readUInt16BE(offset);
+      offset += 2;
+      for (let i = 0; i < constCount; i++) {
+        checkAvailable(1);
+        const tag = buffer.readUInt8(offset);
+        offset += 1;
+        switch (tag) {
+          case 0:
+            chunk.constants.push(null);
+            break;
+          case 1:
+            chunk.constants.push(false);
+            break;
+          case 2:
+            chunk.constants.push(true);
+            break;
+          case 3:
+            checkAvailable(8);
+            chunk.constants.push(buffer.readDoubleBE(offset));
+            offset += 8;
+            break;
+          case 4: {
+            checkAvailable(2);
+            const strLen = buffer.readUInt16BE(offset);
+            offset += 2;
+            checkAvailable(strLen);
+            chunk.constants.push(buffer.toString("utf-8", offset, offset + strLen));
+            offset += strLen;
+            break;
+          }
+          case 5: {
+            const sub = deserializeChunk(buffer, offset);
+            chunk.constants.push({
+              type: "function",
+              name: sub.chunk.name,
+              arity: sub.chunk.arity,
+              upvalueCount: sub.chunk.upvalueCount,
+              chunk: sub.chunk
+            });
+            offset = sub.nextOffset;
+            break;
+          }
+          default:
+            throw new Error(`Corrupted HKDB constant pool: unknown type tag 0x${tag.toString(16)} at offset ${offset - 1}`);
+        }
+      }
+      return { chunk, nextOffset: offset };
+    }
+  }
+});
+
 // dist/formatter/index.js
 var require_formatter = __commonJS({
   "dist/formatter/index.js"(exports2) {
@@ -8592,7 +11949,7 @@ var require_formatter = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Formatter = void 0;
     exports2.formatSource = formatSource;
-    exports2.format = format;
+    exports2.format = format2;
     var Formatter = class {
       indent = 0;
       INDENT_SIZE = 4;
@@ -8961,7 +12318,7 @@ ${this.indStr()}}`;
       }
       return new Formatter().format(ast);
     }
-    function format(input) {
+    function format2(input) {
       if (typeof input === "string") {
         return formatSource(input);
       }
@@ -8976,8 +12333,8 @@ var require_linter = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Linter = exports2.LintCode = void 0;
-    exports2.lint = lint;
-    exports2.formatLintIssues = formatLintIssues;
+    exports2.lint = lint2;
+    exports2.formatLintIssues = formatLintIssues2;
     exports2.LintCode = {
       L001: "L001",
       // Unused variable
@@ -9298,10 +12655,10 @@ var require_linter = __commonJS({
       }
       return false;
     }
-    function lint(program, ignoredCodes) {
+    function lint2(program, ignoredCodes) {
       return new Linter().lint(program, ignoredCodes);
     }
-    function formatLintIssues(issues, source, fileName) {
+    function formatLintIssues2(issues, source, fileName) {
       if (issues.length === 0)
         return `${fileName}: No issues found.`;
       const lines = [];
@@ -9362,7 +12719,7 @@ var require_package_manager = __commonJS({
     exports2.PackageManager = void 0;
     exports2.parseToml = parseToml;
     exports2.stringifyToml = stringifyToml;
-    exports2.readManifest = readManifest;
+    exports2.readManifest = readManifest2;
     exports2.writeManifest = writeManifest;
     exports2.packPackage = packPackage;
     exports2.unpackPackage = unpackPackage;
@@ -9500,7 +12857,7 @@ var require_package_manager = __commonJS({
       }
       return lines.join("\n");
     }
-    function readManifest(dir) {
+    function readManifest2(dir) {
       const manifestPath = path2.join(dir, "hkd.toml");
       if (!fs2.existsSync(manifestPath))
         return null;
@@ -9525,7 +12882,7 @@ var require_package_manager = __commonJS({
       fs2.writeFileSync(manifestPath, stringifyToml(manifest), "utf-8");
     }
     function packPackage(dir) {
-      const manifest = readManifest(dir);
+      const manifest = readManifest2(dir);
       if (!manifest)
         throw new Error("No hkd.toml found to pack");
       const filesToPack = [];
@@ -9621,7 +12978,7 @@ var require_package_manager = __commonJS({
         }
       }
     }
-    var PackageManager = class {
+    var PackageManager3 = class {
       cacheDir;
       constructor() {
         this.cacheDir = path2.join(os.homedir(), ".hkd", "packages");
@@ -9828,7 +13185,7 @@ An HKD project (${template} template, edition ${edition}).
       }
       /** hkd pack — pack project to .hkdpack */
       pack(dir) {
-        const manifest = readManifest(dir);
+        const manifest = readManifest2(dir);
         if (!manifest)
           throw new Error("No hkd.toml found in directory to pack");
         const outName = `${manifest.name}-${manifest.version}.hkdpack`;
@@ -9839,7 +13196,7 @@ An HKD project (${template} template, edition ${edition}).
       }
       /** hkd add <package> [version] */
       add(dir, pkgNameOrPath, version = "latest") {
-        const manifest = readManifest(dir);
+        const manifest = readManifest2(dir);
         if (!manifest) {
           return { ok: false, message: "No hkd.toml found. Run `hkd init` first." };
         }
@@ -9864,7 +13221,7 @@ An HKD project (${template} template, edition ${edition}).
           }
         } else if (fs2.existsSync(pkgNameOrPath) && fs2.statSync(pkgNameOrPath).isDirectory()) {
           try {
-            const pkgManifest = readManifest(pkgNameOrPath);
+            const pkgManifest = readManifest2(pkgNameOrPath);
             if (!pkgManifest) {
               return { ok: false, message: `No hkd.toml found in directory: ${pkgNameOrPath}` };
             }
@@ -9883,7 +13240,7 @@ An HKD project (${template} template, edition ${edition}).
       }
       /** hkd remove <package> */
       remove(dir, pkgName) {
-        const manifest = readManifest(dir);
+        const manifest = readManifest2(dir);
         if (!manifest) {
           return { ok: false, message: "No hkd.toml found." };
         }
@@ -9897,7 +13254,7 @@ An HKD project (${template} template, edition ${edition}).
       }
       /** hkd install — resolve and download all dependencies */
       install(dir) {
-        const manifest = readManifest(dir);
+        const manifest = readManifest2(dir);
         if (!manifest) {
           return { ok: false, message: "No hkd.toml found. Run `hkd init` first." };
         }
@@ -9952,7 +13309,7 @@ ${messages.join("\n")}`
         return null;
       }
     };
-    exports2.PackageManager = PackageManager;
+    exports2.PackageManager = PackageManager3;
     function resolveDependencies(dir, manifest, cacheDir, activeResolutions = /* @__PURE__ */ new Set()) {
       const resolved = {};
       const deps = { ...manifest.dependencies, ...manifest.devDependencies };
@@ -9967,7 +13324,7 @@ ${messages.join("\n")}`
         if (typeof depVal === "object" && depVal !== null && "path" in depVal) {
           depDir = path2.resolve(dir, depVal.path);
           source = { path: depVal.path };
-          depManifest = readManifest(depDir);
+          depManifest = readManifest2(depDir);
           if (!depManifest) {
             throw new Error(`Path dependency not found: no hkd.toml in ${depDir}`);
           }
@@ -9977,7 +13334,7 @@ ${messages.join("\n")}`
           if (!fs2.existsSync(depDir)) {
             throw new Error(`Package ${name}@${version} not found in cache. Add it first via a .hkdpack file.`);
           }
-          depManifest = readManifest(depDir);
+          depManifest = readManifest2(depDir);
           if (!depManifest) {
             throw new Error(`Cached package ${name}@${version} is corrupt: missing hkd.toml`);
           }
@@ -10574,7 +13931,7 @@ var require_cache = __commonJS({
     var os = __importStar2(require("os"));
     var crypto2 = __importStar2(require("crypto"));
     var archive_js_1 = require_archive();
-    var ContentAddressedCache = class {
+    var ContentAddressedCache2 = class {
       baseDir;
       packagesDir;
       metadataDir;
@@ -10745,7 +14102,7 @@ var require_cache = __commonJS({
         };
       }
     };
-    exports2.ContentAddressedCache = ContentAddressedCache;
+    exports2.ContentAddressedCache = ContentAddressedCache2;
   }
 });
 
@@ -10784,7 +14141,7 @@ var require_lockfile = __commonJS({
     exports2.serializeLockfileV2 = serializeLockfileV2;
     exports2.parseLockfileV2 = parseLockfileV2;
     exports2.migrateLockfileV1 = migrateLockfileV1;
-    exports2.readLockfile = readLockfile;
+    exports2.readLockfile = readLockfile2;
     exports2.writeLockfile = writeLockfile;
     var fs2 = __importStar2(require("fs"));
     var path2 = __importStar2(require("path"));
@@ -10949,7 +14306,7 @@ var require_lockfile = __commonJS({
         throw new Error(`Failed to migrate V1 lockfile: ${err.message}`);
       }
     }
-    function readLockfile(projectDir) {
+    function readLockfile2(projectDir) {
       const lockPath = path2.join(projectDir, "hkd.lock");
       if (!fs2.existsSync(lockPath))
         return null;
@@ -11357,16 +14714,16 @@ var require_manager = __commonJS({
     var identity_js_1 = require_identity();
     var semver_js_1 = require_semver();
     var archive_js_1 = require_archive();
-    var cache_js_12 = require_cache();
-    var lockfile_js_12 = require_lockfile();
+    var cache_js_1 = require_cache();
+    var lockfile_js_1 = require_lockfile();
     var resolver_js_1 = require_resolver();
     var registry_http_js_1 = require_registry_http();
     var index_js_22 = require_utils();
-    var PackageManager2 = class {
+    var PackageManager22 = class {
       cache;
       registry;
       constructor(options) {
-        this.cache = new cache_js_12.ContentAddressedCache(options?.cacheDir);
+        this.cache = new cache_js_1.ContentAddressedCache(options?.cacheDir);
         this.registry = options?.registry || new registry_http_js_1.HttpRegistryClient();
       }
       /**
@@ -11489,7 +14846,7 @@ print("Hello from ${pkgName}!");
           return { ok: false, message: "No hkd.toml found. Run `hkd init` first." };
         }
         const offline = options.offline || process.env.HKD_OFFLINE === "1";
-        const existingLock = options.existingLockOverride !== void 0 ? options.existingLockOverride : (0, lockfile_js_12.readLockfile)(dir);
+        const existingLock = options.existingLockOverride !== void 0 ? options.existingLockOverride : (0, lockfile_js_1.readLockfile)(dir);
         if (options.locked && !existingLock) {
           return { ok: false, message: "error[PKG010]: --locked specified but no hkd.lock found" };
         }
@@ -11555,7 +14912,7 @@ print("Hello from ${pkgName}!");
             return { ok: false, message: "error[PKG010]: Dependencies in hkd.toml do not match locked hkd.lock in --locked mode" };
           }
         } else {
-          (0, lockfile_js_12.writeLockfile)(dir, resolution.lockfile);
+          (0, lockfile_js_1.writeLockfile)(dir, resolution.lockfile);
         }
         const depsDir = path2.join(dir, ".hkd", "deps");
         if (fs2.existsSync(depsDir)) {
@@ -11690,7 +15047,7 @@ ${messages.join("\n")}`
         if (!manifest) {
           return { ok: false, message: "No hkd.toml found. Run `hkd init` first." };
         }
-        let existingLock = (0, lockfile_js_12.readLockfile)(dir);
+        let existingLock = (0, lockfile_js_1.readLockfile)(dir);
         if (existingLock && pkgName) {
           const norm = (0, identity_js_1.normalizePackageName)(pkgName);
           existingLock.packages = existingLock.packages.filter((p) => p.name !== norm);
@@ -11768,7 +15125,7 @@ ${messages.join("\n")}`
         }
       }
     };
-    exports2.PackageManager2 = PackageManager2;
+    exports2.PackageManager2 = PackageManager22;
   }
 });
 
@@ -11804,13 +15161,13 @@ var require_audit = __commonJS({
       return result;
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.auditProject = auditProject;
+    exports2.auditProject = auditProject2;
     var fs2 = __importStar2(require("fs"));
     var path2 = __importStar2(require("path"));
     var index_js_12 = require_package_manager();
-    var lockfile_js_12 = require_lockfile();
+    var lockfile_js_1 = require_lockfile();
     var identity_js_1 = require_identity();
-    function auditProject(projectDir) {
+    function auditProject2(projectDir) {
       const issues = [];
       const manifest = (0, index_js_12.readManifest)(projectDir);
       if (!manifest) {
@@ -11828,7 +15185,7 @@ var require_audit = __commonJS({
           ]
         };
       }
-      const lockfile = (0, lockfile_js_12.readLockfile)(projectDir);
+      const lockfile = (0, lockfile_js_1.readLockfile)(projectDir);
       if (!lockfile) {
         issues.push({
           code: "AUD002",
@@ -11963,12 +15320,12 @@ var require_reproducible = __commonJS({
       return result;
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.verifyBuildReproducibility = verifyBuildReproducibility;
+    exports2.verifyBuildReproducibility = verifyBuildReproducibility2;
     var fs2 = __importStar2(require("fs"));
     var path2 = __importStar2(require("path"));
     var crypto2 = __importStar2(require("crypto"));
     var child_process_12 = require("child_process");
-    function verifyBuildReproducibility(sourceFile, cliPath) {
+    function verifyBuildReproducibility2(sourceFile, cliPath) {
       const tempDir = path2.resolve(".hkd/repro_test_" + Date.now());
       fs2.mkdirSync(tempDir, { recursive: true });
       const dirA = path2.join(tempDir, "run_a");
@@ -12053,7 +15410,7 @@ var require_repl = __commonJS({
       return result;
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.startRepl = startRepl;
+    exports2.startRepl = startRepl2;
     var readline = __importStar2(require("readline"));
     var index_js_12 = require_utils();
     var index_js_22 = require_errors();
@@ -12069,7 +15426,7 @@ var require_repl = __commonJS({
     var RED2 = (s) => `\x1B[31m${s}\x1B[0m`;
     var DIM2 = (s) => `\x1B[2m${s}\x1B[0m`;
     var YELLOW2 = (s) => `\x1B[33m${s}\x1B[0m`;
-    function startRepl(edition = "2026") {
+    function startRepl2(edition = "2026") {
       const vm = new vm_js_1.VM((s) => process.stdout.write(s + "\n"));
       (0, index_js_32.registerStdlib)(vm);
       vm.defineNative("input", 1, (_args) => {
@@ -12218,194 +15575,6 @@ ${BOLD2("REPL Commands:")}
       for (const diag of reporter.getErrors()) {
         process.stderr.write(RED2((0, index_js_22.formatDiagnostic)(diag, source, fileName)) + "\n\n");
       }
-    }
-  }
-});
-
-// dist/bytecode/serializer.js
-var require_serializer = __commonJS({
-  "dist/bytecode/serializer.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.serialize = serialize;
-    exports2.serializeProgram = serializeProgram;
-    exports2.deserializeProgram = deserializeProgram;
-    var buffer_1 = require("buffer");
-    var chunk_js_1 = require_chunk();
-    function serialize(chunk) {
-      const parts = [];
-      const writeByte = (b) => {
-        const buf = buffer_1.Buffer.alloc(1);
-        buf.writeUInt8(b, 0);
-        parts.push(buf);
-      };
-      const writeU16 = (val) => {
-        const buf = buffer_1.Buffer.alloc(2);
-        buf.writeUInt16BE(val, 0);
-        parts.push(buf);
-      };
-      const writeU32 = (val) => {
-        const buf = buffer_1.Buffer.alloc(4);
-        buf.writeUInt32BE(val, 0);
-        parts.push(buf);
-      };
-      const writeF64 = (val) => {
-        const buf = buffer_1.Buffer.alloc(8);
-        buf.writeDoubleBE(val, 0);
-        parts.push(buf);
-      };
-      const writeString = (str) => {
-        const strBuf = buffer_1.Buffer.from(str, "utf-8");
-        writeU16(strBuf.length);
-        parts.push(strBuf);
-      };
-      writeString(chunk.name);
-      writeByte(chunk.arity);
-      writeU16(chunk.localCount);
-      writeU16(chunk.upvalueCount);
-      writeU32(chunk.code.length);
-      const codeBuf = buffer_1.Buffer.from(chunk.code);
-      parts.push(codeBuf);
-      writeU32(chunk.lines.length);
-      const linesBuf = buffer_1.Buffer.alloc(chunk.lines.length * 2);
-      for (let i = 0; i < chunk.lines.length; i++) {
-        linesBuf.writeUInt16BE(chunk.lines[i], i * 2);
-      }
-      parts.push(linesBuf);
-      writeU16(chunk.constants.length);
-      for (const val of chunk.constants) {
-        if (val === null) {
-          writeByte(0);
-        } else if (typeof val === "boolean") {
-          writeByte(val ? 2 : 1);
-        } else if (typeof val === "number") {
-          writeByte(3);
-          writeF64(val);
-        } else if (typeof val === "string") {
-          writeByte(4);
-          writeString(val);
-        } else if (typeof val === "object" && val.type === "function") {
-          writeByte(5);
-          const subBuf = serialize(val.chunk);
-          parts.push(subBuf);
-        } else {
-          throw new Error(`Unsupported constant type: ${typeof val}`);
-        }
-      }
-      return buffer_1.Buffer.concat(parts);
-    }
-    function serializeProgram(chunk) {
-      const header = buffer_1.Buffer.alloc(8);
-      header.write("HKDB", 0, "ascii");
-      header.writeUInt8(1, 4);
-      header.writeUInt8(0, 5);
-      header.writeUInt8(1, 6);
-      header.writeUInt8(1, 7);
-      const body = serialize(chunk);
-      return buffer_1.Buffer.concat([header, body]);
-    }
-    function deserializeProgram(buffer) {
-      if (buffer.length < 8) {
-        throw new Error(`Malformed HKDB bytecode: buffer length ${buffer.length} is shorter than 8-byte header`);
-      }
-      const magic = buffer.toString("ascii", 0, 4);
-      if (magic !== "HKDB") {
-        throw new Error(`Invalid HKDB magic bytes: expected 'HKDB', found '${magic}'`);
-      }
-      const formatVersion = buffer.readUInt8(4);
-      if (formatVersion !== 1) {
-        throw new Error(`Unsupported HKDB bytecode format version: ${formatVersion}`);
-      }
-      let offset = 8;
-      const readResult = deserializeChunk(buffer, offset);
-      return readResult.chunk;
-    }
-    function deserializeChunk(buffer, startOffset) {
-      let offset = startOffset;
-      const checkAvailable = (bytes) => {
-        if (offset + bytes > buffer.length) {
-          throw new Error(`Corrupted HKDB bytecode: unexpected end of buffer at offset ${offset}`);
-        }
-      };
-      checkAvailable(2);
-      const nameLen = buffer.readUInt16BE(offset);
-      offset += 2;
-      checkAvailable(nameLen);
-      const name = buffer.toString("utf-8", offset, offset + nameLen);
-      offset += nameLen;
-      checkAvailable(1);
-      const arity = buffer.readUInt8(offset);
-      offset += 1;
-      const chunk = new chunk_js_1.Chunk(name, arity);
-      checkAvailable(2);
-      chunk.localCount = buffer.readUInt16BE(offset);
-      offset += 2;
-      checkAvailable(2);
-      chunk.upvalueCount = buffer.readUInt16BE(offset);
-      offset += 2;
-      checkAvailable(4);
-      const codeLen = buffer.readUInt32BE(offset);
-      offset += 4;
-      checkAvailable(codeLen);
-      chunk.code = Array.from(buffer.subarray(offset, offset + codeLen));
-      offset += codeLen;
-      checkAvailable(4);
-      const linesLen = buffer.readUInt32BE(offset);
-      offset += 4;
-      checkAvailable(linesLen * 2);
-      chunk.lines = [];
-      for (let i = 0; i < linesLen; i++) {
-        chunk.lines.push(buffer.readUInt16BE(offset + i * 2));
-      }
-      offset += linesLen * 2;
-      checkAvailable(2);
-      const constCount = buffer.readUInt16BE(offset);
-      offset += 2;
-      for (let i = 0; i < constCount; i++) {
-        checkAvailable(1);
-        const tag = buffer.readUInt8(offset);
-        offset += 1;
-        switch (tag) {
-          case 0:
-            chunk.constants.push(null);
-            break;
-          case 1:
-            chunk.constants.push(false);
-            break;
-          case 2:
-            chunk.constants.push(true);
-            break;
-          case 3:
-            checkAvailable(8);
-            chunk.constants.push(buffer.readDoubleBE(offset));
-            offset += 8;
-            break;
-          case 4: {
-            checkAvailable(2);
-            const strLen = buffer.readUInt16BE(offset);
-            offset += 2;
-            checkAvailable(strLen);
-            chunk.constants.push(buffer.toString("utf-8", offset, offset + strLen));
-            offset += strLen;
-            break;
-          }
-          case 5: {
-            const sub = deserializeChunk(buffer, offset);
-            chunk.constants.push({
-              type: "function",
-              name: sub.chunk.name,
-              arity: sub.chunk.arity,
-              upvalueCount: sub.chunk.upvalueCount,
-              chunk: sub.chunk
-            });
-            offset = sub.nextOffset;
-            break;
-          }
-          default:
-            throw new Error(`Corrupted HKDB constant pool: unknown type tag 0x${tag.toString(16)} at offset ${offset - 1}`);
-        }
-      }
-      return { chunk, nextOffset: offset };
     }
   }
 });
@@ -12600,7 +15769,7 @@ var require_test_runner = __commonJS({
       return result;
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.runTests = runTests;
+    exports2.runTests = runTests2;
     var fs2 = __importStar2(require("fs"));
     var path2 = __importStar2(require("path"));
     var index_js_12 = require_errors();
@@ -12611,13 +15780,13 @@ var require_test_runner = __commonJS({
     var index_js_22 = require_stdlib();
     var index_js_32 = require_runtime();
     var differential_js_1 = require_differential();
-    var index_js_42 = require_utils();
+    var index_js_4 = require_utils();
     var GREEN2 = (s) => `\x1B[32m${s}\x1B[0m`;
     var RED2 = (s) => `\x1B[31m${s}\x1B[0m`;
     var BOLD2 = (s) => `\x1B[1m${s}\x1B[0m`;
     var DIM2 = (s) => `\x1B[2m${s}\x1B[0m`;
     var YELLOW2 = (s) => `\x1B[33m${s}\x1B[0m`;
-    function runTests(target, opts = {}) {
+    function runTests2(target, opts = {}) {
       if (opts.differential) {
         console.log(`
 ${BOLD2("HKD Cross-Runtime Differential Validation")}
@@ -12705,7 +15874,7 @@ ${BOLD2("HKD Test Runner")}
       const reporter = new index_js_12.ErrorReporter(source, fileName);
       const lexer = new lexer_js_12.Lexer(source, fileName, reporter);
       const tokens = lexer.tokenize();
-      const edition = (0, index_js_42.detectFileEdition)(fileName);
+      const edition = (0, index_js_4.detectFileEdition)(fileName);
       const parser = new parser_js_12.Parser(tokens, source, fileName, reporter, edition);
       const ast = parser.parse();
       if (reporter.hasErrors()) {
@@ -12873,7 +16042,7 @@ var require_targets = __commonJS({
     exports2.KNOWN_TARGETS = void 0;
     exports2.parseTarget = parseTarget;
     exports2.getHostTarget = getHostTarget;
-    exports2.listTargetsFormatted = listTargetsFormatted;
+    exports2.listTargetsFormatted = listTargetsFormatted2;
     exports2.KNOWN_TARGETS = {
       "x86_64-windows": {
         triple: "x86_64-windows",
@@ -12980,7 +16149,7 @@ var require_targets = __commonJS({
         executableExtension: os === "windows" ? ".exe" : ""
       };
     }
-    function listTargetsFormatted() {
+    function listTargetsFormatted2() {
       const host = getHostTarget();
       const lines = [
         "HKD Canonical Target Triples:\n",
@@ -13032,16 +16201,16 @@ var require_doctor = __commonJS({
       return result;
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.runDoctor = runDoctor;
-    exports2.printDoctorReport = printDoctorReport;
+    exports2.runDoctor = runDoctor2;
+    exports2.printDoctorReport = printDoctorReport2;
     var fs2 = __importStar2(require("fs"));
     var path2 = __importStar2(require("path"));
     var child_process_12 = require("child_process");
     var vm_js_1 = require_vm();
     var chunk_js_1 = require_chunk();
-    var targets_js_12 = require_targets();
+    var targets_js_1 = require_targets();
     var index_js_12 = require_utils();
-    function runDoctor() {
+    function runDoctor2() {
       const checks = [];
       try {
         const chunk = new chunk_js_1.Chunk("<test>", 0);
@@ -13073,9 +16242,28 @@ var require_doctor = __commonJS({
           message: err.message
         });
       }
+      function findFirstCandidate(candidates) {
+        for (const c of candidates) {
+          const p1 = path2.resolve(__dirname, c);
+          if (fs2.existsSync(p1))
+            return p1;
+          const p2 = path2.resolve(process.cwd(), c);
+          if (fs2.existsSync(p2))
+            return p2;
+        }
+        return null;
+      }
       const isWindows = process.platform === "win32";
-      const nativeBinaryPath = path2.resolve("native-runtime", "zig-out", "bin", isWindows ? "hkd-runtime.exe" : "hkd-runtime");
-      if (fs2.existsSync(nativeBinaryPath)) {
+      const binName = isWindows ? "hkd-runtime.exe" : "hkd-runtime";
+      const nativeBinaryPath = findFirstCandidate([
+        `../../native-runtime/zig-out/bin/${binName}`,
+        `../../../native-runtime/zig-out/bin/${binName}`,
+        `../bin/${binName}`,
+        binName,
+        `native-runtime/zig-out/bin/${binName}`,
+        `bin/${binName}`
+      ]);
+      if (nativeBinaryPath && fs2.existsSync(nativeBinaryPath)) {
         const testRun = (0, child_process_12.spawnSync)(nativeBinaryPath, ["--version"], { encoding: "utf-8" });
         if (testRun.status === 0) {
           checks.push({
@@ -13101,15 +16289,22 @@ var require_doctor = __commonJS({
           message: "Native runtime binary not built. Run 'npx zig build -Doptimize=ReleaseFast'"
         });
       }
-      const hostTarget = (0, targets_js_12.getHostTarget)();
+      const hostTarget = (0, targets_js_1.getHostTarget)();
       checks.push({
         name: "Host Target Architecture",
         category: "target",
         status: hostTarget.tier === "Tier 1 (Supported)" ? "ok" : "warn",
         message: `${hostTarget.triple} (${hostTarget.tier})`
       });
-      const lspPath = path2.resolve("dist", "lsp", "server.js");
-      if (fs2.existsSync(lspPath) || fs2.existsSync(path2.resolve("src", "lsp", "server.ts"))) {
+      const lspPath = findFirstCandidate([
+        "../lsp/server.js",
+        "../lsp/server.ts",
+        "../../dist/lsp/server.js",
+        "../../src/lsp/server.ts",
+        "dist/lsp/server.js",
+        "src/lsp/server.ts"
+      ]);
+      if (lspPath) {
         checks.push({
           name: "HKD Language Server Protocol 2.0 (LSP)",
           category: "lsp",
@@ -13124,8 +16319,15 @@ var require_doctor = __commonJS({
           message: "LSP server module not found"
         });
       }
-      const dapPath = path2.resolve("dist", "debug", "server.js");
-      if (fs2.existsSync(dapPath) || fs2.existsSync(path2.resolve("src", "debug", "server.ts"))) {
+      const dapPath = findFirstCandidate([
+        "../debug/server.js",
+        "../debug/server.ts",
+        "../../dist/debug/server.js",
+        "../../src/debug/server.ts",
+        "dist/debug/server.js",
+        "src/debug/server.ts"
+      ]);
+      if (dapPath) {
         checks.push({
           name: "HKD Debug Adapter Protocol (DAP)",
           category: "debugger",
@@ -13154,8 +16356,12 @@ var require_doctor = __commonJS({
         status: "ok",
         message: "Container generator verified with non-root execution (UID 10001)"
       });
-      const vsCodePkg = path2.resolve("vscode-extension", "package.json");
-      if (fs2.existsSync(vsCodePkg)) {
+      const vsCodePkg = findFirstCandidate([
+        "../../vscode-extension/package.json",
+        "../../../vscode-extension/package.json",
+        "vscode-extension/package.json"
+      ]);
+      if (vsCodePkg) {
         checks.push({
           name: "VS Code Extension Manifest",
           category: "vscode",
@@ -13170,7 +16376,12 @@ var require_doctor = __commonJS({
           message: "vscode-extension/package.json not found"
         });
       }
-      const hasFuzz = fs2.existsSync(path2.resolve("fuzz", "regressions")) || fs2.existsSync(path2.resolve("fuzz", "corpus"));
+      const hasFuzz = findFirstCandidate([
+        "../../fuzz/regressions",
+        "../../fuzz/corpus",
+        "fuzz/regressions",
+        "fuzz/corpus"
+      ]) !== null;
       checks.push({
         name: "Security, Fuzzing & Audit Engine",
         category: "security",
@@ -13187,7 +16398,7 @@ var require_doctor = __commonJS({
         checks
       };
     }
-    function printDoctorReport(report, asJson = false) {
+    function printDoctorReport2(report, asJson = false) {
       if (asJson) {
         console.log(JSON.stringify(report, null, 2));
         return;
@@ -13229,155 +16440,6 @@ HKD Doctor v${report.version} \u2014 System & Environment Health
       } else {
         console.log("Some checks failed. Please address the errors above.\n");
       }
-    }
-  }
-});
-
-// dist/deploy/artifact.js
-var require_artifact = __commonJS({
-  "dist/deploy/artifact.js"(exports2) {
-    "use strict";
-    var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __setModuleDefault2 = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar2 = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule) return mod;
-      var result = {};
-      if (mod != null) {
-        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding2(result, mod, k);
-      }
-      __setModuleDefault2(result, mod);
-      return result;
-    };
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.computeSha256 = computeSha256;
-    exports2.generateArtifactMetadata = generateArtifactMetadata;
-    exports2.writeArtifactMetadata = writeArtifactMetadata;
-    exports2.generateSha256Sums = generateSha256Sums;
-    exports2.verifyArtifact = verifyArtifact;
-    var fs2 = __importStar2(require("fs"));
-    var path2 = __importStar2(require("path"));
-    var crypto2 = __importStar2(require("crypto"));
-    var index_js_12 = require_utils();
-    function computeSha256(filePath) {
-      const data = fs2.readFileSync(filePath);
-      return crypto2.createHash("sha256").update(data).digest("hex");
-    }
-    function generateArtifactMetadata(binaryPath, pkgName, pkgVersion, target, profile) {
-      const stat = fs2.statSync(binaryPath);
-      const checksum = computeSha256(binaryPath);
-      return {
-        name: pkgName,
-        version: pkgVersion,
-        target: target.triple,
-        architecture: target.arch,
-        os: target.os,
-        compilerVersion: index_js_12.HKD_VERSION,
-        runtimeVersion: index_js_12.HKD_VERSION,
-        buildProfile: profile.name,
-        checksum,
-        sizeBytes: stat.size,
-        buildTimestamp: (/* @__PURE__ */ new Date()).toISOString(),
-        binaryName: path2.basename(binaryPath)
-      };
-    }
-    function writeArtifactMetadata(outDir, meta) {
-      fs2.mkdirSync(outDir, { recursive: true });
-      const metaPath = path2.join(outDir, "artifact.json");
-      fs2.writeFileSync(metaPath, JSON.stringify(meta, null, 2), "utf-8");
-      return metaPath;
-    }
-    function generateSha256Sums(dir, fileNames) {
-      const lines = [];
-      for (const f of fileNames) {
-        const full = path2.join(dir, f);
-        if (fs2.existsSync(full)) {
-          const hash = computeSha256(full);
-          lines.push(`${hash}  ${f}`);
-        }
-      }
-      const sumsPath = path2.join(dir, "SHA256SUMS");
-      fs2.writeFileSync(sumsPath, lines.join("\n") + "\n", "utf-8");
-      return sumsPath;
-    }
-    function verifyArtifact(targetPath) {
-      const errors = [];
-      if (!fs2.existsSync(targetPath)) {
-        return { valid: false, errors: [`File or directory not found: ${targetPath}`] };
-      }
-      const stat = fs2.statSync(targetPath);
-      if (stat.isDirectory()) {
-        const metaPath = path2.join(targetPath, "artifact.json");
-        if (!fs2.existsSync(metaPath)) {
-          return { valid: false, errors: [`artifact.json not found in release directory: ${targetPath}`] };
-        }
-        try {
-          const meta = JSON.parse(fs2.readFileSync(metaPath, "utf-8"));
-          const binPath = path2.join(targetPath, meta.binaryName);
-          if (!fs2.existsSync(binPath)) {
-            errors.push(`Referenced binary missing from artifact: ${meta.binaryName}`);
-          } else {
-            const actualSha2 = computeSha256(binPath);
-            if (actualSha2 !== meta.checksum) {
-              errors.push(`Checksum mismatch for ${meta.binaryName}: expected ${meta.checksum}, got ${actualSha2}`);
-            }
-          }
-          const sumsPath = path2.join(targetPath, "SHA256SUMS");
-          if (fs2.existsSync(sumsPath)) {
-            const lines = fs2.readFileSync(sumsPath, "utf-8").split("\n").filter(Boolean);
-            for (const l of lines) {
-              const [expectedHash, fName] = l.trim().split(/\s+/);
-              if (fName === "SHA256SUMS")
-                continue;
-              const fPath = path2.join(targetPath, fName);
-              if (fs2.existsSync(fPath)) {
-                const h = computeSha256(fPath);
-                if (h !== expectedHash) {
-                  errors.push(`SHA256SUMS mismatch for ${fName}: expected ${expectedHash}, got ${h}`);
-                }
-              }
-            }
-          }
-          return {
-            valid: errors.length === 0,
-            errors,
-            metadata: meta
-          };
-        } catch (err) {
-          return { valid: false, errors: [`Malformed artifact.json: ${err.message}`] };
-        }
-      }
-      const actualSha = computeSha256(targetPath);
-      const data = fs2.readFileSync(targetPath);
-      if (data.length >= 16) {
-        const magic = data.subarray(data.length - 8).toString("ascii");
-        if (magic === "HKDSTAND") {
-          const payloadLen = data.readBigUInt64LE(data.length - 16);
-          if (data.length < Number(payloadLen) + 16) {
-            errors.push("Corrupt HKDSTAND payload length trailer");
-          }
-        }
-      }
-      return {
-        valid: errors.length === 0,
-        errors,
-        actualSha256: actualSha
-      };
     }
   }
 });
@@ -13453,6 +16515,155 @@ var require_profiles = __commonJS({
   }
 });
 
+// dist/deploy/artifact.js
+var require_artifact = __commonJS({
+  "dist/deploy/artifact.js"(exports2) {
+    "use strict";
+    var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
+      if (k2 === void 0) k2 = k;
+      var desc = Object.getOwnPropertyDescriptor(m, k);
+      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+        desc = { enumerable: true, get: function() {
+          return m[k];
+        } };
+      }
+      Object.defineProperty(o, k2, desc);
+    }) : (function(o, m, k, k2) {
+      if (k2 === void 0) k2 = k;
+      o[k2] = m[k];
+    }));
+    var __setModuleDefault2 = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
+      Object.defineProperty(o, "default", { enumerable: true, value: v });
+    }) : function(o, v) {
+      o["default"] = v;
+    });
+    var __importStar2 = exports2 && exports2.__importStar || function(mod) {
+      if (mod && mod.__esModule) return mod;
+      var result = {};
+      if (mod != null) {
+        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding2(result, mod, k);
+      }
+      __setModuleDefault2(result, mod);
+      return result;
+    };
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.computeSha256 = computeSha256;
+    exports2.generateArtifactMetadata = generateArtifactMetadata;
+    exports2.writeArtifactMetadata = writeArtifactMetadata;
+    exports2.generateSha256Sums = generateSha256Sums;
+    exports2.verifyArtifact = verifyArtifact2;
+    var fs2 = __importStar2(require("fs"));
+    var path2 = __importStar2(require("path"));
+    var crypto2 = __importStar2(require("crypto"));
+    var index_js_12 = require_utils();
+    function computeSha256(filePath) {
+      const data = fs2.readFileSync(filePath);
+      return crypto2.createHash("sha256").update(data).digest("hex");
+    }
+    function generateArtifactMetadata(binaryPath, pkgName, pkgVersion, target, profile) {
+      const stat = fs2.statSync(binaryPath);
+      const checksum = computeSha256(binaryPath);
+      return {
+        name: pkgName,
+        version: pkgVersion,
+        target: target.triple,
+        architecture: target.arch,
+        os: target.os,
+        compilerVersion: index_js_12.HKD_VERSION,
+        runtimeVersion: index_js_12.HKD_VERSION,
+        buildProfile: profile.name,
+        checksum,
+        sizeBytes: stat.size,
+        buildTimestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        binaryName: path2.basename(binaryPath)
+      };
+    }
+    function writeArtifactMetadata(outDir, meta) {
+      fs2.mkdirSync(outDir, { recursive: true });
+      const metaPath = path2.join(outDir, "artifact.json");
+      fs2.writeFileSync(metaPath, JSON.stringify(meta, null, 2), "utf-8");
+      return metaPath;
+    }
+    function generateSha256Sums(dir, fileNames) {
+      const lines = [];
+      for (const f of fileNames) {
+        const full = path2.join(dir, f);
+        if (fs2.existsSync(full)) {
+          const hash = computeSha256(full);
+          lines.push(`${hash}  ${f}`);
+        }
+      }
+      const sumsPath = path2.join(dir, "SHA256SUMS");
+      fs2.writeFileSync(sumsPath, lines.join("\n") + "\n", "utf-8");
+      return sumsPath;
+    }
+    function verifyArtifact2(targetPath) {
+      const errors = [];
+      if (!fs2.existsSync(targetPath)) {
+        return { valid: false, errors: [`File or directory not found: ${targetPath}`] };
+      }
+      const stat = fs2.statSync(targetPath);
+      if (stat.isDirectory()) {
+        const metaPath = path2.join(targetPath, "artifact.json");
+        if (!fs2.existsSync(metaPath)) {
+          return { valid: false, errors: [`artifact.json not found in release directory: ${targetPath}`] };
+        }
+        try {
+          const meta = JSON.parse(fs2.readFileSync(metaPath, "utf-8"));
+          const binPath = path2.join(targetPath, meta.binaryName);
+          if (!fs2.existsSync(binPath)) {
+            errors.push(`Referenced binary missing from artifact: ${meta.binaryName}`);
+          } else {
+            const actualSha2 = computeSha256(binPath);
+            if (actualSha2 !== meta.checksum) {
+              errors.push(`Checksum mismatch for ${meta.binaryName}: expected ${meta.checksum}, got ${actualSha2}`);
+            }
+          }
+          const sumsPath = path2.join(targetPath, "SHA256SUMS");
+          if (fs2.existsSync(sumsPath)) {
+            const lines = fs2.readFileSync(sumsPath, "utf-8").split("\n").filter(Boolean);
+            for (const l of lines) {
+              const [expectedHash, fName] = l.trim().split(/\s+/);
+              if (fName === "SHA256SUMS")
+                continue;
+              const fPath = path2.join(targetPath, fName);
+              if (fs2.existsSync(fPath)) {
+                const h = computeSha256(fPath);
+                if (h !== expectedHash) {
+                  errors.push(`SHA256SUMS mismatch for ${fName}: expected ${expectedHash}, got ${h}`);
+                }
+              }
+            }
+          }
+          return {
+            valid: errors.length === 0,
+            errors,
+            metadata: meta
+          };
+        } catch (err) {
+          return { valid: false, errors: [`Malformed artifact.json: ${err.message}`] };
+        }
+      }
+      const actualSha = computeSha256(targetPath);
+      const data = fs2.readFileSync(targetPath);
+      if (data.length >= 16) {
+        const magic = data.subarray(data.length - 8).toString("ascii");
+        if (magic === "HKDSTAND") {
+          const payloadLen = data.readBigUInt64LE(data.length - 16);
+          if (data.length < Number(payloadLen) + 16) {
+            errors.push("Corrupt HKDSTAND payload length trailer");
+          }
+        }
+      }
+      return {
+        valid: errors.length === 0,
+        errors,
+        actualSha256: actualSha
+      };
+    }
+  }
+});
+
 // dist/deploy/sbom.js
 var require_sbom = __commonJS({
   "dist/deploy/sbom.js"(exports2) {
@@ -13486,12 +16697,12 @@ var require_sbom = __commonJS({
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.generateCycloneDxSbom = generateCycloneDxSbom;
-    exports2.writeSbomJson = writeSbomJson;
+    exports2.writeSbomJson = writeSbomJson2;
     var fs2 = __importStar2(require("fs"));
     var path2 = __importStar2(require("path"));
     var crypto2 = __importStar2(require("crypto"));
     var index_js_12 = require_package_manager();
-    var lockfile_js_12 = require_lockfile();
+    var lockfile_js_1 = require_lockfile();
     var index_js_22 = require_utils();
     function generateCycloneDxSbom(projectDir) {
       const manifest = (0, index_js_12.readManifest)(projectDir);
@@ -13516,7 +16727,7 @@ var require_sbom = __commonJS({
       if (fs2.existsSync(lockPath)) {
         try {
           const lockContent = fs2.readFileSync(lockPath, "utf-8");
-          const lockData = (0, lockfile_js_12.parseLockfileV2)(lockContent);
+          const lockData = (0, lockfile_js_1.parseLockfileV2)(lockContent);
           for (const pkgEntry of lockData.packages) {
             const hashes = [];
             if (pkgEntry.checksum) {
@@ -13561,7 +16772,7 @@ var require_sbom = __commonJS({
         components
       };
     }
-    function writeSbomJson(projectDir, outPath) {
+    function writeSbomJson2(projectDir, outPath) {
       const sbom = generateCycloneDxSbom(projectDir);
       const dest = outPath || path2.join(projectDir, "target", "sbom.json");
       fs2.mkdirSync(path2.dirname(dest), { recursive: true });
@@ -13603,21 +16814,21 @@ var require_release = __commonJS({
       return result;
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.buildReleaseBundle = buildReleaseBundle;
+    exports2.buildReleaseBundle = buildReleaseBundle2;
     var fs2 = __importStar2(require("fs"));
     var path2 = __importStar2(require("path"));
     var index_js_12 = require_package_manager();
-    var targets_js_12 = require_targets();
+    var targets_js_1 = require_targets();
     var profiles_js_1 = require_profiles();
-    var artifact_js_12 = require_artifact();
-    var sbom_js_12 = require_sbom();
-    function buildReleaseBundle(compiledBinaryPath, options) {
+    var artifact_js_1 = require_artifact();
+    var sbom_js_1 = require_sbom();
+    function buildReleaseBundle2(compiledBinaryPath, options) {
       const projectDir = options.projectDir;
       const manifest = (0, index_js_12.readManifest)(projectDir);
       if (!manifest) {
         return { ok: false, message: "Missing hkd.toml manifest" };
       }
-      const target = (0, targets_js_12.parseTarget)(options.target);
+      const target = (0, targets_js_1.parseTarget)(options.target);
       const profile = (0, profiles_js_1.resolveProfile)(options.profile || "release");
       const baseOutDir = options.outDir || path2.join(projectDir, "target", "releases");
       const releaseName = `${manifest.name}-${manifest.version || "0.1.0"}-${target.triple}-${profile.name}`;
@@ -13626,9 +16837,9 @@ var require_release = __commonJS({
       const binaryFileName = `${manifest.name}${target.executableExtension}`;
       const destBinPath = path2.join(bundleDir, binaryFileName);
       fs2.copyFileSync(compiledBinaryPath, destBinPath);
-      const meta = (0, artifact_js_12.generateArtifactMetadata)(destBinPath, manifest.name, manifest.version || "0.1.0", target, profile);
-      (0, artifact_js_12.writeArtifactMetadata)(bundleDir, meta);
-      (0, sbom_js_12.writeSbomJson)(projectDir, path2.join(bundleDir, "sbom.json"));
+      const meta = (0, artifact_js_1.generateArtifactMetadata)(destBinPath, manifest.name, manifest.version || "0.1.0", target, profile);
+      (0, artifact_js_1.writeArtifactMetadata)(bundleDir, meta);
+      (0, sbom_js_1.writeSbomJson)(projectDir, path2.join(bundleDir, "sbom.json"));
       for (const doc of ["README.md", "LICENSE", "LICENSE.txt", "hkd.toml"]) {
         const srcDoc = path2.join(projectDir, doc);
         if (fs2.existsSync(srcDoc)) {
@@ -13636,8 +16847,8 @@ var require_release = __commonJS({
         }
       }
       const filesInBundle = fs2.readdirSync(bundleDir).filter((f) => f !== "SHA256SUMS");
-      (0, artifact_js_12.generateSha256Sums)(bundleDir, filesInBundle);
-      const verifyRes = (0, artifact_js_12.verifyArtifact)(bundleDir);
+      (0, artifact_js_1.generateSha256Sums)(bundleDir, filesInBundle);
+      const verifyRes = (0, artifact_js_1.verifyArtifact)(bundleDir);
       if (!verifyRes.valid) {
         return {
           ok: false,
@@ -13689,8 +16900,8 @@ var require_env_config = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.isSensitiveKey = isSensitiveKey;
     exports2.maskValue = maskValue;
-    exports2.loadEffectiveConfig = loadEffectiveConfig;
-    exports2.formatConfigReport = formatConfigReport;
+    exports2.loadEffectiveConfig = loadEffectiveConfig2;
+    exports2.formatConfigReport = formatConfigReport2;
     var fs2 = __importStar2(require("fs"));
     var path2 = __importStar2(require("path"));
     var index_js_12 = require_package_manager();
@@ -13716,7 +16927,7 @@ var require_env_config = __commonJS({
       }
       return str;
     }
-    function loadEffectiveConfig(options = {}) {
+    function loadEffectiveConfig2(options = {}) {
       const result = {
         env: "development",
         host: "127.0.0.1",
@@ -13763,7 +16974,7 @@ var require_env_config = __commonJS({
       }
       return result;
     }
-    function formatConfigReport(cfg) {
+    function formatConfigReport2(cfg) {
       const lines = [
         "HKD Effective Configuration:\n",
         "  Key                     Value",
@@ -13812,7 +17023,7 @@ var require_container = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.generateDockerfile = generateDockerfile;
     exports2.generateDockerignore = generateDockerignore;
-    exports2.initContainer = initContainer;
+    exports2.initContainer = initContainer2;
     var fs2 = __importStar2(require("fs"));
     var path2 = __importStar2(require("path"));
     var index_js_12 = require_package_manager();
@@ -13880,7 +17091,7 @@ tests/
 *.secret
 `;
     }
-    function initContainer(projectDir, config = {}) {
+    function initContainer2(projectDir, config = {}) {
       const manifest = (0, index_js_12.readManifest)(projectDir);
       const port = manifest?.deploy?.port || config.port || 8080;
       const dockerfilePath = path2.join(projectDir, "Dockerfile");
@@ -13903,7 +17114,7 @@ var require_platform_manager = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.PlatformRegistry = void 0;
-    var PlatformRegistry = class {
+    var PlatformRegistry2 = class {
       adapters = /* @__PURE__ */ new Map();
       register(adapter) {
         this.adapters.set(adapter.id, adapter);
@@ -13924,7 +17135,7 @@ var require_platform_manager = __commonJS({
         return active;
       }
     };
-    exports2.PlatformRegistry = PlatformRegistry;
+    exports2.PlatformRegistry = PlatformRegistry2;
   }
 });
 
@@ -13964,7 +17175,7 @@ var require_generic_server = __commonJS({
     var fs2 = __importStar2(require("fs"));
     var path2 = __importStar2(require("path"));
     var index_js_12 = require_package_manager();
-    var GenericServerAdapter = class {
+    var GenericServerAdapter2 = class {
       id = "generic-server";
       name = "Generic Linux Server (systemd)";
       tier = "SUPPORTED";
@@ -14030,7 +17241,7 @@ echo "Deployment successful."
         return [servicePath, scriptPath];
       }
     };
-    exports2.GenericServerAdapter = GenericServerAdapter;
+    exports2.GenericServerAdapter = GenericServerAdapter2;
   }
 });
 
@@ -14069,8 +17280,8 @@ var require_docker = __commonJS({
     exports2.DockerAdapter = void 0;
     var fs2 = __importStar2(require("fs"));
     var path2 = __importStar2(require("path"));
-    var container_js_12 = require_container();
-    var DockerAdapter = class {
+    var container_js_1 = require_container();
+    var DockerAdapter2 = class {
       id = "docker";
       name = "Docker / OCI Container";
       tier = "SUPPORTED";
@@ -14099,11 +17310,11 @@ var require_docker = __commonJS({
         };
       }
       async generateBundle(projectDir, _outDir) {
-        const res = (0, container_js_12.initContainer)(projectDir);
+        const res = (0, container_js_1.initContainer)(projectDir);
         return [res.dockerfile, res.dockerignore];
       }
     };
-    exports2.DockerAdapter = DockerAdapter;
+    exports2.DockerAdapter = DockerAdapter2;
   }
 });
 
@@ -14142,7 +17353,7 @@ var require_github_actions = __commonJS({
     exports2.GithubActionsAdapter = void 0;
     var fs2 = __importStar2(require("fs"));
     var path2 = __importStar2(require("path"));
-    var GithubActionsAdapter = class {
+    var GithubActionsAdapter2 = class {
       id = "github-actions";
       name = "GitHub Actions CI/CD";
       tier = "SUPPORTED";
@@ -14227,7 +17438,7 @@ jobs:
         return [ciPath, releasePath];
       }
     };
-    exports2.GithubActionsAdapter = GithubActionsAdapter;
+    exports2.GithubActionsAdapter = GithubActionsAdapter2;
   }
 });
 
@@ -14266,7 +17477,7 @@ var require_vercel = __commonJS({
     exports2.VercelAdapter = void 0;
     var fs2 = __importStar2(require("fs"));
     var path2 = __importStar2(require("path"));
-    var VercelAdapter = class {
+    var VercelAdapter2 = class {
       id = "vercel";
       name = "Vercel Serverless (Node Bridge)";
       tier = "EXPERIMENTAL";
@@ -14320,7 +17531,7 @@ module.exports = async (req, res) => {
         return [vercelJsonPath, bridgePath];
       }
     };
-    exports2.VercelAdapter = VercelAdapter;
+    exports2.VercelAdapter = VercelAdapter2;
   }
 });
 
@@ -14356,18 +17567,18 @@ var require_check = __commonJS({
       return result;
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.runDeployCheck = runDeployCheck;
-    exports2.printDeployCheckReport = printDeployCheckReport;
-    exports2.runDeployDryRun = runDeployDryRun;
+    exports2.runDeployCheck = runDeployCheck2;
+    exports2.printDeployCheckReport = printDeployCheckReport2;
+    exports2.runDeployDryRun = runDeployDryRun2;
     var fs2 = __importStar2(require("fs"));
     var path2 = __importStar2(require("path"));
     var index_js_12 = require_package_manager();
-    var targets_js_12 = require_targets();
+    var targets_js_1 = require_targets();
     var profiles_js_1 = require_profiles();
-    var env_config_js_12 = require_env_config();
-    function runDeployCheck(projectDir, targetStr, profileStr) {
+    var env_config_js_1 = require_env_config();
+    function runDeployCheck2(projectDir, targetStr, profileStr) {
       const items = [];
-      const target = (0, targets_js_12.parseTarget)(targetStr);
+      const target = (0, targets_js_1.parseTarget)(targetStr);
       const profile = (0, profiles_js_1.resolveProfile)(profileStr || "release");
       const manifest = (0, index_js_12.readManifest)(projectDir);
       if (manifest) {
@@ -14445,7 +17656,7 @@ var require_check = __commonJS({
         items
       };
     }
-    function printDeployCheckReport(report, asJson = false) {
+    function printDeployCheckReport2(report, asJson = false) {
       if (asJson) {
         console.log(JSON.stringify(report, null, 2));
         return;
@@ -14468,11 +17679,11 @@ HKD Pre-Flight Deployment Checklist (${report.target} / ${report.profile})
         console.log("Pre-flight deployment checks failed. Correct errors before deploying.\n");
       }
     }
-    function runDeployDryRun(projectDir, targetStr, profileStr) {
-      const target = (0, targets_js_12.parseTarget)(targetStr);
+    function runDeployDryRun2(projectDir, targetStr, profileStr) {
+      const target = (0, targets_js_1.parseTarget)(targetStr);
       const profile = (0, profiles_js_1.resolveProfile)(profileStr || "release");
       const manifest = (0, index_js_12.readManifest)(projectDir);
-      const config = (0, env_config_js_12.loadEffectiveConfig)({ projectDir });
+      const config = (0, env_config_js_1.loadEffectiveConfig)({ projectDir });
       console.log("\n\u2500\u2500 HKD Deployment Dry Run Plan \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n");
       console.log(`  Project:         ${manifest?.name || "unknown"} v${manifest?.version || "0.1.0"}`);
       console.log(`  Target Triple:   ${target.triple} (${target.tier})`);
@@ -14496,8 +17707,8 @@ var require_runtime_info = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ExitCode = void 0;
-    exports2.getRuntimeInfo = getRuntimeInfo;
-    exports2.printRuntimeInfo = printRuntimeInfo;
+    exports2.getRuntimeInfo = getRuntimeInfo2;
+    exports2.printRuntimeInfo = printRuntimeInfo2;
     var index_js_12 = require_utils();
     var ExitCode;
     (function(ExitCode2) {
@@ -14508,7 +17719,7 @@ var require_runtime_info = __commonJS({
       ExitCode2[ExitCode2["BuildError"] = 4] = "BuildError";
       ExitCode2[ExitCode2["DeployError"] = 5] = "DeployError";
     })(ExitCode || (exports2.ExitCode = ExitCode = {}));
-    function getRuntimeInfo() {
+    function getRuntimeInfo2() {
       const mem = process.memoryUsage();
       return {
         version: index_js_12.HKD_VERSION,
@@ -14534,7 +17745,7 @@ var require_runtime_info = __commonJS({
         }
       };
     }
-    function printRuntimeInfo(report, asJson = false) {
+    function printRuntimeInfo2(report, asJson = false) {
       if (asJson) {
         console.log(JSON.stringify(report, null, 2));
         return;
@@ -14588,11 +17799,11 @@ var require_migrate = __commonJS({
       return result;
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.runMigration = runMigration;
+    exports2.runMigration = runMigration2;
     var fs2 = __importStar2(require("fs"));
     var path2 = __importStar2(require("path"));
-    var lockfile_js_12 = require_lockfile();
-    function runMigration(projectDir, dryRun = false, targetEdition = "2026") {
+    var lockfile_js_1 = require_lockfile();
+    function runMigration2(projectDir, dryRun = false, targetEdition = "2026") {
       const changes = [];
       const warnings = [];
       const manifestPath = path2.join(projectDir, "hkd.toml");
@@ -14624,8 +17835,8 @@ ${manifestContent}`;
         const lockContent = fs2.readFileSync(lockPath, "utf-8");
         if (!lockContent.includes("version = 2")) {
           try {
-            const v2 = (0, lockfile_js_12.migrateLockfileV1)(lockContent);
-            const serialized = (0, lockfile_js_12.serializeLockfileV2)(v2);
+            const v2 = (0, lockfile_js_1.migrateLockfileV1)(lockContent);
+            const serialized = (0, lockfile_js_1.serializeLockfileV2)(v2);
             changes.push("Migrated legacy hkd.lock to Lockfile V2 (Edition 2026)");
             if (!dryRun) {
               fs2.copyFileSync(lockPath, `${lockPath}.bak`);
@@ -14681,8 +17892,8 @@ var require_verify_release = __commonJS({
       return result;
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.runVerifyRelease = runVerifyRelease;
-    exports2.printVerifyReleaseReport = printVerifyReleaseReport;
+    exports2.runVerifyRelease = runVerifyRelease2;
+    exports2.printVerifyReleaseReport = printVerifyReleaseReport2;
     var fs2 = __importStar2(require("fs"));
     var path2 = __importStar2(require("path"));
     var crypto2 = __importStar2(require("crypto"));
@@ -14690,15 +17901,15 @@ var require_verify_release = __commonJS({
     var vm_js_1 = require_vm();
     var chunk_js_1 = require_chunk();
     var serializer_js_12 = require_serializer();
-    var targets_js_12 = require_targets();
-    var sbom_js_12 = require_sbom();
+    var targets_js_1 = require_targets();
+    var sbom_js_1 = require_sbom();
     var index_js_12 = require_runtime();
     var index_js_22 = require_utils();
-    function runVerifyRelease(projectDir) {
+    function runVerifyRelease2(projectDir) {
       const gates = [];
       const dimensions = [];
       const verificationGates = [];
-      const target = (0, targets_js_12.getHostTarget)();
+      const target = (0, targets_js_1.getHostTarget)();
       let effectiveDir = projectDir;
       if (!fs2.existsSync(path2.join(effectiveDir, "hkd.toml"))) {
         const candidateApp = path2.join(effectiveDir, "examples", "production-app");
@@ -14902,7 +18113,7 @@ var require_verify_release = __commonJS({
       let secPass = false;
       let componentCount = 0;
       try {
-        const sbom = (0, sbom_js_12.generateCycloneDxSbom)(effectiveDir);
+        const sbom = (0, sbom_js_1.generateCycloneDxSbom)(effectiveDir);
         if (sbom.bomFormat === "CycloneDX" && sbom.specVersion === "1.5") {
           secPass = true;
           componentCount = sbom.components.length;
@@ -15091,7 +18302,7 @@ var require_verify_release = __commonJS({
       }
       return report;
     }
-    function printVerifyReleaseReport(report, asJson = false) {
+    function printVerifyReleaseReport2(report, asJson = false) {
       if (asJson) {
         console.log(JSON.stringify(report, null, 2));
         return;
@@ -15120,7 +18331,7 @@ var require_explain = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ERROR_EXPLANATIONS = void 0;
-    exports2.explainError = explainError;
+    exports2.explainError = explainError2;
     exports2.ERROR_EXPLANATIONS = {
       E101: {
         code: "E101",
@@ -15398,7 +18609,7 @@ x();`
         fixedExample: `hkd add collections-extra`
       }
     };
-    function explainError(codeOrInput) {
+    function explainError2(codeOrInput) {
       const normalized = codeOrInput.toUpperCase().trim();
       const explanation = exports2.ERROR_EXPLANATIONS[normalized];
       if (!explanation) {
@@ -15477,7 +18688,7 @@ var require_rfc_validator = __commonJS({
       "Drawbacks",
       "Compatibility"
     ];
-    var RfcValidator = class {
+    var RfcValidator2 = class {
       rfcsDir;
       constructor(rfcsDir) {
         this.rfcsDir = rfcsDir;
@@ -15638,7 +18849,7 @@ RFC [${r.id}] ${r.title}`);
         return lines.join("\n");
       }
     };
-    exports2.RfcValidator = RfcValidator;
+    exports2.RfcValidator = RfcValidator2;
   }
 });
 
@@ -16002,7 +19213,7 @@ var require_workspace = __commonJS({
     var path2 = __importStar2(require("path"));
     var index_js_12 = require_package_manager();
     var identity_js_1 = require_identity();
-    var manager_js_12 = require_manager();
+    var manager_js_1 = require_manager();
     function isWorkspace(rootDir) {
       const manifestPath = path2.join(rootDir, "hkd.toml");
       if (!fs2.existsSync(manifestPath))
@@ -16061,7 +19272,7 @@ var require_workspace = __commonJS({
       };
     }
     async function installWorkspace(ws, options) {
-      const pm = new manager_js_12.PackageManager2();
+      const pm = new manager_js_1.PackageManager2();
       const results = [];
       for (const member of ws.members) {
         const res = await pm.install(member.dir, options);
@@ -17910,7 +21121,9 @@ var __importStar = exports && exports.__importStar || function(mod) {
   return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.ExitCode = void 0;
 exports.applyLintFixes = applyLintFixes;
+exports.printSubcommandHelp = printSubcommandHelp;
 var fs = __importStar(require("fs"));
 var path = __importStar(require("path"));
 var crypto = __importStar(require("crypto"));
@@ -17920,50 +21133,317 @@ var index_js_2 = require_runtime();
 var index_js_3 = require_errors();
 var lexer_js_1 = require_lexer();
 var parser_js_1 = require_parser();
-var index_js_4 = require_formatter();
-var index_js_5 = require_linter();
-var index_js_6 = require_package_manager();
-var manager_js_1 = require_manager();
-var audit_js_1 = require_audit();
-var reproducible_js_1 = require_reproducible();
-var cache_js_1 = require_cache();
-var lockfile_js_1 = require_lockfile();
-var repl_js_1 = require_repl();
-var test_runner_js_1 = require_test_runner();
 var analyser_js_1 = require_analyser();
 var compiler_js_1 = require_compiler();
 var serializer_js_1 = require_serializer();
-var doctor_js_1 = require_doctor();
-var targets_js_1 = require_targets();
-var artifact_js_1 = require_artifact();
-var release_js_1 = require_release();
-var env_config_js_1 = require_env_config();
-var container_js_1 = require_container();
-var platform_manager_js_1 = require_platform_manager();
-var generic_server_js_1 = require_generic_server();
-var docker_js_1 = require_docker();
-var github_actions_js_1 = require_github_actions();
-var vercel_js_1 = require_vercel();
-var sbom_js_1 = require_sbom();
-var check_js_1 = require_check();
-var runtime_info_js_1 = require_runtime_info();
-var migrate_js_1 = require_migrate();
-var verify_release_js_1 = require_verify_release();
-var explain_js_1 = require_explain();
-var rfc_validator_js_1 = require_rfc_validator();
+exports.ExitCode = {
+  Success: 0,
+  RuntimeError: 1,
+  UsageError: 2,
+  ConfigError: 3,
+  BuildError: 4,
+  DeployError: 5
+};
+var lazy = (loader) => {
+  let mod;
+  return () => {
+    if (!mod)
+      mod = loader();
+    return mod;
+  };
+};
+var getFormatter = lazy(() => require_formatter());
+var getLinter = lazy(() => require_linter());
+var getPackageManager = lazy(() => require_package_manager());
+var getPackageManager2 = lazy(() => require_manager());
+var getAudit = lazy(() => require_audit());
+var getReproducible = lazy(() => require_reproducible());
+var getCache = lazy(() => require_cache());
+var getLockfile = lazy(() => require_lockfile());
+var getRepl = lazy(() => require_repl());
+var getTestRunner = lazy(() => require_test_runner());
+var getDoctor = lazy(() => require_doctor());
+var getTargets = lazy(() => require_targets());
+var getProfiles = lazy(() => require_profiles());
+var getArtifact = lazy(() => require_artifact());
+var getRelease = lazy(() => require_release());
+var getEnvConfig = lazy(() => require_env_config());
+var getContainer = lazy(() => require_container());
+var getPlatform = lazy(() => require_platform_manager());
+var getGenericServer = lazy(() => require_generic_server());
+var getDocker = lazy(() => require_docker());
+var getGithubActions = lazy(() => require_github_actions());
+var getVercel = lazy(() => require_vercel());
+var getSbom = lazy(() => require_sbom());
+var getDeployCheck = lazy(() => require_check());
+var getRuntimeInfoMod = lazy(() => require_runtime_info());
+var getMigrate = lazy(() => require_migrate());
+var getVerifyRelease = lazy(() => require_verify_release());
+var getExplain = lazy(() => require_explain());
+var getRfcValidator = lazy(() => require_rfc_validator());
+function readManifest(dir) {
+  return getPackageManager().readManifest(dir);
+}
+function format(...args) {
+  return getFormatter().format(...args);
+}
+function lint(...args) {
+  return getLinter().lint(...args);
+}
+function formatLintIssues(...args) {
+  return getLinter().formatLintIssues(...args);
+}
+var LintCode = {
+  get L001() {
+    return getLinter().LintCode.L001;
+  },
+  get L005() {
+    return getLinter().LintCode.L005;
+  }
+};
+function verifyBuildReproducibility(...args) {
+  return getReproducible().verifyBuildReproducibility(...args);
+}
+function startRepl(...args) {
+  return getRepl().startRepl(...args);
+}
+function runTests(...args) {
+  return getTestRunner().runTests(...args);
+}
+function runDoctor(...args) {
+  return getDoctor().runDoctor(...args);
+}
+function printDoctorReport(...args) {
+  return getDoctor().printDoctorReport(...args);
+}
+function listTargetsFormatted(...args) {
+  return getTargets().listTargetsFormatted(...args);
+}
+function buildReleaseBundle(...args) {
+  return getRelease().buildReleaseBundle(...args);
+}
+function verifyArtifact(...args) {
+  return getArtifact().verifyArtifact(...args);
+}
+function loadEffectiveConfig(...args) {
+  return getEnvConfig().loadEffectiveConfig(...args);
+}
+function formatConfigReport(...args) {
+  return getEnvConfig().formatConfigReport(...args);
+}
+function initContainer(...args) {
+  return getContainer().initContainer(...args);
+}
+function writeSbomJson(...args) {
+  return getSbom().writeSbomJson(...args);
+}
+function runDeployCheck(...args) {
+  return getDeployCheck().runDeployCheck(...args);
+}
+function printDeployCheckReport(...args) {
+  return getDeployCheck().printDeployCheckReport(...args);
+}
+function runDeployDryRun(...args) {
+  return getDeployCheck().runDeployDryRun(...args);
+}
+function getRuntimeInfo(...args) {
+  return getRuntimeInfoMod().getRuntimeInfo(...args);
+}
+function printRuntimeInfo(...args) {
+  return getRuntimeInfoMod().printRuntimeInfo(...args);
+}
+function runMigration(...args) {
+  return getMigrate().runMigration(...args);
+}
+function runVerifyRelease(...args) {
+  return getVerifyRelease().runVerifyRelease(...args);
+}
+function printVerifyReleaseReport(...args) {
+  return getVerifyRelease().printVerifyReleaseReport(...args);
+}
+function explainError(...args) {
+  return getExplain().explainError(...args);
+}
+function auditProject(...args) {
+  return getAudit().auditProject(...args);
+}
+function readLockfile(...args) {
+  return getLockfile().readLockfile(...args);
+}
+var PackageManager = new Proxy(class {
+}, {
+  construct(_, args) {
+    return new (getPackageManager()).PackageManager(...args);
+  }
+});
+var PackageManager2 = new Proxy(class {
+}, {
+  construct(_, args) {
+    return new (getPackageManager2()).PackageManager2(...args);
+  }
+});
+var ContentAddressedCache = new Proxy(class {
+}, {
+  construct(_, args) {
+    return new (getCache()).ContentAddressedCache(...args);
+  }
+});
+var PlatformRegistry = new Proxy(class {
+}, {
+  construct(_, args) {
+    return new (getPlatform()).PlatformRegistry(...args);
+  }
+});
+var GenericServerAdapter = new Proxy(class {
+}, {
+  construct(_, args) {
+    return new (getGenericServer()).GenericServerAdapter(...args);
+  }
+});
+var DockerAdapter = new Proxy(class {
+}, {
+  construct(_, args) {
+    return new (getDocker()).DockerAdapter(...args);
+  }
+});
+var GithubActionsAdapter = new Proxy(class {
+}, {
+  construct(_, args) {
+    return new (getGithubActions()).GithubActionsAdapter(...args);
+  }
+});
+var VercelAdapter = new Proxy(class {
+}, {
+  construct(_, args) {
+    return new (getVercel()).VercelAdapter(...args);
+  }
+});
+var RfcValidator = new Proxy(class {
+}, {
+  construct(_, args) {
+    return new (getRfcValidator()).RfcValidator(...args);
+  }
+});
 var BOLD = (s) => `\x1B[1m${s}\x1B[0m`;
 var GREEN = (s) => `\x1B[32m${s}\x1B[0m`;
 var RED = (s) => `\x1B[31m${s}\x1B[0m`;
 var CYAN = (s) => `\x1B[36m${s}\x1B[0m`;
 var YELLOW = (s) => `\x1B[33m${s}\x1B[0m`;
 var DIM = (s) => `\x1B[2m${s}\x1B[0m`;
+function isLaunchedFromExplorer() {
+  if (process.platform !== "win32")
+    return false;
+  if (process.env.CI || process.env.HKD_NON_INTERACTIVE)
+    return false;
+  try {
+    const res = (0, child_process_1.spawnSync)("tasklist", ["/fi", `PID eq ${process.ppid}`, "/nh", "/fo", "csv"], {
+      encoding: "utf8",
+      windowsHide: true,
+      timeout: 1200
+    });
+    const stdout = (res.stdout || "").toLowerCase();
+    return stdout.includes("explorer.exe");
+  } catch {
+    return false;
+  }
+}
+function handleWindowsExplorerLaunch() {
+  console.log(`
+======================================================================
+  HKD Programming Language (v${index_js_1.HKD_VERSION})
+======================================================================
+
+  HKD is a high-performance command-line developer toolchain.
+  To use HKD, open a terminal (PowerShell, Command Prompt, or Terminal)
+  and run commands such as:
+
+    hkd init my-project     Create a new project
+    hkd run                 Run current project or file
+    hkd build               Compile project modules
+    hkd test                Run project tests
+    hkd check               Type-check project
+    hkd --help              View all available commands
+
+  Quick Start on Windows:
+    1. Hold Shift and right-click inside your project or workspace folder.
+    2. Click "Open PowerShell window here" or "Open in Terminal".
+    3. Type: hkd --help
+
+  Documentation & Tutorials: https://hkd-lang.dev/docs
+
+======================================================================
+`);
+  try {
+    process.stdout.write("Press Enter to close this window...");
+    const buf = Buffer.alloc(1024);
+    fs.readSync(0, buf, 0, 1024, null);
+  } catch {
+  }
+  process.exit(0);
+}
+function findClosestCommand(input, candidates) {
+  function distance(a, b) {
+    const dp = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+    for (let i = 0; i <= a.length; i++)
+      dp[i][0] = i;
+    for (let j = 0; j <= b.length; j++)
+      dp[0][j] = j;
+    for (let i = 1; i <= a.length; i++) {
+      for (let j = 1; j <= b.length; j++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+      }
+    }
+    return dp[a.length][b.length];
+  }
+  let bestMatch = null;
+  let bestDist = Infinity;
+  for (const c of candidates) {
+    const d = distance(input.toLowerCase(), c.toLowerCase());
+    if (d < bestDist && d <= 3) {
+      bestDist = d;
+      bestMatch = c;
+    }
+  }
+  return bestMatch;
+}
 function main() {
   const args = process.argv.slice(2);
   if (args.length === 0) {
+    if (isLaunchedFromExplorer()) {
+      handleWindowsExplorerLaunch();
+    } else {
+      printHelp();
+      process.exit(0);
+    }
+  }
+  const command = args[0];
+  if (command === "help") {
+    const sub = args[1];
+    if (sub) {
+      printSubcommandHelp(sub);
+      process.exit(0);
+    }
     printHelp();
     process.exit(0);
   }
-  const command = args[0];
+  if (command === "--help" || command === "-h") {
+    printHelp();
+    process.exit(0);
+  }
+  if (command === "--help-all" || command === "help-all") {
+    printAllHelp();
+    process.exit(0);
+  }
+  if (command === "version" || command === "--version" || command === "-v") {
+    console.log(`HKD ${index_js_1.HKD_VERSION}`);
+    return;
+  }
+  const isHelpFlag = args.includes("--help") || args.includes("-h");
+  if (isHelpFlag) {
+    printSubcommandHelp(command);
+    process.exit(0);
+  }
   switch (command) {
     case "run":
       cmdRun(args.slice(1));
@@ -18108,15 +21588,65 @@ function main() {
       if (command.endsWith(".hkd") && fs.existsSync(command)) {
         cmdRun([command]);
       } else {
-        console.error(RED(`Unknown command: \`${command}\``));
+        const knownCommands = [
+          "init",
+          "repl",
+          "run",
+          "build",
+          "test",
+          "fmt",
+          "lint",
+          "check",
+          "add",
+          "remove",
+          "install",
+          "update",
+          "pack",
+          "publish",
+          "search",
+          "info",
+          "vendor",
+          "audit",
+          "cache",
+          "tree",
+          "ci",
+          "doc",
+          "version",
+          "doctor",
+          "release",
+          "verify-release",
+          "targets",
+          "config",
+          "container",
+          "platform",
+          "deploy",
+          "sbom",
+          "runtime-info",
+          "migrate",
+          "explain",
+          "rfc",
+          "profile",
+          "bench",
+          "stats",
+          "lsp",
+          "dap"
+        ];
+        const suggestion = findClosestCommand(command, knownCommands);
+        console.error(RED(`Unknown command: '${command}'`));
+        if (suggestion) {
+          console.error(YELLOW(`Did you mean '${suggestion}'?`));
+        }
         console.error(`Run ${CYAN("hkd help")} to see available commands.`);
-        process.exit(2);
+        process.exit(exports.ExitCode.UsageError);
       }
   }
 }
 function getImportSources(filePath) {
   try {
     const source = fs.readFileSync(filePath, "utf-8");
+    if (!source.includes("import")) {
+      return [];
+    }
     const reporter = new index_js_3.ErrorReporter(source, filePath);
     const lexer = new lexer_js_1.Lexer(source, filePath, reporter);
     const tokens = lexer.tokenize();
@@ -18149,7 +21679,7 @@ function collectProjectModules(entryPath) {
         if (!fs.existsSync(pkgDir)) {
           pkgDir = path.join(dir, "vendor", imp);
         }
-        const manifest = (0, index_js_6.readManifest)(pkgDir);
+        const manifest = readManifest(pkgDir);
         if (manifest) {
           const pkgEntry = path.resolve(pkgDir, manifest.main ?? "src/main.hkd");
           queue.push(pkgEntry);
@@ -18238,7 +21768,7 @@ function cmdBuild(args) {
       console.error(RED("Error: Specify source file for reproducible build verification"));
       process.exit(1);
     }
-    const result = (0, reproducible_js_1.verifyBuildReproducibility)(fileArg2, path.resolve("dist/cli/main.js"));
+    const result = verifyBuildReproducibility(fileArg2, path.resolve("dist/cli/main.js"));
     console.log(result.message);
     if (!result.reproducible)
       process.exit(1);
@@ -18265,7 +21795,7 @@ function cmdBuild(args) {
     console.error(RED("Error: No file or project found to build."));
     process.exit(2);
   }
-  const manifest = (0, index_js_6.readManifest)(projectDir);
+  const manifest = readManifest(projectDir);
   if (!manifest) {
     console.error(RED("Error: Failed to read hkd.toml"));
     process.exit(1);
@@ -18340,7 +21870,7 @@ function buildStandaloneNative(args) {
   if (!entryHkd) {
     const projectDir = getProjectDir();
     if (projectDir) {
-      const manifest = (0, index_js_6.readManifest)(projectDir);
+      const manifest = readManifest(projectDir);
       const manifestMain = manifest?.main && manifest.main.endsWith(".hkd") ? manifest.main : "src/main.hkd";
       entryHkd = manifest ? path.resolve(projectDir, manifestMain) : void 0;
     }
@@ -18454,7 +21984,7 @@ function cmdRun(args) {
     compiledPath = cmdBuild(isRelease ? ["--release"] : []);
   }
   if (useReference) {
-    const sourceFile = firstArg && firstArg.endsWith(".hkd") ? firstArg : getProjectDir() ? path.resolve(getProjectDir(), (0, index_js_6.readManifest)(getProjectDir())?.main ?? "src/main.hkd") : firstArg;
+    const sourceFile = firstArg && firstArg.endsWith(".hkd") ? firstArg : getProjectDir() ? path.resolve(getProjectDir(), readManifest(getProjectDir())?.main ?? "src/main.hkd") : firstArg;
     const result = (0, index_js_2.runFile)(sourceFile);
     process.exit(result.ok ? 0 : 1);
   } else {
@@ -18600,13 +22130,13 @@ Examples:
     const rawEdition = args[editionIdx + 1];
     if (!rawEdition || rawEdition.startsWith("-")) {
       console.error(RED('Error: Missing value for --edition. Supported editions: "2026", "2027".'));
-      process.exit(runtime_info_js_1.ExitCode.UsageError);
+      process.exit(exports.ExitCode.UsageError);
     }
     try {
       edition = (0, index_js_1.parseEdition)(rawEdition);
     } catch (err) {
       console.error(RED(`Error: ${err.message}`));
-      process.exit(runtime_info_js_1.ExitCode.UsageError);
+      process.exit(exports.ExitCode.UsageError);
     }
   } else {
     const eqArg = args.find((a) => a.startsWith("--edition="));
@@ -18616,11 +22146,11 @@ Examples:
         edition = (0, index_js_1.parseEdition)(rawEdition);
       } catch (err) {
         console.error(RED(`Error: ${err.message}`));
-        process.exit(runtime_info_js_1.ExitCode.UsageError);
+        process.exit(exports.ExitCode.UsageError);
       }
     }
   }
-  (0, repl_js_1.startRepl)(edition);
+  startRepl(edition);
 }
 function findHkdFiles(dir) {
   const results = [];
@@ -18656,7 +22186,7 @@ function formatHkdSource(filePath, source) {
     console.error(RED(`fmt: ${filePath} has parse errors \u2014 cannot format`));
     process.exit(1);
   }
-  return (0, index_js_4.format)(ast);
+  return format(ast);
 }
 function cmdFmt(args) {
   const inPlace = args.includes("--write") || args.includes("-w");
@@ -18728,7 +22258,7 @@ function applyLintFixes(source, issues) {
   const sortedIssues = [...issues].sort((a, b) => b.span.start.offset - a.span.start.offset);
   let result = source;
   for (const issue of sortedIssues) {
-    if (issue.code === index_js_5.LintCode.L005) {
+    if (issue.code === LintCode.L005) {
       const start = issue.span.start.offset;
       const end = issue.span.end.offset;
       let lineStart = start;
@@ -18740,7 +22270,7 @@ function applyLintFixes(source, issues) {
       if (lineEnd < result.length && result[lineEnd] === "\n")
         lineEnd++;
       result = result.substring(0, lineStart) + result.substring(lineEnd);
-    } else if (issue.code === index_js_5.LintCode.L001) {
+    } else if (issue.code === LintCode.L001) {
       const start = issue.span.start.offset;
       const end = issue.span.end.offset;
       const originalText = result.substring(start, end);
@@ -18763,7 +22293,7 @@ function applyLintFixes(source, issues) {
     const parser = new parser_js_1.Parser(tokens, result, "fix.hkd", reporter);
     const ast = parser.parse();
     if (!reporter.hasErrors()) {
-      result = (0, index_js_4.format)(ast);
+      result = format(ast);
     }
   } catch {
   }
@@ -18793,9 +22323,9 @@ function cmdLint(args) {
     process.exit(1);
   }
   const projectDir = getProjectDir();
-  const manifest = projectDir ? (0, index_js_6.readManifest)(projectDir) : null;
+  const manifest = projectDir ? readManifest(projectDir) : null;
   const ignored = new Set(manifest?.lint?.ignore ?? []);
-  const issues = (0, index_js_5.lint)(ast, ignored);
+  const issues = lint(ast, ignored);
   if (hasFix && issues.length > 0) {
     const fixedSource = applyLintFixes(source, issues);
     fs.writeFileSync(filePath, fixedSource, "utf-8");
@@ -18805,16 +22335,16 @@ function cmdLint(args) {
     const newTokens = newLexer.tokenize();
     const newParser = new parser_js_1.Parser(newTokens, fixedSource, fileName, newReporter);
     const newAst = newParser.parse();
-    const remainingIssues = (0, index_js_5.lint)(newAst, ignored);
+    const remainingIssues = lint(newAst, ignored);
     if (remainingIssues.length > 0) {
-      const output2 = (0, index_js_5.formatLintIssues)(remainingIssues, fixedSource, fileName);
+      const output2 = formatLintIssues(remainingIssues, fixedSource, fileName);
       console.log(output2);
     } else {
       console.log(GREEN("No remaining lint issues."));
     }
     process.exit(0);
   }
-  const output = (0, index_js_5.formatLintIssues)(issues, source, fileName);
+  const output = formatLintIssues(issues, source, fileName);
   console.log(output);
   const errors = issues.filter((i) => i.severity === "error");
   const warnings = issues.filter((i) => i.severity === "warning");
@@ -18846,7 +22376,7 @@ function cmdTest(args) {
     return true;
   });
   const target = conformance ? "tests/conformance" : cleanArgs[0] ?? ".";
-  (0, test_runner_js_1.runTests)(target, { filter, verbose, quiet, conformance, differential });
+  runTests(target, { filter, verbose, quiet, conformance, differential });
 }
 function cmdCheck(args) {
   const cleanArgs = args.filter((a) => !a.startsWith("-"));
@@ -18857,7 +22387,7 @@ function cmdCheck(args) {
       console.error(RED("hkd check: Expected a file path or an HKD project (no hkd.toml found)"));
       process.exit(2);
     }
-    const manifest = (0, index_js_6.readManifest)(projectDir);
+    const manifest = readManifest(projectDir);
     const entryFile = path.resolve(projectDir, manifest?.main ?? "src/main.hkd");
     if (!fs.existsSync(entryFile)) {
       console.error(RED(`hkd check: Entry file not found: ${entryFile}`));
@@ -18921,13 +22451,13 @@ Examples:
     const rawEdition = args[editionIdx + 1];
     if (!rawEdition || rawEdition.startsWith("-")) {
       console.error(RED('Error: Missing value for --edition. Supported editions: "2026", "2027".'));
-      process.exit(runtime_info_js_1.ExitCode.UsageError);
+      process.exit(exports.ExitCode.UsageError);
     }
     try {
       edition = (0, index_js_1.parseEdition)(rawEdition);
     } catch (err) {
       console.error(RED(`Error: ${err.message}`));
-      process.exit(runtime_info_js_1.ExitCode.UsageError);
+      process.exit(exports.ExitCode.UsageError);
     }
   } else {
     const eqArg = args.find((a) => a.startsWith("--edition="));
@@ -18937,7 +22467,7 @@ Examples:
         edition = (0, index_js_1.parseEdition)(rawEdition);
       } catch (err) {
         console.error(RED(`Error: ${err.message}`));
-        process.exit(runtime_info_js_1.ExitCode.UsageError);
+        process.exit(exports.ExitCode.UsageError);
       }
     }
   }
@@ -18956,7 +22486,7 @@ Examples:
   });
   const targetDir = cleanArgs[0] ?? ".";
   const name = cleanArgs[1] ?? "";
-  const pm = new index_js_6.PackageManager();
+  const pm = new PackageManager();
   const result = pm.init(path.resolve(targetDir), name, template, edition);
   if (result.ok) {
     console.log(GREEN(`\u2713 ${result.message}`));
@@ -18989,7 +22519,7 @@ async function cmdAdd(args) {
     console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
     process.exit(1);
   }
-  const pm = new manager_js_1.PackageManager2();
+  const pm = new PackageManager2();
   const pkgSpec = cleanArgs[0] || "";
   const res = await pm.add(projectDir, pkgSpec, {
     offline: args.includes("--offline"),
@@ -19012,7 +22542,7 @@ async function cmdRemove(args) {
     console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
     process.exit(1);
   }
-  const pm = new manager_js_1.PackageManager2();
+  const pm = new PackageManager2();
   const res = await pm.remove(projectDir, args[0]);
   if (res.ok) {
     console.log(GREEN("\u2713 ") + res.message);
@@ -19027,7 +22557,7 @@ async function cmdInstall(args) {
     console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
     process.exit(1);
   }
-  const pm = new manager_js_1.PackageManager2();
+  const pm = new PackageManager2();
   const res = await pm.install(projectDir, {
     offline: args.includes("--offline"),
     locked: args.includes("--locked"),
@@ -19048,7 +22578,7 @@ async function cmdUpdate(args) {
   }
   const cleanArgs = args.filter((a) => !a.startsWith("-"));
   const targetPkg = cleanArgs[0];
-  const pm = new manager_js_1.PackageManager2();
+  const pm = new PackageManager2();
   const res = await pm.update(projectDir, targetPkg, { offline: args.includes("--offline") });
   if (res.ok) {
     console.log(GREEN("\u2713 ") + res.message);
@@ -19063,7 +22593,7 @@ function cmdPack(args) {
     console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
     process.exit(1);
   }
-  const pm = new manager_js_1.PackageManager2();
+  const pm = new PackageManager2();
   try {
     const res = pm.pack(projectDir);
     console.log(GREEN(`\u2713 Created package archive: ${path.basename(res.path)}`));
@@ -19081,7 +22611,7 @@ async function cmdPublish(args) {
   }
   const tokenIdx = args.indexOf("--token");
   const token = tokenIdx !== -1 ? args[tokenIdx + 1] : void 0;
-  const pm = new manager_js_1.PackageManager2();
+  const pm = new PackageManager2();
   const res = await pm.publish(projectDir, token);
   if (res.ok) {
     console.log(GREEN("\u2713 ") + res.message);
@@ -19097,7 +22627,7 @@ async function cmdSearch(args) {
     console.error(RED("hkd search: Expected search query"));
     process.exit(1);
   }
-  const pm = new manager_js_1.PackageManager2();
+  const pm = new PackageManager2();
   const results = await pm.search(query);
   if (isJson) {
     console.log(JSON.stringify(results, null, 2));
@@ -19121,7 +22651,7 @@ async function cmdInfo(args) {
     console.error(RED("hkd info: Expected package name"));
     process.exit(1);
   }
-  const pm = new manager_js_1.PackageManager2();
+  const pm = new PackageManager2();
   const meta = await pm.info(pkgName);
   if (!meta) {
     console.error(RED(`Error: Package '${pkgName}' not found in registry.`));
@@ -19145,7 +22675,7 @@ async function cmdVendor(args) {
     console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
     process.exit(1);
   }
-  const pm = new manager_js_1.PackageManager2();
+  const pm = new PackageManager2();
   const res = await pm.vendor(projectDir);
   if (res.ok) {
     console.log(GREEN("\u2713 Vendored all dependencies into vendor/ directory"));
@@ -19161,7 +22691,7 @@ function cmdAudit(args) {
     console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
     process.exit(1);
   }
-  const res = (0, audit_js_1.auditProject)(projectDir);
+  const res = auditProject(projectDir);
   if (isJson) {
     console.log(JSON.stringify(res, null, 2));
   } else {
@@ -19189,12 +22719,12 @@ function cmdTree(args) {
     console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
     process.exit(1);
   }
-  const manifest = (0, index_js_6.readManifest)(projectDir);
+  const manifest = readManifest(projectDir);
   if (!manifest) {
     console.error(RED("Error: Could not read hkd.toml"));
     process.exit(1);
   }
-  const lock = (0, lockfile_js_1.readLockfile)(projectDir);
+  const lock = readLockfile(projectDir);
   const pkgMap = /* @__PURE__ */ new Map();
   if (lock && lock.packages) {
     for (const pkg of lock.packages) {
@@ -19256,7 +22786,7 @@ function cmdTree(args) {
 }
 function cmdCache(args) {
   const sub = args[0] || "list";
-  const cache = new cache_js_1.ContentAddressedCache();
+  const cache = new ContentAddressedCache();
   if (sub === "list") {
     const list = cache.list();
     console.log(BOLD(`
@@ -19288,7 +22818,7 @@ async function cmdCi(args) {
     console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
     process.exit(1);
   }
-  const pm = new manager_js_1.PackageManager2();
+  const pm = new PackageManager2();
   console.log("1. Verifying and installing locked dependencies...");
   const installRes = await pm.install(projectDir, { locked: true });
   if (!installRes.ok) {
@@ -19297,7 +22827,7 @@ async function cmdCi(args) {
   }
   console.log(GREEN("\u2713 Dependencies verified against hkd.lock"));
   console.log("2. Running security audit...");
-  const auditRes = (0, audit_js_1.auditProject)(projectDir);
+  const auditRes = auditProject(projectDir);
   if (!auditRes.ok) {
     console.error(RED(`Audit failed with ${auditRes.issues.length} issue(s)`));
     process.exit(1);
@@ -19313,7 +22843,7 @@ function cmdDoc() {
     console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
     process.exit(1);
   }
-  const manifest = (0, index_js_6.readManifest)(projectDir);
+  const manifest = readManifest(projectDir);
   const entryFile = path.resolve(projectDir, manifest?.main ?? "src/main.hkd");
   if (!fs.existsSync(entryFile)) {
     console.error(RED(`Error: Entry file not found: ${entryFile}`));
@@ -19359,20 +22889,20 @@ struct ${stmt.name}
 }
 function cmdDoctor(args) {
   const asJson = args.includes("--json");
-  const report = (0, doctor_js_1.runDoctor)();
-  (0, doctor_js_1.printDoctorReport)(report, asJson);
+  const report = runDoctor();
+  printDoctorReport(report, asJson);
   if (!report.allOk) {
     process.exit(1);
   }
 }
 function cmdTargets() {
-  console.log((0, targets_js_1.listTargetsFormatted)());
+  console.log(listTargetsFormatted());
 }
 function cmdRelease(args) {
   const projectDir = getProjectDir();
   if (!projectDir) {
     console.error(RED("Error: Not inside an HKD project (no hkd.toml found)"));
-    process.exit(runtime_info_js_1.ExitCode.UsageError);
+    process.exit(exports.ExitCode.UsageError);
   }
   const targetIdx = args.indexOf("--target");
   const target = targetIdx !== -1 ? args[targetIdx + 1] : void 0;
@@ -19380,7 +22910,7 @@ function cmdRelease(args) {
   const profile = profileIdx !== -1 ? args[profileIdx + 1] : "release";
   console.log(`Building release bundle for target '${target || "host"}' (${profile} profile)...`);
   const nativeBin = buildStandaloneNative(["--quiet"]);
-  const res = (0, release_js_1.buildReleaseBundle)(nativeBin, {
+  const res = buildReleaseBundle(nativeBin, {
     projectDir,
     target,
     profile
@@ -19389,16 +22919,16 @@ function cmdRelease(args) {
     console.log(GREEN(`\u2713 ${res.message}`));
   } else {
     console.error(RED(res.message));
-    process.exit(runtime_info_js_1.ExitCode.DeployError);
+    process.exit(exports.ExitCode.DeployError);
   }
 }
 function cmdVerifyArtifact(args) {
   const targetPath = args[0];
   if (!targetPath) {
     console.error(RED("Error: Specify artifact file or directory to verify"));
-    process.exit(runtime_info_js_1.ExitCode.UsageError);
+    process.exit(exports.ExitCode.UsageError);
   }
-  const res = (0, artifact_js_1.verifyArtifact)(targetPath);
+  const res = verifyArtifact(targetPath);
   if (res.valid) {
     console.log(GREEN(`\u2713 Artifact verified successfully: ${targetPath}`));
     if (res.actualSha256) {
@@ -19409,23 +22939,23 @@ function cmdVerifyArtifact(args) {
     for (const err of res.errors) {
       console.error(RED(`  - ${err}`));
     }
-    process.exit(runtime_info_js_1.ExitCode.DeployError);
+    process.exit(exports.ExitCode.DeployError);
   }
 }
 function cmdConfig(args) {
   const projectDir = getProjectDir() || process.cwd();
-  const cfg = (0, env_config_js_1.loadEffectiveConfig)({ projectDir });
+  const cfg = loadEffectiveConfig({ projectDir });
   if (args.includes("--json")) {
     console.log(JSON.stringify(cfg, null, 2));
   } else {
-    console.log((0, env_config_js_1.formatConfigReport)(cfg));
+    console.log(formatConfigReport(cfg));
   }
 }
 function cmdContainer(args) {
   const sub = args[0] || "init";
   const projectDir = getProjectDir() || process.cwd();
   if (sub === "init") {
-    const res = (0, container_js_1.initContainer)(projectDir);
+    const res = initContainer(projectDir);
     console.log(GREEN(`\u2713 Container configuration initialized:`));
     console.log(`  Dockerfile:    ${res.dockerfile}`);
     console.log(`  .dockerignore: ${res.dockerignore}`);
@@ -19433,17 +22963,17 @@ function cmdContainer(args) {
     console.log(GREEN(`\u2713 Multi-stage Docker container build verified for project.`));
   } else {
     console.error(RED(`Unknown container subcommand: ${sub}. Valid: init, build`));
-    process.exit(runtime_info_js_1.ExitCode.UsageError);
+    process.exit(exports.ExitCode.UsageError);
   }
 }
 function cmdPlatform(args) {
   const sub = args[0] || "detect";
   const projectDir = getProjectDir() || process.cwd();
-  const registry = new platform_manager_js_1.PlatformRegistry();
-  registry.register(new generic_server_js_1.GenericServerAdapter());
-  registry.register(new docker_js_1.DockerAdapter());
-  registry.register(new github_actions_js_1.GithubActionsAdapter());
-  registry.register(new vercel_js_1.VercelAdapter());
+  const registry = new PlatformRegistry();
+  registry.register(new GenericServerAdapter());
+  registry.register(new DockerAdapter());
+  registry.register(new GithubActionsAdapter());
+  registry.register(new VercelAdapter());
   if (sub === "detect" || sub === "list") {
     console.log("\nHKD Platform Adapters Matrix:\n");
     for (const a of registry.getAll()) {
@@ -19452,7 +22982,7 @@ function cmdPlatform(args) {
     console.log("");
   } else {
     console.error(RED(`Unknown platform subcommand: ${sub}`));
-    process.exit(runtime_info_js_1.ExitCode.UsageError);
+    process.exit(exports.ExitCode.UsageError);
   }
 }
 function cmdDeploy(args) {
@@ -19464,17 +22994,17 @@ function cmdDeploy(args) {
   const profileIdx = args.indexOf("--profile");
   const profile = profileIdx !== -1 ? args[profileIdx + 1] : "release";
   if (isDryRun) {
-    (0, check_js_1.runDeployDryRun)(projectDir, target, profile);
+    runDeployDryRun(projectDir, target, profile);
     return;
   }
   if (sub === "check") {
-    const report = (0, check_js_1.runDeployCheck)(projectDir, target, profile);
-    (0, check_js_1.printDeployCheckReport)(report, args.includes("--json"));
+    const report = runDeployCheck(projectDir, target, profile);
+    printDeployCheckReport(report, args.includes("--json"));
     if (!report.allOk) {
-      process.exit(runtime_info_js_1.ExitCode.DeployError);
+      process.exit(exports.ExitCode.DeployError);
     }
   } else if (sub === "manifest") {
-    const adapter = new generic_server_js_1.GenericServerAdapter();
+    const adapter = new GenericServerAdapter();
     const outDir = path.join(projectDir, "target", "deploy");
     adapter.generateBundle(projectDir, outDir).then((files) => {
       console.log(GREEN(`\u2713 Deployment manifest generated in ${outDir}:`));
@@ -19485,25 +23015,25 @@ function cmdDeploy(args) {
 }
 function cmdSbom(args) {
   const projectDir = getProjectDir() || process.cwd();
-  const outPath = (0, sbom_js_1.writeSbomJson)(projectDir);
+  const outPath = writeSbomJson(projectDir);
   console.log(GREEN(`\u2713 Generated CycloneDX 1.5 JSON SBOM in ${outPath}`));
 }
 function cmdRuntimeInfo(args) {
-  const info = (0, runtime_info_js_1.getRuntimeInfo)();
-  (0, runtime_info_js_1.printRuntimeInfo)(info, args.includes("--json"));
+  const info = getRuntimeInfo();
+  printRuntimeInfo(info, args.includes("--json"));
 }
 function cmdMigrate(args) {
   const projectDir = getProjectDir() || process.cwd();
   const dryRun = args.includes("--dry-run");
   const editionIdx = args.indexOf("--edition");
   const targetEdition = editionIdx !== -1 && args[editionIdx + 1] === "2027" ? "2027" : "2026";
-  const result = (0, migrate_js_1.runMigration)(projectDir, dryRun, targetEdition);
+  const result = runMigration(projectDir, dryRun, targetEdition);
   if (!result.ok) {
     console.error(RED("Migration failed:"));
     for (const w of result.warnings) {
       console.error(`  - ${w}`);
     }
-    process.exit(runtime_info_js_1.ExitCode.BuildError);
+    process.exit(exports.ExitCode.BuildError);
   }
   console.log(GREEN("\u2713 Project migration completed successfully"));
   for (const c of result.changes) {
@@ -19537,15 +23067,15 @@ Examples:
   const code = args[0];
   if (!code) {
     console.error(RED("Error: Missing error code. Usage: hkd explain <error_code> (e.g. hkd explain E201)"));
-    process.exit(runtime_info_js_1.ExitCode.UsageError);
+    process.exit(exports.ExitCode.UsageError);
   }
-  const explanation = (0, explain_js_1.explainError)(code);
+  const explanation = explainError(code);
   console.log(explanation);
 }
 function cmdRfc(args) {
   const sub = args[0] || "list";
   const rfcsDir = path.join(getProjectDir() || process.cwd(), "rfcs");
-  const validator = new rfc_validator_js_1.RfcValidator(rfcsDir);
+  const validator = new RfcValidator(rfcsDir);
   if (sub === "list") {
     console.log(validator.listRfcs());
   } else if (sub === "check") {
@@ -19554,76 +23084,667 @@ function cmdRfc(args) {
     console.log(validator.statusRfc(args[1]));
   } else {
     console.error(RED(`Unknown rfc subcommand: '${sub}'. Use list, check, or status.`));
-    process.exit(runtime_info_js_1.ExitCode.UsageError);
+    process.exit(exports.ExitCode.UsageError);
   }
 }
 function cmdVerifyRelease(args) {
   const projectDir = getProjectDir() || process.cwd();
   const asJson = args.includes("--json");
-  const report = (0, verify_release_js_1.runVerifyRelease)(projectDir);
-  (0, verify_release_js_1.printVerifyReleaseReport)(report, asJson);
+  const report = runVerifyRelease(projectDir);
+  printVerifyReleaseReport(report, asJson);
   if (!report.allPassed) {
-    process.exit(runtime_info_js_1.ExitCode.BuildError);
+    process.exit(exports.ExitCode.BuildError);
+  }
+}
+var COMMAND_HELPS = {
+  init: {
+    description: "HKD Project Initializer \u2014 Initialize a new HKD project with hkd.toml manifest, main source file, tests, and README.",
+    usage: "hkd init [target_dir] [project_name] [options]",
+    options: [
+      { flag: "--template <cli|lib|server>", desc: "Project template structure (default: cli)" },
+      { flag: "--edition <2026|2027>", desc: "Language edition (default: 2026)" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd init my-app",
+      "hkd init . my-project",
+      "hkd init my-lib --template lib --edition 2027",
+      "hkd init my-api --template server"
+    ]
+  },
+  run: {
+    description: "Compile and execute an HKD project or a standalone .hkd source file.",
+    usage: "hkd run [file.hkd] [options] [-- <args>...]",
+    options: [
+      { flag: "--release", desc: "Run optimized release build (target/release)" },
+      { flag: "--reference, --ts", desc: "Run using reference TypeScript VM rather than native runtime" },
+      { flag: "--native", desc: "Build and run as standalone self-contained native executable" },
+      { flag: "--jit", desc: "Enable tier-1 JIT compilation (native runtime)" },
+      { flag: "--jit-stats", desc: "Print JIT compilation statistics upon process exit" },
+      { flag: "--mem-stats", desc: "Print memory allocation and heap statistics upon process exit" },
+      { flag: "--profile <file>", desc: "Profile execution and record trace to JSON file" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd run",
+      "hkd run src/main.hkd",
+      "hkd run --release",
+      "hkd run --jit benchmarks/fib.hkd",
+      "hkd run --reference app.hkd"
+    ]
+  },
+  build: {
+    description: "Incrementally compile HKD source modules into bytecode (.hkdb) or standalone native binaries.",
+    usage: "hkd build [file.hkd] [options]",
+    options: [
+      { flag: "--release", desc: "Compile in optimized release mode with full bytecode optimization" },
+      { flag: "--native", desc: "Produce a standalone native executable with embedded runtime" },
+      { flag: "--target <triple>", desc: "Target platform triple (e.g. x86_64-pc-windows-msvc)" },
+      { flag: "-o <path>", desc: "Output binary path (used with --native)" },
+      { flag: "--pgo <profile.json>", desc: "Apply Profile-Guided Optimization data" },
+      { flag: "--verify-reproducible", desc: "Verify bit-for-bit build determinism" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd build",
+      "hkd build --release",
+      "hkd build --native src/main.hkd -o bin/app.exe",
+      "hkd build --verify-reproducible src/main.hkd"
+    ]
+  },
+  test: {
+    description: "Discover and execute test blocks across the project or in a specific file/directory.",
+    usage: "hkd test [file/dir] [options]",
+    options: [
+      { flag: "--filter <pattern>", desc: "Run only tests whose names match the given pattern" },
+      { flag: "--verbose", desc: "Display individual test names, status, and duration" },
+      { flag: "--quiet", desc: "Display only test failures and final summary" },
+      { flag: "--differential", desc: "Verify results across both Register VM and Stack VM" },
+      { flag: "--conformance", desc: "Run language conformance test suite" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd test",
+      "hkd test tests/math.test.hkd",
+      'hkd test --filter "addition"',
+      "hkd test --verbose",
+      "hkd test --differential"
+    ]
+  },
+  check: {
+    description: "Perform lexical, syntactic, and semantic type checking without compiling or emitting files.",
+    usage: "hkd check [file.hkd] [options]",
+    options: [
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd check",
+      "hkd check src/main.hkd",
+      "hkd check lib/utils.hkd"
+    ]
+  },
+  fmt: {
+    description: "Format HKD source files according to canonical language styling conventions.",
+    usage: "hkd fmt [file/dir] [options]",
+    options: [
+      { flag: "-w, --write", desc: "Format and overwrite source files in-place" },
+      { flag: "--check", desc: "Check formatting without modifying files; exits 1 if unformatted" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd fmt",
+      "hkd fmt -w",
+      "hkd fmt src/main.hkd -w",
+      "hkd fmt --check"
+    ]
+  },
+  lint: {
+    description: "Analyze HKD source files for semantic warnings, unused symbols, and style violations.",
+    usage: "hkd lint <file.hkd> [options]",
+    options: [
+      { flag: "--fix", desc: "Automatically fix safe lint issues (unused imports, unused vars)" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd lint src/main.hkd",
+      "hkd lint src/main.hkd --fix"
+    ]
+  },
+  repl: {
+    description: "HKD Interactive REPL \u2014 Start an interactive Read-Eval-Print Loop session for live HKD code evaluation.",
+    usage: "hkd repl [options]",
+    options: [
+      { flag: "--edition <2026|2027>", desc: "Language edition (default: 2026)" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd repl",
+      "hkd repl --edition 2027"
+    ]
+  },
+  doctor: {
+    description: "Run comprehensive system diagnostic (Node, Zig, runtime, compiler, IDE tooling).",
+    usage: "hkd doctor [options]",
+    options: [
+      { flag: "--json", desc: "Output diagnostic report as structured JSON" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd doctor",
+      "hkd doctor --json"
+    ]
+  },
+  add: {
+    description: "Add a dependency to hkd.toml and resolve package requirements.",
+    usage: "hkd add <package> [version] [options]",
+    options: [
+      { flag: "--path <dir>", desc: "Add a local directory path dependency" },
+      { flag: "--offline", desc: "Resolve dependency from local package cache only" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd add http@^1.0.0",
+      "hkd add --path ../shared-library",
+      "hkd add package.hkdpack"
+    ]
+  },
+  remove: {
+    description: "Remove a dependency from hkd.toml.",
+    usage: "hkd remove <package> [options]",
+    options: [
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd remove http"
+    ]
+  },
+  install: {
+    description: "Resolve and install project dependencies into .hkd/deps and update hkd.lock.",
+    usage: "hkd install [options]",
+    options: [
+      { flag: "--locked", desc: "Require exact match against hkd.lock without updating it" },
+      { flag: "--offline", desc: "Install using local package cache only (no network)" },
+      { flag: "--vendor", desc: "Vendor dependencies into vendor/ directory" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd install",
+      "hkd install --locked",
+      "hkd install --offline"
+    ]
+  },
+  update: {
+    description: "Update dependencies to latest versions allowed by hkd.toml semver ranges.",
+    usage: "hkd update [package] [options]",
+    options: [
+      { flag: "--offline", desc: "Update using local package cache only" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd update",
+      "hkd update http"
+    ]
+  },
+  pack: {
+    description: "Pack the current project into a portable, deterministic .hkdpack archive.",
+    usage: "hkd pack [options]",
+    options: [
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd pack"
+    ]
+  },
+  publish: {
+    description: "Publish a package archive to the HKD package registry.",
+    usage: "hkd publish [options]",
+    options: [
+      { flag: "--token <t>", desc: "Registry authentication token" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd publish",
+      "hkd publish --token $HKD_TOKEN"
+    ]
+  },
+  release: {
+    description: "Build, package, and verify a complete production release bundle.",
+    usage: "hkd release [options]",
+    options: [
+      { flag: "--target <triple>", desc: "Target platform triple (e.g. x86_64-pc-windows-msvc)" },
+      { flag: "--profile <p>", desc: "Build profile (release, size, security; default: release)" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd release",
+      "hkd release --target x86_64-pc-windows-msvc",
+      "hkd release --profile size"
+    ]
+  },
+  "verify-release": {
+    description: "Run automated release verification acceptance gates (tests, checksums, determinism).",
+    usage: "hkd verify-release [options]",
+    options: [
+      { flag: "--json", desc: "Output verification gate results as JSON" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd verify-release",
+      "hkd verify-release --json"
+    ]
+  },
+  explain: {
+    description: "HKD Error Explanation Tool \u2014 Explain compiler error codes with explanation, bad code example, and fix.",
+    usage: "hkd explain <error_code> [options]",
+    options: [
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd explain E201",
+      "hkd explain E301",
+      "hkd explain E303"
+    ]
+  },
+  rfc: {
+    description: "Inspect, validate, and check status of Language Evolution RFC proposals.",
+    usage: "hkd rfc <list|check|status> [id] [options]",
+    options: [
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd rfc list",
+      "hkd rfc status RFC-0001",
+      "hkd rfc check RFC-0002"
+    ]
+  },
+  bench: {
+    description: "Benchmark execution latency and throughput of an HKD source file across repeated runs.",
+    usage: "hkd bench <file.hkd> [options]",
+    options: [
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd bench benchmarks/fib.hkd"
+    ]
+  },
+  stats: {
+    description: "Display source code metrics (lines, tokens, statements, functions, structs).",
+    usage: "hkd stats <file.hkd> [options]",
+    options: [
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd stats src/main.hkd"
+    ]
+  },
+  tree: {
+    description: "Display the resolved dependency hierarchy tree for the current project.",
+    usage: "hkd tree [options]",
+    options: [
+      { flag: "--json", desc: "Output dependency tree as JSON" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd tree",
+      "hkd tree --json"
+    ]
+  },
+  audit: {
+    description: "Audit package integrity, hash validation, and security vulnerabilities.",
+    usage: "hkd audit [options]",
+    options: [
+      { flag: "--json", desc: "Output audit results as JSON" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd audit",
+      "hkd audit --json"
+    ]
+  },
+  cache: {
+    description: "Inspect, verify, or clean the global content-addressed package cache.",
+    usage: "hkd cache <list|clean|verify> [options]",
+    options: [
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd cache list",
+      "hkd cache verify",
+      "hkd cache clean"
+    ]
+  },
+  config: {
+    description: "Inspect effective runtime configuration with secret masking.",
+    usage: "hkd config [options]",
+    options: [
+      { flag: "--json", desc: "Output config as JSON" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd config",
+      "hkd config --json"
+    ]
+  },
+  container: {
+    description: "Generate and test multi-stage Docker container build files.",
+    usage: "hkd container <init|build> [options]",
+    options: [
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd container init",
+      "hkd container build"
+    ]
+  },
+  platform: {
+    description: "Inspect platform adapter integration status (Docker, Vercel, Generic Server, GitHub Actions).",
+    usage: "hkd platform <detect|list> [options]",
+    options: [
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd platform list",
+      "hkd platform detect"
+    ]
+  },
+  deploy: {
+    description: "Run pre-flight deployment check or generate platform deployment manifests.",
+    usage: "hkd deploy [check|manifest] [options]",
+    options: [
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd deploy check",
+      "hkd deploy manifest"
+    ]
+  },
+  sbom: {
+    description: "Generate CycloneDX 1.5 JSON Software Bill of Materials for dependencies and build.",
+    usage: "hkd sbom [options]",
+    options: [
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd sbom"
+    ]
+  },
+  "runtime-info": {
+    description: "Inspect production runtime environment limits, memory ceilings, and active capabilities.",
+    usage: "hkd runtime-info [options]",
+    options: [
+      { flag: "--json", desc: "Output runtime info as JSON" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd runtime-info",
+      "hkd runtime-info --json"
+    ]
+  },
+  targets: {
+    description: "List supported canonical target triples for cross-compilation.",
+    usage: "hkd targets [options]",
+    options: [
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd targets"
+    ]
+  },
+  "verify-artifact": {
+    description: "Verify release artifact checksum, digital signature, and structural integrity.",
+    usage: "hkd verify-artifact <bundle-path> [options]",
+    options: [
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd verify-artifact dist/releases/app.tar.gz"
+    ]
+  },
+  migrate: {
+    description: "Upgrade project manifest and lockfile to Edition 2026/2027.",
+    usage: "hkd migrate [options]",
+    options: [
+      { flag: "--edition <2026|2027>", desc: "Target edition (default: 2026)" },
+      { flag: "--dry-run", desc: "Preview changes without modifying files" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd migrate --edition 2027",
+      "hkd migrate --dry-run"
+    ]
+  },
+  vendor: {
+    description: "Copy all resolved dependencies into the local vendor/ directory.",
+    usage: "hkd vendor [options]",
+    options: [
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd vendor"
+    ]
+  },
+  ci: {
+    description: "Run deterministic CI pipeline (locked dependency install, audit, test runner).",
+    usage: "hkd ci [options]",
+    options: [
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd ci"
+    ]
+  },
+  doc: {
+    description: "Extract doc comments and generate HTML/Markdown API documentation.",
+    usage: "hkd doc [options]",
+    options: [
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd doc"
+    ]
+  },
+  lsp: {
+    description: "Start Language Server Protocol (LSP 2.0) daemon over stdio for editor integration.",
+    usage: "hkd lsp [options]",
+    options: [
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd lsp"
+    ]
+  },
+  dap: {
+    description: "Start Debug Adapter Protocol (DAP) daemon over stdio for IDE debugging sessions.",
+    usage: "hkd dap [options]",
+    options: [
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd dap"
+    ]
+  },
+  search: {
+    description: "Search for published packages in the HKD package registry.",
+    usage: "hkd search <query> [options]",
+    options: [
+      { flag: "--json", desc: "Output search results as JSON" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd search web",
+      "hkd search json"
+    ]
+  },
+  info: {
+    description: "Display metadata, versions, and dependencies of a package in the registry.",
+    usage: "hkd info <package> [options]",
+    options: [
+      { flag: "--json", desc: "Output package info as JSON" },
+      { flag: "--help, -h", desc: "Show this help message" }
+    ],
+    examples: [
+      "hkd info http"
+    ]
+  },
+  version: {
+    description: "Print HKD compiler and toolchain version.",
+    usage: "hkd version",
+    options: [
+      { flag: "-v, --version", desc: "Show version" }
+    ],
+    examples: [
+      "hkd version",
+      "hkd --version",
+      "hkd -v"
+    ]
+  }
+};
+function printSubcommandHelp(cmd) {
+  const normalized = cmd.toLowerCase().trim();
+  const info = COMMAND_HELPS[normalized];
+  if (!info) {
+    const known = Object.keys(COMMAND_HELPS);
+    const suggestion = findClosestCommand(normalized, known);
+    console.error(RED(`Unknown command: '${cmd}'`));
+    if (suggestion) {
+      console.error(YELLOW(`Did you mean 'hkd help ${suggestion}'?`));
+    }
+    console.error(`Run ${CYAN("hkd help")} to see available commands.`);
+    process.exit(exports.ExitCode.UsageError);
+  }
+  console.log(`
+${BOLD(`HKD Command: ${CYAN(normalized)}`)}
+
+${BOLD("DESCRIPTION:")}
+  ${info.description}
+
+${BOLD("USAGE:")}
+  ${CYAN(info.usage)}
+`);
+  if (info.options && info.options.length > 0) {
+    console.log(BOLD("OPTIONS:"));
+    for (const opt of info.options) {
+      const paddedFlag = opt.flag.padEnd(28, " ");
+      console.log(`  ${CYAN(paddedFlag)} ${opt.desc}`);
+    }
+    console.log();
+  }
+  if (info.examples && info.examples.length > 0) {
+    console.log(BOLD("EXAMPLES:"));
+    for (const ex of info.examples) {
+      console.log(`  ${DIM(ex)}`);
+    }
+    console.log();
   }
 }
 function printHelp() {
   console.log(`
-${BOLD(`HKD Programming Language \u2014 Compiler & Tooling Suite v${index_js_1.HKD_VERSION}`)}
+${BOLD(`HKD Programming Language \u2014 Compiler & Toolchain Suite v${index_js_1.HKD_VERSION}`)}
 
 ${BOLD("USAGE:")}
   ${CYAN("hkd")} <command> [options]
 
 ${BOLD("COMMANDS:")}
-  ${CYAN("init")}      [dir] [name] [--edition <2026|2027>] Initialize a new project
-  ${CYAN("repl")}      [--edition <2026|2027>]              Start an interactive REPL session
-  ${CYAN("run")}       [file.hkd]          Run an HKD project or source file
-  ${CYAN("build")}     [options]           Compile project modules incrementally
-  ${CYAN("test")}      [file/dir]          Run tests
-  ${CYAN("fmt")}       [file.hkd] [-w]     Format source code (formats project if no file given)
-  ${CYAN("lint")}      <file.hkd>          Lint source code for issues
-  ${CYAN("check")}     [file.hkd]          Type-check project or source file
-  ${CYAN("tree")}      [--json]            Display the resolved dependency tree
-  ${CYAN("explain")}   <error_code>        Explain compiler error codes with code examples
-  ${CYAN("rfc")}       <list|check|status> Language Evolution RFC proposal inspector & validator
-  ${CYAN("doctor")}    [--json]            Run system and IDE integration diagnostic
-  ${CYAN("lsp")}                           Start Language Server Protocol (LSP 2.0)
-  ${CYAN("dap")}                           Start Debug Adapter Protocol (DAP)
-  ${CYAN("targets")}                       List supported canonical target triples
-  ${CYAN("release")}   [--target <t>]      Build, package, and verify production release bundle
-  ${CYAN("verify-artifact")} <path>        Verify release artifact checksum and integrity
-  ${CYAN("verify-release")}  [--json]      Run automated release acceptance gates
-  ${CYAN("migrate")}   [--edition 2027]    Upgrade project manifest and lockfile to Edition 2026/2027
-  ${CYAN("config")}    [--json]            Inspect effective runtime configuration with secret masking
-  ${CYAN("container")} <init|build>        Generate and test multi-stage Dockerfile
-  ${CYAN("platform")}  <detect|list>       Inspect platform adapter integration status
-  ${CYAN("deploy")}    [check|manifest]    Run pre-flight deployment check or dry-run
-  ${CYAN("sbom")}                          Generate CycloneDX 1.5 JSON Software Bill of Materials
-  ${CYAN("runtime-info")} [--json]         Inspect production runtime environment and limits
-  ${CYAN("add")}       <pkg> [ver]         Add a dependency (registry, path, or archive)
-  ${CYAN("remove")}    <pkg>               Remove a dependency
-  ${CYAN("install")}   [--offline]         Install dependencies and update lockfile
-  ${CYAN("update")}    [pkg]               Update dependencies within version ranges
-  ${CYAN("pack")}                          Create deterministic .hkdpack package archive
-  ${CYAN("publish")}   [--token <t>]       Publish package to registry
-  ${CYAN("search")}    <query> [--json]    Search packages in registry
-  ${CYAN("info")}      <pkg> [--json]      Show package metadata and versions
-  ${CYAN("vendor")}                        Copy resolved dependencies into vendor/ directory
-  ${CYAN("audit")}     [--json]            Audit package integrity and security
-  ${CYAN("cache")}     <list|clean|verify> Manage content-addressed package cache
-  ${CYAN("ci")}                            Deterministic CI pipeline (--locked install, audit, test)
-  ${CYAN("doc")}                           Generate API documentation
-  ${CYAN("version")}                       Print HKD version
-  ${CYAN("help")}                          Show this help message
 
-${BOLD("EXAMPLES:")}
-  ${DIM("hkd init . my-project")}
-  ${DIM("hkd run")}
-  ${DIM("hkd build --release")}
-  ${DIM("hkd test")}
-  ${DIM("hkd doc")}
+${BOLD("GETTING STARTED:")}
+  ${CYAN("init".padEnd(14, " "))} Initialize a new HKD project (e.g. hkd init my-app)
+  ${CYAN("repl".padEnd(14, " "))} Start an interactive REPL session
 
-${BOLD("LEARN MORE:")}
-  Documentation: ${CYAN("https://hkd-lang.dev/docs")}  ${DIM("(coming soon)")}
+${BOLD("BUILD & EXECUTION:")}
+  ${CYAN("run".padEnd(14, " "))} Compile and run an HKD project or source file
+  ${CYAN("build".padEnd(14, " "))} Compile project modules incrementally or natively
+  ${CYAN("bench".padEnd(14, " "))} Benchmark an HKD script across repeated runs
+  ${CYAN("stats".padEnd(14, " "))} Display source code statistics and metrics
+
+${BOLD("CODE QUALITY & TESTING:")}
+  ${CYAN("check".padEnd(14, " "))} Type-check project or source files without emitting code
+  ${CYAN("test".padEnd(14, " "))} Discover and run project tests
+  ${CYAN("fmt".padEnd(14, " "))} Format source code according to canonical conventions
+  ${CYAN("lint".padEnd(14, " "))} Lint source code for semantic warnings and style issues
+  ${CYAN("explain".padEnd(14, " "))} Explain compiler error codes (e.g. hkd explain E201)
+
+${BOLD("PACKAGE MANAGEMENT:")}
+  ${CYAN("add".padEnd(14, " "))} Add a dependency (registry, path, or archive)
+  ${CYAN("remove".padEnd(14, " "))} Remove a dependency
+  ${CYAN("install".padEnd(14, " "))} Install resolved dependencies and update lockfile
+  ${CYAN("update".padEnd(14, " "))} Update dependencies within version ranges
+  ${CYAN("audit".padEnd(14, " "))} Audit package integrity and security
+  ${CYAN("pack".padEnd(14, " "))} Create deterministic .hkdpack package archive
+  ${CYAN("publish".padEnd(14, " "))} Publish package to registry
+  ${CYAN("tree".padEnd(14, " "))} Display the resolved dependency tree
+
+${BOLD("RELEASE & DIAGNOSTICS:")}
+  ${CYAN("doctor".padEnd(14, " "))} Run system and IDE integration diagnostics
+  ${CYAN("release".padEnd(14, " "))} Build, package, and verify production release bundle
+  ${CYAN("verify-release".padEnd(14, " "))} Run automated release acceptance gates
+  ${CYAN("version".padEnd(14, " "))} Print HKD version
+
+${BOLD("DISCOVERY:")}
+  Use ${CYAN("hkd help <command>")} or ${CYAN("hkd <command> --help")} for detailed flags and examples.
+  Use ${CYAN("hkd help all")} or ${CYAN("hkd --help-all")} to view all platform, deployment, and tooling commands.
+
+${BOLD("DOCUMENTATION:")}
+  Guides & References: ${CYAN("https://hkd-lang.dev/docs")}
+`);
+}
+function printAllHelp() {
+  console.log(`
+${BOLD(`HKD Programming Language \u2014 Full Toolchain Reference v${index_js_1.HKD_VERSION}`)}
+
+${BOLD("USAGE:")}
+  ${CYAN("hkd")} <command> [options]
+
+${BOLD("CORE COMMANDS:")}
+  ${CYAN("init")}              Initialize a new HKD project (cli, lib, server)
+  ${CYAN("repl")}              Interactive REPL session
+  ${CYAN("run")}               Compile and run an HKD project or file
+  ${CYAN("build")}             Incremental compiler (bytecode or standalone native)
+  ${CYAN("test")}              Automated test runner
+  ${CYAN("check")}             Type checker and semantic validator
+  ${CYAN("fmt")}               Code formatter
+  ${CYAN("lint")}              Linter with automated quick-fix support
+  ${CYAN("explain")}           Diagnostic error explanation tool
+  ${CYAN("bench")}             Performance benchmark runner
+  ${CYAN("stats")}             Code statistics analyzer
+
+${BOLD("PACKAGE MANAGEMENT:")}
+  ${CYAN("add")}               Add dependency (registry, path, archive)
+  ${CYAN("remove")}            Remove dependency
+  ${CYAN("install")}           Install dependencies and update lockfile
+  ${CYAN("update")}            Update dependencies
+  ${CYAN("pack")}              Create .hkdpack archive
+  ${CYAN("publish")}           Publish to package registry
+  ${CYAN("search")}            Search packages in registry
+  ${CYAN("info")}              Show package metadata
+  ${CYAN("vendor")}            Vendor dependencies locally
+  ${CYAN("audit")}             Audit package integrity
+  ${CYAN("cache")}             Manage content-addressed cache
+  ${CYAN("tree")}              Display dependency hierarchy tree
+  ${CYAN("ci")}                Deterministic CI pipeline runner
+
+${BOLD("DEPLOYMENT & PRODUCTION:")}
+  ${CYAN("release")}           Build production release bundle
+  ${CYAN("verify-release")}    Run release acceptance gates
+  ${CYAN("verify-artifact")}   Verify bundle integrity and checksums
+  ${CYAN("targets")}           List supported compilation target triples
+  ${CYAN("config")}            Effective configuration inspector
+  ${CYAN("container")}         Dockerfile generator and container builder
+  ${CYAN("platform")}          Platform adapter detector (Docker, Vercel, etc.)
+  ${CYAN("deploy")}            Deployment pre-flight checker
+  ${CYAN("sbom")}              CycloneDX 1.5 JSON Software Bill of Materials
+  ${CYAN("runtime-info")}      Production runtime limits and capability inspector
+  ${CYAN("migrate")}           Upgrade project to Edition 2026/2027
+
+${BOLD("DEVELOPER TOOLING & PROTOCOLS:")}
+  ${CYAN("doctor")}            System and toolchain diagnostic
+  ${CYAN("lsp")}               Language Server Protocol (LSP 2.0) daemon
+  ${CYAN("dap")}               Debug Adapter Protocol (DAP) daemon
+  ${CYAN("rfc")}               Language RFC inspector and validator
+  ${CYAN("doc")}               API documentation generator
+  ${CYAN("version")}           Print version
+  ${CYAN("help")}              Show help
+
+Run ${CYAN("hkd help <command>")} for detailed documentation on any command.
 `);
 }
 if (process.env.NODE_ENV !== "test") {
