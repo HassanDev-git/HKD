@@ -1,0 +1,151 @@
+{
+  "phase": "Phase 9H",
+  "category": "vm_architecture_isolation",
+  "timestamp": "2026-09-30T23:47:38.611Z",
+  "results": {
+    "arithmetic_integer": {
+      "stack_vm": {
+        "compile_ms": 1.2043999999999642,
+        "lowering_ms": 0,
+        "serialization_ms": 0.3684000000000651,
+        "vm_init_ms": 0.02689999999995507,
+        "execution_ms": 98.41140000000007,
+        "total_ms": 99.83720000000005
+      },
+      "register_vm": {
+        "compile_ms": 0.8555999999998676,
+        "lowering_ms": 0.15530000000012478,
+        "serialization_ms": 0.17770000000018626,
+        "vm_init_ms": 0.031099999999923966,
+        "execution_ms": 49.978399999999965,
+        "total_ms": 51.158500000000004
+      }
+    },
+    "arithmetic_numeric": {
+      "stack_vm": {
+        "compile_ms": 0.6330000000002656,
+        "lowering_ms": 0,
+        "serialization_ms": 0.18149999999968713,
+        "vm_init_ms": 0.027999999999792635,
+        "execution_ms": 89.43100000000004,
+        "total_ms": 90.14939999999933
+      },
+      "register_vm": {
+        "compile_ms": 1.0572000000001935,
+        "lowering_ms": 0.257600000000366,
+        "serialization_ms": 0.11590000000023792,
+        "vm_init_ms": 0.02999999999974534,
+        "execution_ms": 45.7201,
+        "total_ms": 47.947000000000116
+      }
+    },
+    "loop_tight": {
+      "stack_vm": {
+        "compile_ms": 0.44830000000001746,
+        "lowering_ms": 0,
+        "serialization_ms": 0.08960000000024593,
+        "vm_init_ms": 0.021700000000237196,
+        "execution_ms": 289.96569999999974,
+        "total_ms": 290.62779999999975
+      },
+      "register_vm": {
+        "compile_ms": 0.6351999999997133,
+        "lowering_ms": 0.11979999999948632,
+        "serialization_ms": 0.10190000000056898,
+        "vm_init_ms": 0.02669999999943684,
+        "execution_ms": 165.14819999999963,
+        "total_ms": 166.12259999999878
+      }
+    },
+    "recursion_fib": {
+      "stack_vm": {
+        "compile_ms": 1.156699999999546,
+        "lowering_ms": 0,
+        "serialization_ms": 0.17849999999998545,
+        "vm_init_ms": 0.01860000000033324,
+        "execution_ms": 44.773699999999735,
+        "total_ms": 45.99130000000059
+      },
+      "register_vm": {
+        "compile_ms": 0.9810999999999694,
+        "lowering_ms": 0.18130000000019209,
+        "serialization_ms": 0.1716999999998734,
+        "vm_init_ms": 0.017700000000331784,
+        "execution_ms": 21.42830000000049,
+        "total_ms": 23.561999999999898
+      }
+    },
+    "data_strings": {
+      "stack_vm": {
+        "compile_ms": 1.5912000000007538,
+        "lowering_ms": 0,
+        "serialization_ms": 0.24129999999968277,
+        "vm_init_ms": 0.02230000000054133,
+        "execution_ms": 8.031600000000253,
+        "total_ms": 11.034099999998944
+      },
+      "register_vm": {
+        "compile_ms": 0.9632000000001426,
+        "lowering_ms": 0.1934000000001106,
+        "serialization_ms": 0.19530000000031578,
+        "vm_init_ms": 0.020299999999224383,
+        "execution_ms": 4.488500000000386,
+        "total_ms": 7.4166000000004715
+      }
+    },
+    "runtime_allocations": {
+      "stack_vm": {
+        "compile_ms": 2.748099999999795,
+        "lowering_ms": 0,
+        "serialization_ms": 0.21090000000003783,
+        "vm_init_ms": 0.018299999999726424,
+        "execution_ms": 0.22929999999996653,
+        "total_ms": 3.310099999999693
+      },
+      "register_vm": {
+        "compile_ms": 1.777299999999741,
+        "lowering_ms": 0.42780000000038854,
+        "serialization_ms": 0.18289999999979045,
+        "vm_init_ms": 0.017600000000129512,
+        "execution_ms": 0.36380000000008295,
+        "total_ms": 4.511999999998807
+      }
+    },
+    "function_calls": {
+      "stack_vm": {
+        "compile_ms": 0.8395000000000437,
+        "lowering_ms": 0,
+        "serialization_ms": 0.10089999999945576,
+        "vm_init_ms": 0.016400000000430737,
+        "execution_ms": 179.77950000000055,
+        "total_ms": 180.73199999999997
+      },
+      "register_vm": {
+        "compile_ms": 0.9004000000004453,
+        "lowering_ms": 0.10860000000138825,
+        "serialization_ms": 0.13580000000001746,
+        "vm_init_ms": 0.01720000000022992,
+        "execution_ms": 79.84890000000087,
+        "total_ms": 80.85469999999987
+      }
+    },
+    "data_objects": {
+      "stack_vm": {
+        "compile_ms": 0.893500000000131,
+        "lowering_ms": 0,
+        "serialization_ms": 0.16530000000057044,
+        "vm_init_ms": 0.01660000000083528,
+        "execution_ms": 90.90790000000015,
+        "total_ms": 92.04030000000057
+      },
+      "register_vm": {
+        "compile_ms": 0.6759999999994761,
+        "lowering_ms": 0.13260000000082073,
+        "serialization_ms": 0.09220000000095752,
+        "vm_init_ms": 0.016499999999723514,
+        "execution_ms": 49.45139999999992,
+        "total_ms": 50.69210000000203
+      }
+    }
+  }
+}

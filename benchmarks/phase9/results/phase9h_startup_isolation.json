@@ -1,0 +1,76 @@
+{
+  "phase": "Phase 9H",
+  "category": "startup_isolation",
+  "timestamp": "2026-09-30T23:56:06.381Z",
+  "results": {
+    "node_bare_process": {
+      "command": "node -e \"process.exit(0)\"",
+      "samples": [
+        170.965,
+        134.89,
+        141.668,
+        141.048,
+        137.724,
+        136.421,
+        130.564
+      ],
+      "median": 137.724,
+      "min": 130.564,
+      "max": 170.965,
+      "mean": 141.897
+    },
+    "cli_version": {
+      "command": "node dist/cli/main.js version",
+      "samples": [
+        218.187,
+        304.184,
+        340.847,
+        275.97,
+        302.576,
+        270.24,
+        291.415
+      ],
+      "median": 291.415,
+      "min": 218.187,
+      "max": 340.847,
+      "mean": 286.203
+    },
+    "cli_minimal_run": {
+      "command": "node dist/cli/main.js run \"C:\\Users\\HASSAN\\OneDrive\\Desktop\\HKD\\benchmarks\\phase9\\workloads\\minimal.hkd\"",
+      "samples": [
+        329.145,
+        301.491,
+        278.274,
+        334.118,
+        361.061,
+        331.55,
+        268.482
+      ],
+      "median": 329.145,
+      "min": 268.482,
+      "max": 361.061,
+      "mean": 314.874
+    },
+    "in_process_minimal_total": {
+      "samples": [
+        1.105,
+        0.237,
+        0.205,
+        0.244,
+        0.22,
+        0.175,
+        0.158
+      ],
+      "median": 0.22,
+      "min": 0.158,
+      "max": 1.105,
+      "mean": 0.335
+    },
+    "analysis": {
+      "node_process_startup_overhead_ms": 137.724,
+      "cli_module_loading_overhead_ms": 153.691,
+      "in_process_execution_ms": 0.22,
+      "startup_fraction_of_minimal_run_percent": 41.8
+    }
+  }
+}

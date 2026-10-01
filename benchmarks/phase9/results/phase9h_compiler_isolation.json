@@ -1,0 +1,139 @@
+{
+  "phase": "Phase 9H",
+  "category": "compiler_benchmark_isolation",
+  "timestamp": "2026-09-30T23:56:01.173Z",
+  "results": {
+    "compiler_small": {
+      "lexing": {
+        "median": 0.114,
+        "min": 0.072,
+        "max": 0.31,
+        "mean": 0.14
+      },
+      "parsing": {
+        "median": 0.199,
+        "min": 0.122,
+        "max": 0.421,
+        "mean": 0.208
+      },
+      "semantic_analysis": {
+        "median": 0.132,
+        "min": 0.078,
+        "max": 0.206,
+        "mean": 0.13
+      },
+      "bytecode_emission": {
+        "median": 0.215,
+        "min": 0.162,
+        "max": 0.372,
+        "mean": 0.237
+      },
+      "register_lowering": {
+        "median": 0.178,
+        "min": 0.093,
+        "max": 0.219,
+        "mean": 0.176
+      },
+      "serialization": {
+        "median": 0.175,
+        "min": 0.13,
+        "max": 0.217,
+        "mean": 0.171
+      },
+      "total_compilation": {
+        "median": 0.991,
+        "min": 0.831,
+        "max": 1.467,
+        "mean": 1.061
+      }
+    },
+    "compiler_medium": {
+      "lexing": {
+        "median": 0.336,
+        "min": 0.176,
+        "max": 0.421,
+        "mean": 0.326
+      },
+      "parsing": {
+        "median": 0.421,
+        "min": 0.199,
+        "max": 1.763,
+        "mean": 0.513
+      },
+      "semantic_analysis": {
+        "median": 0.363,
+        "min": 0.165,
+        "max": 0.452,
+        "mean": 0.347
+      },
+      "bytecode_emission": {
+        "median": 0.632,
+        "min": 0.421,
+        "max": 1.75,
+        "mean": 0.74
+      },
+      "register_lowering": {
+        "median": 0.242,
+        "min": 0.121,
+        "max": 0.77,
+        "mean": 0.359
+      },
+      "serialization": {
+        "median": 0.352,
+        "min": 0.128,
+        "max": 0.862,
+        "mean": 0.379
+      },
+      "total_compilation": {
+        "median": 2.547,
+        "min": 1.287,
+        "max": 4.333,
+        "mean": 2.664
+      }
+    },
+    "compiler_large": {
+      "lexing": {
+        "median": 2.375,
+        "min": 1.092,
+        "max": 16.345,
+        "mean": 3.843
+      },
+      "parsing": {
+        "median": 2.053,
+        "min": 0.9,
+        "max": 9.13,
+        "mean": 3.1
+      },
+      "semantic_analysis": {
+        "median": 1.583,
+        "min": 0.746,
+        "max": 4.011,
+        "mean": 1.975
+      },
+      "bytecode_emission": {
+        "median": 2.35,
+        "min": 1.429,
+        "max": 7.055,
+        "mean": 3.086
+      },
+      "register_lowering": {
+        "median": 3.175,
+        "min": 0.762,
+        "max": 4.334,
+        "mean": 2.639
+      },
+      "serialization": {
+        "median": 1.191,
+        "min": 0.461,
+        "max": 2.852,
+        "mean": 1.303
+      },
+      "total_compilation": {
+        "median": 16.037,
+        "min": 6.948,
+        "max": 31.807,
+        "mean": 15.945
+      }
+    }
+  }
+}

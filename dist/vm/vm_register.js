@@ -28,6 +28,7 @@ class RegisterVM {
     callbackQueue = [];
     isDispatchingCallbacks = false;
     regArrayPool = [];
+    framePool = [];
     constructor(output = (s) => process.stdout.write(s + "\n")) {
         this.output = output;
         this.registerBuiltins();
@@ -161,14 +162,27 @@ class RegisterVM {
         if (this.frames.length >= MAX_CALL_DEPTH) {
             throw new vm_js_1.VmError("Stack overflow (call depth limit reached)", index_js_1.ErrorCode.E404);
         }
-        this.frames.push({
-            closure,
-            chunk,
-            ip: 0,
-            registers,
-            destReg,
-            cells: [],
-        });
+        let frame;
+        if (this.framePool.length > 0) {
+            frame = this.framePool.pop();
+            frame.closure = closure;
+            frame.chunk = chunk;
+            frame.ip = 0;
+            frame.registers = registers;
+            frame.destReg = destReg;
+            frame.cells.length = 0;
+        }
+        else {
+            frame = {
+                closure,
+                chunk,
+                ip: 0,
+                registers,
+                destReg,
+                cells: [],
+            };
+        }
+        this.frames.push(frame);
     }
     execute(targetFrames = 0) {
         let frame = this.frames[this.frames.length - 1];
@@ -207,10 +221,11 @@ class RegisterVM {
                         cell = this.getGlobalCell(name);
                         cells[idx] = cell;
                     }
-                    if (cell.value === undefined && !this.globals.has(cell.name)) {
+                    const val = cell.value;
+                    if (val === undefined && !this.globals.has(cell.name)) {
                         throw new vm_js_1.VmError(`Undefined variable \`${cell.name}\``, index_js_1.ErrorCode.E301);
                     }
-                    registers[ins.dst] = cell.value;
+                    registers[ins.dst] = val;
                     break;
                 }
                 case register_chunk_js_1.RegOp.StoreGlobal: {
@@ -453,14 +468,14 @@ class RegisterVM {
                     break;
                 case register_chunk_js_1.RegOp.JumpIf: {
                     const cond = registers[ins.dst];
-                    if (cond !== false && cond !== null && cond !== 0 && cond !== "") {
+                    if (cond === true || (cond && cond !== 0 && cond !== "")) {
                         frame.ip = ins.src2;
                     }
                     break;
                 }
                 case register_chunk_js_1.RegOp.JumpIfNot: {
                     const cond = registers[ins.dst];
-                    if (cond === false || cond === null || cond === 0 || cond === "") {
+                    if (cond !== true && (!cond || cond === 0 || cond === "")) {
                         frame.ip = ins.src2;
                     }
                     break;
@@ -493,7 +508,11 @@ class RegisterVM {
                     let closure;
                     if (c.type === "function") {
                         fn = c;
-                        closure = { type: "closure", fn, upvalues: [] };
+                        closure = fn._defaultClosure;
+                        if (!closure) {
+                            closure = { type: "closure", fn, upvalues: [] };
+                            fn._defaultClosure = closure;
+                        }
                     }
                     else if (c.type === "closure") {
                         closure = c;
@@ -540,8 +559,14 @@ class RegisterVM {
                 case register_chunk_js_1.RegOp.Return: {
                     const returnValue = registers[ins.dst];
                     const returnFrame = this.frames.pop();
-                    if (this.regArrayPool.length < 64) {
+                    if (this.regArrayPool.length < 256) {
                         this.regArrayPool.push(returnFrame.registers);
+                    }
+                    if (this.framePool.length < 256) {
+                        returnFrame.closure = null;
+                        returnFrame.registers = null;
+                        returnFrame.cells.length = 0;
+                        this.framePool.push(returnFrame);
                     }
                     if (this.frames.length === targetFrames) {
                         return { ok: true, value: returnValue };

@@ -53,6 +53,7 @@ export class RegisterVM {
   private callbackQueue: Array<[HkdValue, HkdValue[]]> = [];
   private isDispatchingCallbacks: boolean = false;
   private regArrayPool: HkdValue[][] = [];
+  private framePool: RegCallFrame[] = [];
 
   constructor(output: (s: string) => void = (s) => process.stdout.write(s + "\n")) {
     this.output = output;
@@ -192,14 +193,26 @@ export class RegisterVM {
     if (this.frames.length >= MAX_CALL_DEPTH) {
       throw new VmError("Stack overflow (call depth limit reached)", ErrorCode.E404);
     }
-    this.frames.push({
-      closure,
-      chunk,
-      ip: 0,
-      registers,
-      destReg,
-      cells: [],
-    });
+    let frame: RegCallFrame;
+    if (this.framePool.length > 0) {
+      frame = this.framePool.pop()!;
+      frame.closure = closure;
+      frame.chunk = chunk;
+      frame.ip = 0;
+      frame.registers = registers;
+      frame.destReg = destReg;
+      frame.cells.length = 0;
+    } else {
+      frame = {
+        closure,
+        chunk,
+        ip: 0,
+        registers,
+        destReg,
+        cells: [],
+      };
+    }
+    this.frames.push(frame);
   }
 
   private execute(targetFrames: number = 0): VmResult {
@@ -248,10 +261,11 @@ export class RegisterVM {
             cell = this.getGlobalCell(name);
             cells[idx] = cell;
           }
-          if (cell.value === undefined && !this.globals.has(cell.name)) {
+          const val = cell.value;
+          if (val === undefined && !this.globals.has(cell.name)) {
             throw new VmError(`Undefined variable \`${cell.name}\``, ErrorCode.E301);
           }
-          registers[ins.dst] = cell.value!;
+          registers[ins.dst] = val!;
           break;
         }
 
@@ -501,7 +515,7 @@ export class RegisterVM {
 
         case RegOp.JumpIf: {
           const cond = registers[ins.dst];
-          if (cond !== false && cond !== null && cond !== 0 && cond !== "") {
+          if (cond === true || (cond && cond !== 0 && cond !== "")) {
             frame.ip = ins.src2;
           }
           break;
@@ -509,7 +523,7 @@ export class RegisterVM {
 
         case RegOp.JumpIfNot: {
           const cond = registers[ins.dst];
-          if (cond === false || cond === null || cond === 0 || cond === "") {
+          if (cond !== true && (!cond || cond === 0 || cond === "")) {
             frame.ip = ins.src2;
           }
           break;
@@ -552,7 +566,11 @@ export class RegisterVM {
 
           if (c.type === "function") {
             fn = c as HkdFunction;
-            closure = { type: "closure", fn, upvalues: [] };
+            closure = (fn as any)._defaultClosure;
+            if (!closure) {
+              closure = { type: "closure", fn, upvalues: [] };
+              (fn as any)._defaultClosure = closure;
+            }
           } else if (c.type === "closure") {
             closure = c as HkdClosure;
             fn = closure.fn;
@@ -605,8 +623,14 @@ export class RegisterVM {
         case RegOp.Return: {
           const returnValue = registers[ins.dst];
           const returnFrame = this.frames.pop()!;
-          if (this.regArrayPool.length < 64) {
+          if (this.regArrayPool.length < 256) {
             this.regArrayPool.push(returnFrame.registers);
+          }
+          if (this.framePool.length < 256) {
+            returnFrame.closure = null;
+            returnFrame.registers = null as any;
+            returnFrame.cells.length = 0;
+            this.framePool.push(returnFrame);
           }
 
           if (this.frames.length === targetFrames) {

@@ -26,6 +26,7 @@ export declare class RegisterVM {
     private callbackQueue;
     private isDispatchingCallbacks;
     private regArrayPool;
+    private framePool;
     constructor(output?: (s: string) => void);
     dispatchCallback(cb: HkdValue, args: HkdValue[]): void;
     runCallable(callee: HkdValue, args: HkdValue[]): HkdValue;
