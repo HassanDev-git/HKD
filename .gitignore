@@ -14,3 +14,4 @@ native-runtime/.zig-cache/
 # Build artifacts
 dist-release/
 target/
+hkd-landing-page/

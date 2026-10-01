@@ -34,6 +34,8 @@ export interface HkdNativeFunction {
     name: string;
     arity: number;
     call: (args: HkdValue[]) => HkdValue;
+    call1?: (a: HkdValue) => HkdValue;
+    call2?: (a: HkdValue, b: HkdValue) => HkdValue;
 }
 export interface HkdIterator {
     type: "iterator";

@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Release: 1.1.0](https://img.shields.io/badge/Release-1.1.0-brightgreen.svg)](docs/release-notes-1.1.0.md)
 [![Status: Project--Scope Production Ready](https://img.shields.io/badge/Readiness-Project--Scope%20Production%20Ready-success.svg)](docs/phase19-20-final-release-report.md)
-[![Tests: 765 Passing](https://img.shields.io/badge/Tests-765%20passing-success.svg)](tests/)
+[![Tests: 1043 Passing](https://img.shields.io/badge/Tests-1043%20passing-success.svg)](tests/)
 
 **HKD** is a modern, statically-typed systems programming language and developer platform combining high developer velocity with predictable runtime performance, deterministic compilation, and a unified zero-dependency toolchain.
 

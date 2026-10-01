@@ -31,7 +31,7 @@ export declare class RegisterVM {
     dispatchCallback(cb: HkdValue, args: HkdValue[]): void;
     runCallable(callee: HkdValue, args: HkdValue[]): HkdValue;
     getGlobalCell(name: string): GlobalCell;
-    defineNative(name: string, arity: number, fn: (args: HkdValue[]) => HkdValue): void;
+    defineNative(name: string, arity: number, fn: (args: HkdValue[]) => HkdValue, call1?: (a: HkdValue) => HkdValue, call2?: (a: HkdValue, b: HkdValue) => HkdValue): void;
     getGlobal(name: string): HkdValue | undefined;
     setGlobal(name: string, value: HkdValue): void;
     getAllGlobals(): Array<{

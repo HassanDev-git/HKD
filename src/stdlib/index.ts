@@ -182,7 +182,7 @@ function buildString(): StdModule {
   m.set("upper",  native("upper",  1, (a) => (a[0] as string).toUpperCase()));
   m.set("lower",  native("lower",  1, (a) => (a[0] as string).toLowerCase()));
   m.set("trim",   native("trim",   1, (a) => (a[0] as string).trim()));
-  m.set("len",    native("len",    1, (a) => (a[0] as string).length));
+  m.set("len",    native("len",    1, (a) => (a[0] as string).length, (a) => (a as string).length));
   m.set("split",  native("split",  2, (a) => arr((a[0] as string).split(a[1] as string))));
   m.set("join",   native("join",   2, (a) => (a[0] as HkdArray).elements.join(a[1] as string)));
   m.set("replace",native("replace",3, (a) => (a[0] as string).replace(a[1] as string, a[2] as string)));
@@ -211,11 +211,11 @@ function buildString(): StdModule {
 function buildArray(): StdModule {
   const m = new Map<string, HkdValue>();
 
-  m.set("len",    native("len",    1, (a) => (a[0] as HkdArray).elements.length));
-  m.set("push",   native("push",   2, (a) => { (a[0] as HkdArray).elements.push(a[1]); return null; }));
-  m.set("pop",    native("pop",    1, (a) => (a[0] as HkdArray).elements.pop() ?? null));
-  m.set("shift",  native("shift",  1, (a) => (a[0] as HkdArray).elements.shift() ?? null));
-  m.set("unshift",native("unshift",2, (a) => { (a[0] as HkdArray).elements.unshift(a[1]); return null; }));
+  m.set("len",    native("len",    1, (a) => (a[0] as HkdArray).elements.length, (a) => (a as HkdArray).elements.length));
+  m.set("push",   native("push",   2, (a) => { (a[0] as HkdArray).elements.push(a[1]); return null; }, undefined, (a, b) => { (a as HkdArray).elements.push(b); return null; }));
+  m.set("pop",    native("pop",    1, (a) => (a[0] as HkdArray).elements.pop() ?? null, (a) => (a as HkdArray).elements.pop() ?? null));
+  m.set("shift",  native("shift",  1, (a) => (a[0] as HkdArray).elements.shift() ?? null, (a) => (a as HkdArray).elements.shift() ?? null));
+  m.set("unshift",native("unshift",2, (a) => { (a[0] as HkdArray).elements.unshift(a[1]); return null; }, undefined, (a, b) => { (a as HkdArray).elements.unshift(b); return null; }));
   m.set("join",   native("join",   2, (a) => (a[0] as HkdArray).elements.map(String).join(a[1] as string)));
   m.set("slice",  native("slice",  3, (a) => arr((a[0] as HkdArray).elements.slice(a[1] as number, a[2] as number))));
   m.set("concat", native("concat", 2, (a) => arr([...(a[0] as HkdArray).elements, ...(a[1] as HkdArray).elements])));
@@ -1089,9 +1089,11 @@ function makeResultObject(isOk: boolean, val: HkdValue, err: HkdValue): HkdObjec
 function native(
   name: string,
   arity: number,
-  call: (args: HkdValue[]) => HkdValue
+  call: (args: HkdValue[]) => HkdValue,
+  call1?: (a: HkdValue) => HkdValue,
+  call2?: (a: HkdValue, b: HkdValue) => HkdValue
 ): HkdNativeFunction {
-  return { type: "native", name, arity, call };
+  return { type: "native", name, arity, call, call1, call2 };
 }
 
 function arr(elements: HkdValue[]): HkdArray {

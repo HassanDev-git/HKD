@@ -19,6 +19,7 @@ const register_lowering_js_1 = require("../bytecode/register_lowering.js");
 const index_js_1 = require("../errors/index.js");
 const vm_js_1 = require("./vm.js");
 const MAX_CALL_DEPTH = 512;
+const EMPTY_ARGS = [];
 class RegisterVM {
     frames = [];
     globals = new Map();
@@ -82,12 +83,14 @@ class RegisterVM {
         }
         return cell;
     }
-    defineNative(name, arity, fn) {
+    defineNative(name, arity, fn, call1, call2) {
         const native = {
             type: "native",
             name,
             arity,
             call: fn,
+            call1,
+            call2,
         };
         this.globals.set(name, native);
         const cell = this.globalCells.get(name);
@@ -500,8 +503,18 @@ class RegisterVM {
                         if (native.arity >= 0 && native.arity !== argc) {
                             throw new vm_js_1.VmError(`${native.name}() expects ${native.arity} argument(s), got ${argc}`, index_js_1.ErrorCode.E307);
                         }
-                        const args = registers.slice(argStart, argStart + argc);
-                        registers[ins.dst] = native.call(args);
+                        if (argc === 1 && native.call1) {
+                            registers[ins.dst] = native.call1(registers[argStart]);
+                        }
+                        else if (argc === 2 && native.call2) {
+                            registers[ins.dst] = native.call2(registers[argStart], registers[argStart + 1]);
+                        }
+                        else if (argc === 0) {
+                            registers[ins.dst] = native.call(EMPTY_ARGS);
+                        }
+                        else {
+                            registers[ins.dst] = native.call(registers.slice(argStart, argStart + argc));
+                        }
                         break;
                     }
                     let fn;
@@ -608,15 +621,39 @@ class RegisterVM {
                     registers[ins.dst] = { type: "array", elements };
                     break;
                 }
-                case register_chunk_js_1.RegOp.GetIndex:
-                    registers[ins.dst] = this.getIndex(registers[ins.src1], registers[ins.src2]);
+                case register_chunk_js_1.RegOp.GetIndex: {
+                    const obj = registers[ins.src1];
+                    const idx = registers[ins.src2];
+                    if (typeof idx === "number" && obj !== null && typeof obj === "object" && obj.type === "array") {
+                        const arr = obj.elements;
+                        const i = idx < 0 ? arr.length + idx : idx;
+                        if (i >= 0 && i < arr.length) {
+                            registers[ins.dst] = arr[i];
+                            break;
+                        }
+                    }
+                    registers[ins.dst] = this.getIndex(obj, idx);
                     break;
-                case register_chunk_js_1.RegOp.SetIndex:
-                    this.setIndex(registers[ins.dst], registers[ins.src1], registers[ins.src2]);
+                }
+                case register_chunk_js_1.RegOp.SetIndex: {
+                    const obj = registers[ins.dst];
+                    const idx = registers[ins.src1];
+                    if (typeof idx === "number" && obj !== null && typeof obj === "object" && obj.type === "array") {
+                        obj.elements[idx] = registers[ins.src2];
+                        break;
+                    }
+                    this.setIndex(obj, idx, registers[ins.src2]);
                     break;
-                case register_chunk_js_1.RegOp.ArrayLen:
-                    registers[ins.dst] = this.getArrayLen(registers[ins.src1]);
+                }
+                case register_chunk_js_1.RegOp.ArrayLen: {
+                    const obj = registers[ins.src1];
+                    if (obj !== null && typeof obj === "object" && obj.type === "array") {
+                        registers[ins.dst] = obj.elements.length;
+                        break;
+                    }
+                    registers[ins.dst] = this.getArrayLen(obj);
                     break;
+                }
                 case register_chunk_js_1.RegOp.MakeObject: {
                     const pairCount = ins.src2;
                     const startReg = ins.src1;
@@ -630,13 +667,26 @@ class RegisterVM {
                     break;
                 }
                 case register_chunk_js_1.RegOp.GetField: {
+                    const obj = registers[ins.src1];
                     const fieldName = constants[ins.src2];
-                    registers[ins.dst] = this.getField(registers[ins.src1], fieldName);
+                    if (obj !== null && typeof obj === "object" && obj.type === "object") {
+                        const val = obj.fields.get(fieldName);
+                        if (val !== undefined) {
+                            registers[ins.dst] = val;
+                            break;
+                        }
+                    }
+                    registers[ins.dst] = this.getField(obj, fieldName);
                     break;
                 }
                 case register_chunk_js_1.RegOp.SetField: {
+                    const obj = registers[ins.dst];
                     const fieldName = constants[ins.src1];
-                    this.setField(registers[ins.dst], fieldName, registers[ins.src2]);
+                    if (obj !== null && typeof obj === "object" && obj.type === "object") {
+                        obj.fields.set(fieldName, registers[ins.src2]);
+                        break;
+                    }
+                    this.setField(obj, fieldName, registers[ins.src2]);
                     break;
                 }
                 // ── Iterators & String ───────────────────────────────────────────────
@@ -896,6 +946,14 @@ class RegisterVM {
             if (v?.type === "object")
                 return v.fields.size;
             throw new vm_js_1.VmError(`len() not supported for ${typeof v}`, index_js_1.ErrorCode.E405);
+        }, (v) => {
+            if (v?.type === "array")
+                return v.elements.length;
+            if (typeof v === "string")
+                return v.length;
+            if (v?.type === "object")
+                return v.fields.size;
+            throw new vm_js_1.VmError(`len() not supported for ${typeof v}`, index_js_1.ErrorCode.E405);
         });
         this.defineNative("type_of", 1, (args) => {
             const v = args[0];
@@ -916,8 +974,26 @@ class RegisterVM {
             if (v?.type === "native")
                 return "Function";
             return "Object";
+        }, (v) => {
+            if (v === null)
+                return "null";
+            if (typeof v === "boolean")
+                return "Bool";
+            if (typeof v === "number")
+                return Number.isInteger(v) ? "Int" : "Float";
+            if (typeof v === "string")
+                return "String";
+            if (v?.type === "array")
+                return "Array";
+            if (v?.type === "function")
+                return "Function";
+            if (v?.type === "closure")
+                return "Function";
+            if (v?.type === "native")
+                return "Function";
+            return "Object";
         });
-        this.defineNative("to_string", 1, (args) => this.hkdToString(args[0]));
+        this.defineNative("to_string", 1, (args) => this.hkdToString(args[0]), (a) => this.hkdToString(a));
         this.defineNative("to_int", 1, (args) => {
             const v = args[0];
             if (typeof v === "number")

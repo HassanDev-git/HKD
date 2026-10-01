@@ -29,6 +29,7 @@ import { ErrorCode } from "../errors/index.js";
 import { VmError, VmResult } from "./vm.js";
 
 const MAX_CALL_DEPTH = 512;
+const EMPTY_ARGS: HkdValue[] = [];
 
 export interface GlobalCell {
   name: string;
@@ -110,12 +111,20 @@ export class RegisterVM {
     return cell;
   }
 
-  public defineNative(name: string, arity: number, fn: (args: HkdValue[]) => HkdValue): void {
+  public defineNative(
+    name: string,
+    arity: number,
+    fn: (args: HkdValue[]) => HkdValue,
+    call1?: (a: HkdValue) => HkdValue,
+    call2?: (a: HkdValue, b: HkdValue) => HkdValue
+  ): void {
     const native: HkdNativeFunction = {
       type: "native",
       name,
       arity,
       call: fn,
+      call1,
+      call2,
     };
     this.globals.set(name, native);
     const cell = this.globalCells.get(name);
@@ -556,8 +565,15 @@ export class RegisterVM {
                 ErrorCode.E307
               );
             }
-            const args = registers.slice(argStart, argStart + argc);
-            registers[ins.dst] = native.call(args);
+            if (argc === 1 && native.call1) {
+              registers[ins.dst] = native.call1(registers[argStart]);
+            } else if (argc === 2 && native.call2) {
+              registers[ins.dst] = native.call2(registers[argStart], registers[argStart + 1]);
+            } else if (argc === 0) {
+              registers[ins.dst] = native.call(EMPTY_ARGS);
+            } else {
+              registers[ins.dst] = native.call(registers.slice(argStart, argStart + argc));
+            }
             break;
           }
 
@@ -678,17 +694,41 @@ export class RegisterVM {
           break;
         }
 
-        case RegOp.GetIndex:
-          registers[ins.dst] = this.getIndex(registers[ins.src1], registers[ins.src2]);
+        case RegOp.GetIndex: {
+          const obj = registers[ins.src1];
+          const idx = registers[ins.src2];
+          if (typeof idx === "number" && obj !== null && typeof obj === "object" && (obj as HkdArray).type === "array") {
+            const arr = (obj as HkdArray).elements;
+            const i = idx < 0 ? arr.length + idx : idx;
+            if (i >= 0 && i < arr.length) {
+              registers[ins.dst] = arr[i];
+              break;
+            }
+          }
+          registers[ins.dst] = this.getIndex(obj, idx);
           break;
+        }
 
-        case RegOp.SetIndex:
-          this.setIndex(registers[ins.dst], registers[ins.src1], registers[ins.src2]);
+        case RegOp.SetIndex: {
+          const obj = registers[ins.dst];
+          const idx = registers[ins.src1];
+          if (typeof idx === "number" && obj !== null && typeof obj === "object" && (obj as HkdArray).type === "array") {
+            (obj as HkdArray).elements[idx] = registers[ins.src2];
+            break;
+          }
+          this.setIndex(obj, idx, registers[ins.src2]);
           break;
+        }
 
-        case RegOp.ArrayLen:
-          registers[ins.dst] = this.getArrayLen(registers[ins.src1]);
+        case RegOp.ArrayLen: {
+          const obj = registers[ins.src1];
+          if (obj !== null && typeof obj === "object" && (obj as HkdArray).type === "array") {
+            registers[ins.dst] = (obj as HkdArray).elements.length;
+            break;
+          }
+          registers[ins.dst] = this.getArrayLen(obj);
           break;
+        }
 
         case RegOp.MakeObject: {
           const pairCount = ins.src2;
@@ -704,14 +744,27 @@ export class RegisterVM {
         }
 
         case RegOp.GetField: {
+          const obj = registers[ins.src1];
           const fieldName = constants[ins.src2] as string;
-          registers[ins.dst] = this.getField(registers[ins.src1], fieldName);
+          if (obj !== null && typeof obj === "object" && (obj as HkdObject).type === "object") {
+            const val = (obj as HkdObject).fields.get(fieldName);
+            if (val !== undefined) {
+              registers[ins.dst] = val;
+              break;
+            }
+          }
+          registers[ins.dst] = this.getField(obj, fieldName);
           break;
         }
 
         case RegOp.SetField: {
+          const obj = registers[ins.dst];
           const fieldName = constants[ins.src1] as string;
-          this.setField(registers[ins.dst], fieldName, registers[ins.src2]);
+          if (obj !== null && typeof obj === "object" && (obj as HkdObject).type === "object") {
+            (obj as HkdObject).fields.set(fieldName, registers[ins.src2]);
+            break;
+          }
+          this.setField(obj, fieldName, registers[ins.src2]);
           break;
         }
 
@@ -959,6 +1012,11 @@ export class RegisterVM {
       if (typeof v === "string") return v.length;
       if ((v as HkdObject)?.type === "object") return (v as HkdObject).fields.size;
       throw new VmError(`len() not supported for ${typeof v}`, ErrorCode.E405);
+    }, (v) => {
+      if ((v as HkdArray)?.type === "array") return (v as HkdArray).elements.length;
+      if (typeof v === "string") return v.length;
+      if ((v as HkdObject)?.type === "object") return (v as HkdObject).fields.size;
+      throw new VmError(`len() not supported for ${typeof v}`, ErrorCode.E405);
     });
 
     this.defineNative("type_of", 1, (args) => {
@@ -972,9 +1030,19 @@ export class RegisterVM {
       if ((v as HkdClosure)?.type === "closure") return "Function";
       if ((v as HkdNativeFunction)?.type === "native") return "Function";
       return "Object";
+    }, (v) => {
+      if (v === null) return "null";
+      if (typeof v === "boolean") return "Bool";
+      if (typeof v === "number") return Number.isInteger(v) ? "Int" : "Float";
+      if (typeof v === "string") return "String";
+      if ((v as HkdArray)?.type === "array") return "Array";
+      if ((v as HkdFunction)?.type === "function") return "Function";
+      if ((v as HkdClosure)?.type === "closure") return "Function";
+      if ((v as HkdNativeFunction)?.type === "native") return "Function";
+      return "Object";
     });
 
-    this.defineNative("to_string", 1, (args) => this.hkdToString(args[0]));
+    this.defineNative("to_string", 1, (args) => this.hkdToString(args[0]), (a) => this.hkdToString(a));
 
     this.defineNative("to_int", 1, (args) => {
       const v = args[0];

@@ -181,7 +181,7 @@ function buildString() {
     m.set("upper", native("upper", 1, (a) => a[0].toUpperCase()));
     m.set("lower", native("lower", 1, (a) => a[0].toLowerCase()));
     m.set("trim", native("trim", 1, (a) => a[0].trim()));
-    m.set("len", native("len", 1, (a) => a[0].length));
+    m.set("len", native("len", 1, (a) => a[0].length, (a) => a.length));
     m.set("split", native("split", 2, (a) => arr(a[0].split(a[1]))));
     m.set("join", native("join", 2, (a) => a[0].elements.join(a[1])));
     m.set("replace", native("replace", 3, (a) => a[0].replace(a[1], a[2])));
@@ -206,11 +206,11 @@ function buildString() {
 // ─── std.array ────────────────────────────────────────────────────────────────
 function buildArray() {
     const m = new Map();
-    m.set("len", native("len", 1, (a) => a[0].elements.length));
-    m.set("push", native("push", 2, (a) => { a[0].elements.push(a[1]); return null; }));
-    m.set("pop", native("pop", 1, (a) => a[0].elements.pop() ?? null));
-    m.set("shift", native("shift", 1, (a) => a[0].elements.shift() ?? null));
-    m.set("unshift", native("unshift", 2, (a) => { a[0].elements.unshift(a[1]); return null; }));
+    m.set("len", native("len", 1, (a) => a[0].elements.length, (a) => a.elements.length));
+    m.set("push", native("push", 2, (a) => { a[0].elements.push(a[1]); return null; }, undefined, (a, b) => { a.elements.push(b); return null; }));
+    m.set("pop", native("pop", 1, (a) => a[0].elements.pop() ?? null, (a) => a.elements.pop() ?? null));
+    m.set("shift", native("shift", 1, (a) => a[0].elements.shift() ?? null, (a) => a.elements.shift() ?? null));
+    m.set("unshift", native("unshift", 2, (a) => { a[0].elements.unshift(a[1]); return null; }, undefined, (a, b) => { a.elements.unshift(b); return null; }));
     m.set("join", native("join", 2, (a) => a[0].elements.map(String).join(a[1])));
     m.set("slice", native("slice", 3, (a) => arr(a[0].elements.slice(a[1], a[2]))));
     m.set("concat", native("concat", 2, (a) => arr([...a[0].elements, ...a[1].elements])));
@@ -1084,8 +1084,8 @@ function makeResultObject(isOk, val, err) {
     return { type: "object", fields };
 }
 // ─── Utility helpers ──────────────────────────────────────────────────────────
-function native(name, arity, call) {
-    return { type: "native", name, arity, call };
+function native(name, arity, call, call1, call2) {
+    return { type: "native", name, arity, call, call1, call2 };
 }
 function arr(elements) {
     return { type: "array", elements };
