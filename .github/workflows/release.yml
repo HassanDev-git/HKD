@@ -46,7 +46,7 @@ jobs:
             platform: macOS ARM64
             zig: darwin-arm64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
       - name: Verify release tag matches package version
@@ -55,7 +55,7 @@ jobs:
         run: |
           expected="v$(node -p "require('./package.json').version")"
           test "$GITHUB_REF_NAME" = "$expected" || { echo "Tag $GITHUB_REF_NAME does not match package version $expected" >&2; exit 1; }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -96,14 +96,15 @@ jobs:
           if (files.length !== 1 || !files[0].includes(`-${process.env.PACKAGE_ID}.tar.gz`)) {
             throw new Error(`Expected one package for ${process.env.PACKAGE_ID}; got ${files.join(', ')}`);
           }
-          const { execFileSync } = require('node:child_process');
-          const manifest = JSON.parse(execFileSync('tar', ['-xOzf', path.join(dir, files[0]), './manifest.json'], { encoding: 'utf8' }));
+          const archivePath = path.join(dir, files[0]).split(path.sep).join('/');
+          const { readPackageManifest } = require('./scripts/release-archive.cjs');
+          const manifest = readPackageManifest(archivePath);
           if (manifest.sourceCommit !== process.env.EXPECTED_COMMIT) throw new Error(`Wrong source commit: ${manifest.sourceCommit}`);
           if (!manifest.zigVersion || !manifest.buildRunner || !manifest.nodeVersion) throw new Error('Missing build provenance');
           console.log(JSON.stringify({ package: files[0], sourceCommit: manifest.sourceCommit, runner: manifest.buildRunner, node: manifest.nodeVersion, zig: manifest.zigVersion }, null, 2));
           NODE
       - name: Upload verified platform package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: hkd-release-${{ matrix.id }}
           path: ${{ runner.temp }}/hkd-release-dist/releases/*.tar.gz
@@ -119,14 +120,14 @@ jobs:
       contents: read
       actions: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
       - name: Download all six native packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: hkd-release-*
           path: release-assets
@@ -136,7 +137,7 @@ jobs:
           HKD_RELEASE_DIR: release-assets
         run: node scripts/create-release-manifest.cjs
       - name: Preserve verified release candidate bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: hkd-${{ github.event_name == 'push' && github.ref_name || format('candidate-{0}', github.sha) }}
           path: |
@@ -155,11 +156,11 @@ jobs:
       contents: write
       actions: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
       - name: Download verified release bundle
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: hkd-${{ github.ref_name }}
           path: release-assets

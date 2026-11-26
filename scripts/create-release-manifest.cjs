@@ -1,7 +1,7 @@
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
-const { execFileSync } = require("node:child_process");
+const { readPackageManifest } = require("./release-archive.cjs");
 
 const root = path.resolve(__dirname, "..");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
@@ -27,7 +27,7 @@ const packages = files.map((name) => {
   if (!metadata) throw new Error(`Unexpected target: ${key}`);
   if (name !== `hkd-v${pkg.version}-${key}.tar.gz`) throw new Error(`Archive name does not match package version and target: ${name}`);
   const archivePath = path.join(releaseDir, name);
-  const embedded = JSON.parse(execFileSync("tar", ["-xOzf", archivePath, "./manifest.json"], { encoding: "utf8" }));
+  const embedded = readPackageManifest(archivePath);
   if (embedded.version !== pkg.version) throw new Error(`${name} package version mismatch: ${embedded.version}`);
   if (embedded.sourceCommit !== sourceCommit) throw new Error(`${name} was built from ${embedded.sourceCommit}, expected ${sourceCommit}`);
   if (embedded.architecture !== metadata.architecture || embedded.os !== metadata.os) {

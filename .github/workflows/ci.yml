@@ -20,8 +20,8 @@ jobs:
     outputs:
       runtime-sha256: ${{ steps.build.outputs.runtime_sha256 }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -31,7 +31,7 @@ jobs:
         id: build
         run: node scripts/ci-zig-crossbuild-windows-arm64.cjs
       - name: Preserve Windows ARM64 runtime for native execution
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: hkd-native-runtime-windows-arm64
           path: native-runtime/zig-out/bin/hkd-runtime.exe
@@ -80,9 +80,9 @@ jobs:
             node: 22
             zig: linux-x64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Set up Node.js ${{ matrix.node }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
           cache: npm
@@ -99,7 +99,7 @@ jobs:
         run: npm run build
       - name: Download Windows ARM64 native runtime
         if: matrix.platform == 'Windows ARM64'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: hkd-native-runtime-windows-arm64
           path: native-runtime/zig-out/bin
@@ -122,7 +122,7 @@ jobs:
         run: npm run package
       - name: Preserve verified package as a short-lived CI artifact
         if: steps.package.outcome == 'success'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: hkd-validation-package-${{ matrix.platform }}-node-${{ matrix.node }}
           path: ${{ runner.temp }}/hkd-standalone-package/releases/*.tar.gz
@@ -143,7 +143,7 @@ jobs:
         run: node scripts/ci-evidence.cjs
       - name: Preserve machine-readable runner evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: hkd-ci-evidence-${{ matrix.platform }}-node-${{ matrix.node }}
           path: ${{ runner.temp }}/hkd-ci-evidence/
@@ -153,8 +153,8 @@ jobs:
     name: Dependency and platform diagnostics
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -171,8 +171,8 @@ jobs:
     name: Build and execute container image
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -226,7 +226,7 @@ jobs:
         run: node scripts/ci-evidence.cjs
       - name: Preserve container logs and machine-readable evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: hkd-container-runtime-evidence
           path: |
