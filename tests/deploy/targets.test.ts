@@ -26,6 +26,14 @@ describe("Phase 14C — Canonical Target Triple System", () => {
     expect(mac.arch).toBe("aarch64");
     expect(mac.os).toBe("macos");
     expect(mac.tier).toBe("Tier 1 (Supported)");
+
+    const macX64 = parseTarget("x86_64-macos");
+    expect(macX64.tier).toBe("Tier 1 (Supported)");
+
+    const winArm64 = parseTarget("aarch64-windows");
+    expect(winArm64.abi).toBe("msvc");
+    expect(winArm64.executableExtension).toBe(".exe");
+    expect(winArm64.tier).toBe("Tier 2 (Experimental)");
   });
 
   it("parses experimental target triples with Tier 2 status", () => {

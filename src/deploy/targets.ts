@@ -68,6 +68,22 @@ export const KNOWN_TARGETS: Record<string, TargetTriple> = {
     tier: "Tier 1 (Supported)",
     executableExtension: "",
   },
+  "x86_64-macos": {
+    triple: "x86_64-macos",
+    arch: "x86_64",
+    os: "macos",
+    abi: "none",
+    tier: "Tier 1 (Supported)",
+    executableExtension: "",
+  },
+  "aarch64-windows": {
+    triple: "aarch64-windows",
+    arch: "aarch64",
+    os: "windows",
+    abi: "msvc",
+    tier: "Tier 2 (Experimental)",
+    executableExtension: ".exe",
+  },
   "aarch64-linux": {
     triple: "aarch64-linux",
     arch: "aarch64",
@@ -131,7 +147,7 @@ export function getHostTarget(): TargetTriple {
     arch,
     os,
     abi: os === "windows" ? "msvc" : (os === "linux" ? "gnu" : "none"),
-    tier: "Tier 1 (Supported)",
+    tier: "Tier 2 (Experimental)",
     executableExtension: os === "windows" ? ".exe" : "",
   };
 }
