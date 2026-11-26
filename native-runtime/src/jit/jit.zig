@@ -191,6 +191,13 @@ test "JITManager hotness promotion and code cache" {
 
     // Call 5: reaches threshold -> compiled to native machine code!
     const native_ptr = jit.recordCall(&mock_func);
+
+    if (comptime builtin.cpu.arch != .x86_64) {
+        try std.testing.expect(native_ptr == null);
+        try std.testing.expectEqual(@as(usize, 0), jit.total_compiled);
+        return;
+    }
+
     try std.testing.expect(native_ptr != null);
     try std.testing.expectEqual(@as(usize, 1), jit.total_compiled);
 
