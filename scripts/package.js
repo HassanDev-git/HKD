@@ -13,7 +13,9 @@ const PLATFORM_LABEL = packagingTarget.platformLabel;
 
 // Directories
 const rootDir = path.resolve(__dirname, "..");
-const distDir = path.join(rootDir, "dist");
+const distDir = process.env.HKD_DIST_DIR
+  ? path.resolve(process.env.HKD_DIST_DIR)
+  : path.join(rootDir, "dist");
 const bundlePath = path.join(distDir, "bundle.js");
 
 // Release output directory
@@ -36,6 +38,7 @@ function run(file, args) {
 
 function clean() {
   console.log("Preparing an isolated staging directory; existing release artifacts are preserved until smoke checks pass...");
+  fs.mkdirSync(distDir, { recursive: true });
   stagingDir = fs.mkdtempSync(path.join(distDir, `.package-${platformName}-`));
   releaseExePath = path.join(stagingDir, exeName);
   stagedBundlePath = path.join(stagingDir, "bundle.js");
@@ -267,7 +270,23 @@ function runArchiveSmokeTests(stagedArchive) {
 
 function publishArtifacts(stagedArchive) {
   const manifestPath = path.join(distDir, "artifacts.json");
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+  const manifest = fs.existsSync(manifestPath)
+    ? JSON.parse(fs.readFileSync(manifestPath, "utf-8"))
+    : (() => {
+        const pkg = JSON.parse(fs.readFileSync(path.join(rootDir, "package.json"), "utf-8"));
+        return {
+          name: pkg.name,
+          version: pkg.version,
+          releaseName: `HKD ${pkg.version} host package`,
+          compilerVersion: pkg.version,
+          runtimeVersion: pkg.version,
+          edition: "2026",
+          buildProfile: "release",
+          buildTimestamp: new Date().toISOString(),
+          artifacts: [],
+          inventoryNote: "Generated from the current source for this host; this is not an official published release.",
+        };
+      })();
   if (!Array.isArray(manifest.artifacts)) throw new Error("Artifact manifest has no artifacts array");
 
   fs.mkdirSync(releaseDir, { recursive: true });

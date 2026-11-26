@@ -112,6 +112,8 @@ jobs:
       - name: Verify Windows x64 standalone package
         if: matrix.package == true
         id: package
+        env:
+          HKD_DIST_DIR: ${{ runner.temp }}/hkd-standalone-package
         run: npm run package
       - name: Record runner and check outcomes
         if: always()
