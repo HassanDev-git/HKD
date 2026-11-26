@@ -21,7 +21,9 @@ zig(["version"]);
 const zigVersion = spawnSync(executable, ["version"], { encoding: "utf8" });
 assert.equal(zigVersion.status, 0, `Unable to read Zig version: ${zigVersion.stderr}`);
 if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `version=${zigVersion.stdout.trim()}\n`);
-zig(["test", "src/main.zig"]);
+const testArgs = ["test", "src/main.zig"];
+if (process.env.HKD_ZIG_TEST_TARGET) testArgs.push("-target", process.env.HKD_ZIG_TEST_TARGET);
+zig(testArgs);
 const outputDir = process.env.HKD_NATIVE_OUTPUT_DIR
   ? path.resolve(process.env.HKD_NATIVE_OUTPUT_DIR)
   : fs.mkdtempSync(path.join(os.tmpdir(), "hkd-ci-zig-release-"));

@@ -7,7 +7,7 @@ HKD 1.1.1 is a Node.js application with an optional Zig bytecode interpreter. Th
 | Ubuntu x64 | 22 and 24 | Native Zig tests, ReleaseFast runtime, CLI smoke checks; standalone package build and execution on Node 24 |
 | Ubuntu ARM64 | 24 | Native Zig tests, ReleaseFast runtime, CLI smoke checks, standalone package build and execution |
 | Windows x64 | 24 | Native Zig tests, ReleaseFast runtime, CLI checks, standalone package build and execution |
-| Windows ARM64 | 24 | Native Zig tests; ReleaseFast runtime cross-built on Ubuntu x64 and executed on Windows ARM64; standalone package build and execution |
+| Windows ARM64 | 24 | Zig tests compiled for `aarch64-windows` by the Windows x64 Zig compiler under OS emulation and executed on the ARM64 host; ReleaseFast runtime cross-built on Ubuntu x64, checksum-verified, and executed on Windows ARM64; standalone package build and execution |
 | macOS x64 | 24 | Native Zig tests, ReleaseFast runtime, CLI smoke checks, standalone package build and execution |
 | macOS ARM64 | 24 | Native Zig tests, ReleaseFast runtime, CLI smoke checks, standalone package build and execution |
 

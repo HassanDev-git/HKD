@@ -301,6 +301,8 @@ function makeTarPackage() {
     sourceCommit: process.env.GITHUB_SHA || null,
     nodeVersion: process.version,
     zigVersion: process.env.HKD_ZIG_VERSION || null,
+    zigPackage: process.env.ZIG_PACKAGE || null,
+    zigTestTarget: process.env.HKD_ZIG_TEST_TARGET || null,
     buildRunner: process.env.HKD_BUILD_RUNNER || process.env.RUNNER_NAME || `${os.platform()}-${os.arch()}`,
     buildTimestamp: new Date().toISOString(),
     files,

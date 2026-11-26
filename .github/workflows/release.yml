@@ -87,6 +87,9 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
+      - name: Install Windows x64 Zig compiler for ARM64 test target
+        if: matrix.id == 'windows-arm64'
+        run: npm install --no-save --package-lock=false --force @zigc/win32-x64@0.16.0
       - name: Lint
         run: npm run lint
       - name: Typecheck
@@ -102,7 +105,8 @@ jobs:
       - name: Run Zig tests and ReleaseFast runtime startup
         id: zig
         env:
-          ZIG_PACKAGE: ${{ matrix.zig }}
+          ZIG_PACKAGE: ${{ matrix.id == 'windows-arm64' && 'win32-x64' || matrix.zig }}
+          HKD_ZIG_TEST_TARGET: ${{ matrix.id == 'windows-arm64' && 'aarch64-windows' || '' }}
           HKD_NATIVE_OUTPUT_DIR: ${{ runner.temp }}/hkd-runtime
           HKD_PREBUILT_RUNTIME: ${{ matrix.id == 'windows-arm64' && 'true' || 'false' }}
           HKD_EXPECTED_RUNTIME_SHA256: ${{ matrix.id == 'windows-arm64' && needs.windows-arm64-runtime-crossbuild.outputs.runtime-sha256 || '' }}
@@ -113,6 +117,8 @@ jobs:
         env:
           HKD_BUILD_RUNNER: ${{ matrix.runner }}
           HKD_ZIG_VERSION: ${{ steps.zig.outputs.version }}
+          ZIG_PACKAGE: ${{ matrix.id == 'windows-arm64' && 'win32-x64' || matrix.zig }}
+          HKD_ZIG_TEST_TARGET: ${{ matrix.id == 'windows-arm64' && 'aarch64-windows' || '' }}
           HKD_DIST_DIR: ${{ runner.temp }}/hkd-release-dist
         run: npm run package
       - name: Verify package provenance for this runner
@@ -120,6 +126,8 @@ jobs:
         env:
           EXPECTED_COMMIT: ${{ github.sha }}
           PACKAGE_ID: ${{ matrix.id }}
+          EXPECTED_ZIG_PACKAGE: ${{ matrix.id == 'windows-arm64' && 'win32-x64' || matrix.zig }}
+          EXPECTED_ZIG_TEST_TARGET: ${{ matrix.id == 'windows-arm64' && 'aarch64-windows' || '' }}
           HKD_DIST_DIR: ${{ runner.temp }}/hkd-release-dist
         run: |
           node - <<'NODE'
@@ -134,7 +142,9 @@ jobs:
           const { readPackageManifest } = require('./scripts/release-archive.cjs');
           const manifest = readPackageManifest(archivePath);
           if (manifest.sourceCommit !== process.env.EXPECTED_COMMIT) throw new Error(`Wrong source commit: ${manifest.sourceCommit}`);
-          if (!manifest.zigVersion || !manifest.buildRunner || !manifest.nodeVersion) throw new Error('Missing build provenance');
+          if (!manifest.zigVersion || !manifest.zigPackage || !manifest.buildRunner || !manifest.nodeVersion) throw new Error('Missing build provenance');
+          if (manifest.zigPackage !== process.env.EXPECTED_ZIG_PACKAGE) throw new Error(`Unexpected Zig compiler package: ${manifest.zigPackage}`);
+          if ((manifest.zigTestTarget || '') !== process.env.EXPECTED_ZIG_TEST_TARGET) throw new Error(`Unexpected Zig test target: ${manifest.zigTestTarget}`);
           console.log(JSON.stringify({ package: files[0], sourceCommit: manifest.sourceCommit, runner: manifest.buildRunner, node: manifest.nodeVersion, zig: manifest.zigVersion }, null, 2));
           NODE
       - name: Upload verified platform package

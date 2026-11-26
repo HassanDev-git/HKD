@@ -9,12 +9,12 @@ const releaseDir = path.resolve(process.env.HKD_RELEASE_DIR || "release-assets")
 const sourceCommit = process.env.GITHUB_SHA;
 if (!sourceCommit || !/^[a-f0-9]{40}$/i.test(sourceCommit)) throw new Error("GITHUB_SHA must be a full source commit SHA");
 const expected = new Map([
-  ["windows-x64", { platform: "Windows", architecture: "x64", os: "win32" }],
-  ["windows-arm64", { platform: "Windows", architecture: "arm64", os: "win32" }],
-  ["linux-x64", { platform: "Linux", architecture: "x64", os: "linux" }],
-  ["linux-arm64", { platform: "Linux", architecture: "arm64", os: "linux" }],
-  ["macos-x64", { platform: "macOS", architecture: "x64", os: "darwin" }],
-  ["macos-arm64", { platform: "macOS", architecture: "arm64", os: "darwin" }],
+  ["windows-x64", { platform: "Windows", architecture: "x64", os: "win32", zigPackage: "win32-x64", zigTestTarget: null }],
+  ["windows-arm64", { platform: "Windows", architecture: "arm64", os: "win32", zigPackage: "win32-x64", zigTestTarget: "aarch64-windows" }],
+  ["linux-x64", { platform: "Linux", architecture: "x64", os: "linux", zigPackage: "linux-x64", zigTestTarget: null }],
+  ["linux-arm64", { platform: "Linux", architecture: "arm64", os: "linux", zigPackage: "linux-arm64", zigTestTarget: null }],
+  ["macos-x64", { platform: "macOS", architecture: "x64", os: "darwin", zigPackage: "darwin-x64", zigTestTarget: null }],
+  ["macos-arm64", { platform: "macOS", architecture: "arm64", os: "darwin", zigPackage: "darwin-arm64", zigTestTarget: null }],
 ]);
 const files = fs.readdirSync(releaseDir).filter((name) => name.endsWith(".tar.gz")).sort();
 if (files.length !== expected.size) throw new Error(`Expected exactly ${expected.size} platform archives, found ${files.length}`);
@@ -33,7 +33,10 @@ const packages = files.map((name) => {
   if (embedded.architecture !== metadata.architecture || embedded.os !== metadata.os) {
     throw new Error(`${name} target mismatch: ${embedded.os}/${embedded.architecture}`);
   }
-  if (!embedded.zigVersion || !embedded.buildRunner) throw new Error(`${name} lacks Zig or runner provenance`);
+  if (!embedded.zigVersion || !embedded.zigPackage || !embedded.buildRunner) throw new Error(`${name} lacks Zig or runner provenance`);
+  if (embedded.zigPackage !== metadata.zigPackage || embedded.zigTestTarget !== metadata.zigTestTarget) {
+    throw new Error(`${name} Zig test toolchain provenance mismatch`);
+  }
   return {
     file: name,
     version: pkg.version,
@@ -44,6 +47,8 @@ const packages = files.map((name) => {
     runner: embedded.buildRunner,
     nodeVersion: embedded.nodeVersion,
     zigVersion: embedded.zigVersion,
+    zigPackage: embedded.zigPackage,
+    zigTestTarget: embedded.zigTestTarget,
     buildStatus: "PASS",
     verificationStatus: "PASS (native runner package smoke checks)",
     sizeBytes: fs.statSync(archivePath).size,

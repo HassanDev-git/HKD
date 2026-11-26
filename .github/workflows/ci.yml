@@ -88,6 +88,9 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
+      - name: Install Windows x64 Zig compiler for ARM64 test target
+        if: matrix.platform == 'Windows ARM64'
+        run: npm install --no-save --package-lock=false --force @zigc/win32-x64@0.16.0
       - name: Lint TypeScript
         id: lint
         run: npm run lint
@@ -109,7 +112,8 @@ jobs:
           HKD_NATIVE_OUTPUT_DIR: native-runtime/zig-out/bin
           HKD_PREBUILT_RUNTIME: ${{ matrix.platform == 'Windows ARM64' && 'true' || 'false' }}
           HKD_EXPECTED_RUNTIME_SHA256: ${{ matrix.platform == 'Windows ARM64' && needs.windows-arm64-runtime-crossbuild.outputs.runtime-sha256 || '' }}
-          ZIG_PACKAGE: ${{ matrix.zig }}
+          ZIG_PACKAGE: ${{ matrix.platform == 'Windows ARM64' && 'win32-x64' || matrix.zig }}
+          HKD_ZIG_TEST_TARGET: ${{ matrix.platform == 'Windows ARM64' && 'aarch64-windows' || '' }}
         run: node scripts/ci-zig.cjs
       - name: Run HKD CLI correctness and exit-code smoke checks
         id: cli
