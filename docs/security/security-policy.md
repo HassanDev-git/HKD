@@ -1,14 +1,7 @@
-# HKD Vulnerability Handling & Disclosure Policy
+# Vulnerability Handling and Disclosure
 
-## 1. Security Principles
-- **Defense-in-depth**: Security boundaries are reinforced at the parser, bytecode verifier, JIT code generator, and OS interaction layers.
-- **Zero-Trust Packaging**: All third-party packages must be locked by SHA-256 digest and audited for known vulnerabilities.
-- **No Implicit Privilege**: HKD programs run with minimum necessary privileges. Container specifications enforce non-root execution.
+Report suspected vulnerabilities using the private contact and process in [`SECURITY.md`](../../SECURITY.md). Do not include credentials or live exploit material in a public issue.
 
----
+Issues are assessed for impact on the compiler, bytecode readers, package and archive handling, CLI, native runtime, language server, debugger, and deployment examples. Severity is determined from the demonstrated impact and affected versions; this project does not promise a response-time SLA.
 
-## 2. Severity Classification
-- **Critical**: Remote Code Execution (RCE), arbitrary file write, memory safety bypass in native runtime.
-- **High**: Denial of Service (DoS) crashing the runtime, authentication token leakage.
-- **Medium**: High-resource consumption, local path disclosure.
-- **Low**: Minor diagnostic anomalies without operational impact.
+HKD is not a sandbox. Users running untrusted programs or packages should apply operating-system isolation and least privilege. The current runtime interprets bytecode; JIT dispatch and native-code AOT are unavailable.

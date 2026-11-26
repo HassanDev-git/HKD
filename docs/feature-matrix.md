@@ -1,21 +1,18 @@
-# HKD Feature and Capability Matrix
+# HKD 1.1.0 Feature and Capability Matrix
 
-**Version audited:** 1.1.0 (Phase 10.3 local audit, 2026-10-24)
-**Evidence:** `artifacts/phase10.3-final-release-verification.json`, Windows x64 only.
+This table describes the current implementation boundary. CI results are tied to the tested workflow revision; documentation, target names, and build configuration alone do not establish runtime support.
 
-This matrix describes observable implementation status. A file or emitter existing in the repository does not mean the feature is connected to program execution.
-
-| Capability | Status | Evidence / boundary |
+| Capability | Status | Notes |
 |---|---|---|
-| TypeScript compiler and reference Stack VM | Implemented | Full local Jest suite and release verification passed. |
-| Zig bytecode interpreter | Implemented | Built and 9 Zig unit tests passed; native execution covered by parity tests. |
-| `hkd build --native` standalone launcher | Implemented | Embeds HKDB bytecode in the Zig runtime; it does not compile HKD programs to machine code. |
-| JIT execution | Not implemented | Emitter and manager components exist, but dispatch is not integrated; `--jit` exits 2 with an explicit diagnostic. |
-| Native machine-code AOT | Not implemented | No HKD source-to-machine-code compiler path was found. |
-| Language traits / RFC-003 | Experimental | Compiler and runtime coverage is partial; see `docs/rfc-003-status.md`. |
-| Language async/await / RFC-004 | Experimental | Language lowering is not complete; async library APIs do not imply `async fn` support. |
-| Linux, macOS, ARM64 runtime/release | Not verified by this audit | Target strings or CI configuration do not establish a passing build or runtime check. |
-| Container image | Not verified by this audit | Templates are checked; no image was built and run. |
-| WASM/WASI compilation | Not implemented in this release | Deferred; see `docs/platform-wasm.md`. |
+| TypeScript compiler and reference VM | Implemented | Compiles HKD source to bytecode and interprets it in the CLI. |
+| Zig bytecode interpreter | Implemented | Optional native runtime; CI runs Zig tests and a runtime startup check on configured runners. |
+| Standalone bytecode bundle | Implemented, target-limited | Uses the native interpreter as a launcher; Windows x64 package smoke-tested in CI. |
+| JIT execution | Unavailable | Experimental code generation is not dispatched by HKD program execution. |
+| Native-code AOT | Unavailable | HKD source is not compiled to machine code. |
+| Traits / RFC-003 | Experimental | See [RFC-003 status](rfc-003-status.md). |
+| Async/await syntax / RFC-004 | Experimental | See [RFC-004 status](rfc-004-status.md); library APIs do not establish language syntax support. |
+| Container image | CI-verified scope | Linux x64 image build, non-root valid-program execution, and invalid-program diagnostics run in CI. |
+| WebAssembly/WASI | Deferred | No WASM compiler or runtime is provided. |
+| Automated Jest regression suite | Maintainer archive | Preserved outside the public source checkout; public CI does not run it. |
 
-“Implemented” here means present and exercised in the stated local checks. It does not claim formal verification, complete language compatibility, or universal production suitability. See [`known-limitations.md`](known-limitations.md) for scope and remaining limits.
+See [known limitations](known-limitations.md) and [platform support](platform-support.md) for scope and verification details.

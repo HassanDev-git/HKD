@@ -1,2 +1,0 @@
-let x = "hello\x00world";
-let y = 100;

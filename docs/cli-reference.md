@@ -1,6 +1,6 @@
 # HKD CLI Reference Manual
 
-The `hkd` executable provides a unified command suite for developing, testing, packaging, and deploying HKD applications.
+The `hkd` CLI provides commands for compiling, running, checking, and packaging HKD applications. Its `hkd test` command runs HKD source-level test programs (`*.test.hkd`); this is separate from the private Jest regression suite, which is not included in the public checkout.
 
 ```text
 USAGE:

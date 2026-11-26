@@ -1,80 +1,16 @@
-# HKD 1.1.0 Release Notes — Language Evolution & Production Hardening
+# HKD 1.1.0 Release Notes
 
-> Historical release summary: its feature descriptions are not current validation evidence. The current Windows x64 audit and capability boundaries are recorded in `artifacts/phase10.3-final-release-verification.json` and `docs/known-limitations.md`.
+HKD 1.1.0 adds language and toolchain capabilities on top of the 1.0 language baseline.
 
-We are thrilled to announce the official release of **HKD 1.1.0**, the next major milestone in the HKD programming language and developer platform.
+## Highlights
 
-HKD 1.1.0 includes functional standard-library capabilities, Edition 2027 generics and pattern matching, microservice examples, package workflows, and a release verification command. The release command is an evolving local probe suite; it does not certify production readiness.
+- Expanded static typing, generics, and pattern-matching support, with some features edition-gated or experimental.
+- Added a TypeScript compiler and reference bytecode VM, alongside an optional Zig bytecode interpreter.
+- Added CLI support for compiling and running HKD programs and creating standalone bytecode bundles with the native interpreter launcher.
+- Expanded package-management workflows and documentation for bytecode, the language server, and debugger protocol.
 
----
+## Boundaries
 
-## Highlights of HKD 1.1.0
+Traits and language-level async/await remain experimental. JIT dispatch, native-code AOT, and WebAssembly/WASI compilation are not available. The Zig runtime interprets bytecode; a standalone bundle does not compile HKD source to machine code.
 
-### 1. Functional Standard Library 2.0 & Result Monads
-Standard library collections and Result error handling include functional operators:
-- **Array Iterators**: `map`, `filter`, `take`, `skip`, `zip`, `enumerate`, `any`, `all`.
-- **Result Monads**: `result.map`, `result.map_err`, `result.and_then`, `result.unwrap_err`.
-
-```hkd
-// Functional pipelines
-let numbers = [1, 2, 3, 4, 5, 6];
-let evens_squared = array.map(array.filter(numbers, fn(n) { n % 2 == 0 }), fn(n) { n * n });
-println(evens_squared); // [4, 16, 36]
-
-// Monadic Result composition
-let r = Result::Ok(10);
-let transformed = result.and_then(result.map(r, fn(x) { x + 5 }), fn(x) {
-    if x > 12 { Result::Ok(x * 2) } else { Result::Err("Too small") }
-});
-println(transformed); // Ok(30)
-```
-
-### 2. Generics & Pattern Matching Hardening (Edition 2027)
-- Parametric polymorphism with monomorphic specialization and generic type unification.
-- Structural pattern matching with compile-time exhaustiveness checking and destructuring.
-
-### 3. Production Microservice Reference Architecture
-HKD 1.1 includes a production-style service implementation located at `examples/real-world/production-style-service/`:
-- Multi-tier TOML configuration parsing.
-- Structured JSON logging with request tracing.
-- Operational endpoints: `GET /health`, `GET /metrics`, `POST /data`.
-- Graceful shutdown signal handling with in-flight socket draining.
-
-### 4. Supply Chain Security & Cryptographic Provenance
-- **Provenance design notes**: See `docs/signing-provenance.md`; this repository does not claim a verified SLSA level.
-- **CycloneDX 1.5 SBOM**: Automated software bill of materials generation.
-- **Automated Secret Sanitization**: Mandatory CI scanning preventing token or private path leaks.
-- **Release Checksums**: Direct SHA-256 integrity verification recorded in `dist/SHA256SUMS` and `dist/artifacts.json`.
-
-### 5. Transparent Experimental Roadmap
-To maintain total integrity and zero fake implementations, advanced syntax from active RFCs is explicitly classified:
-- **RFC-003 Traits**: Classified as `EXPECTED EXPERIMENTAL`. Parsing syntax is safely diagnostic-gated with `#feature(traits)`.
-- **RFC-004 Async/Await**: Classified as `EXPECTED EXPERIMENTAL`. Concurrency runtime and event loops are operational; full compiler syntax desugaring is scheduled for HKD 1.2.
-
----
-
-## Evidence-Based Release Verification
-
-HKD 1.1.0 includes `hkd verify-release`, which runs a set of local smoke probes and writes evidence to `artifacts/release-verification.json`. Untested high-severity checks block a ready result. It does not perform cross-platform builds, benchmark comparisons, or lifecycle testing, and it cannot certify production readiness by itself.
-
-```bash
-# Verify release readiness on any installation
-hkd verify-release
-# Current local audit result: NOT RELEASE READY (AOT generation is not implemented/tested)
-```
-
----
-
-## Upgrading to HKD 1.1.0
-
-HKD targets backward compatibility for Edition 2026; consult the compatibility suite and known limitations when upgrading.
-
-To upgrade via npm:
-```bash
-npm install -g hkd@1.1.0
-```
-
-To migrate a project manifest:
-```bash
-hkd migrate --edition 2027
-```
+See the [getting started guide](getting-started.md), [feature matrix](feature-matrix.md), [platform support](platform-support.md), and [known limitations](known-limitations.md) for current usage and verification scope.

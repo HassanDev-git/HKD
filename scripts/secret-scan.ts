@@ -17,7 +17,6 @@ interface SecretViolation {
   file: string;
   line: number;
   pattern: string;
-  matchedText: string;
 }
 
 const SECRET_PATTERNS: { name: string; regex: RegExp }[] = [
@@ -32,24 +31,21 @@ const SECRET_PATTERNS: { name: string; regex: RegExp }[] = [
 const IGNORED_DIRS = new Set([
   "node_modules",
   ".git",
+  ".zig-cache",
   "dist",
   "dist-release",
   "scratch",
   "target",
   ".hkd",
+  "coverage",
+  "zig-out",
 ]);
 
-const ALLOWLIST_MATCHES = [
-  "scripts/secret-scan",
-  "task.md",
-  "walkthrough",
-  "user_prompt",
-  "transcript",
-  "********", // masked tokens
-  "fake",
-  "dummy",
-  "test_token",
-];
+const ALLOWLIST_FILES = new Set(["scripts/secret-scan.ts"]);
+const TEXT_EXTENSIONS = new Set([
+  ".ts", ".js", ".cjs", ".mjs", ".hkd", ".json", ".md", ".toml", ".zig",
+  ".yaml", ".yml", ".txt", ".ini", ".cfg", ".conf", ".sh", ".ps1", ".lock",
+]);
 
 export function runSecretScan(rootDir: string): SecretViolation[] {
   const violations: SecretViolation[] = [];
@@ -64,7 +60,7 @@ export function runSecretScan(rootDir: string): SecretViolation[] {
         scanDir(fullPath);
       } else if (ent.isFile()) {
         const ext = path.extname(ent.name);
-        if ([".ts", ".js", ".hkd", ".json", ".md", ".toml", ".zig"].includes(ext)) {
+        if (TEXT_EXTENSIONS.has(ext) || ent.name === ".env" || ent.name.startsWith(".env.")) {
           scanFile(fullPath, rootDir);
         }
       }
@@ -73,9 +69,7 @@ export function runSecretScan(rootDir: string): SecretViolation[] {
 
   function scanFile(filePath: string, baseDir: string) {
     const relPath = path.relative(baseDir, filePath).replace(/\\/g, "/");
-    if (ALLOWLIST_MATCHES.some(m => relPath.includes(m))) {
-      return;
-    }
+    if (ALLOWLIST_FILES.has(relPath)) return;
 
     const content = fs.readFileSync(filePath, "utf-8");
     const lines = content.split(/\r?\n/);
@@ -89,15 +83,10 @@ export function runSecretScan(rootDir: string): SecretViolation[] {
       for (const { name, regex } of SECRET_PATTERNS) {
         const match = line.match(regex);
         if (match) {
-          // Check if match is in allowlist
-          const matchedStr = match[0];
-          if (ALLOWLIST_MATCHES.some(m => matchedStr.includes(m))) continue;
-
           violations.push({
             file: relPath,
             line: i + 1,
             pattern: name,
-            matchedText: matchedStr.slice(0, 30),
           });
         }
       }
@@ -119,7 +108,7 @@ if (process.argv[1] && process.argv[1].replace(/\\/g, "/").includes("secret-scan
   } else {
     console.error(`FAIL: ${violations.length} potential secret violation(s) detected:`);
     for (const v of violations) {
-      console.error(`  - ${v.file}:${v.line} [${v.pattern}]: ${v.matchedText}`);
+      console.error(`  - ${v.file}:${v.line} [${v.pattern}]`);
     }
     process.exit(1);
   }

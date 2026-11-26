@@ -1,6 +1,12 @@
 # Dependencies
 node_modules/
 
+# Generated build output
+/dist/
+/dist-test/
+/coverage/
+native-runtime/zig-out/
+
 # Cache & Scratch
 .hkd/
 scratch/
@@ -15,3 +21,15 @@ native-runtime/.zig-cache/
 dist-release/
 target/
 hkd-landing-page/
+
+# Maintainer-private verification inputs and evidence
+/tests/
+/test-packages/
+/fuzz/
+/benchmarks/
+/artifacts/
+/reports/
+/production-validation-app/
+/tsconfig.test.json
+/walkthrough-phase16.md
+/walkthrough-phase17.md

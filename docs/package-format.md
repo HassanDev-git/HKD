@@ -2,7 +2,7 @@
 
 ## 1. Specification Overview
 
-The HKD Package Archive 2.0 (`.hkdpack`) is a binary, deterministic container designed for distributing HKD packages. It eliminates non-deterministic host metadata (timestamps, file modes, user IDs, path separators) to guarantee bit-for-bit reproducible packaging.
+The HKD Package Archive 2.0 (`.hkdpack`) is a binary container format for distributing HKD packages. Its format is designed to omit irrelevant host metadata such as timestamps and platform-specific path separators. This description does not certify byte-for-byte reproducibility across all toolchains or hosts.
 
 ---
 

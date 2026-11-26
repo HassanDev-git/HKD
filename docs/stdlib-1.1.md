@@ -9,7 +9,7 @@
 
 ## 1. Overview
 
-HKD 1.1 enriches the standard library with functional iteration combinators on arrays and a first-class `result` module providing ergonomic, explicit error handling without exceptions. All additions adhere strictly to HKD's zero-breaking-change promise, preserving 100% backwards compatibility with code written against HKD 1.0.0.
+HKD 1.1 adds functional iteration combinators on arrays and a first-class `result` module for explicit error handling. Compatibility expectations are described in the language compatibility documentation; this document does not claim a measured or formally verified 100% compatibility result.
 
 ---
 

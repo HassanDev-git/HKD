@@ -1,49 +1,18 @@
-# HKD Security Boundaries & Execution Isolation
+# Security Boundaries
 
-**Target Scope**: HKD 1.1.0 Platform  
-**Status**: Formal Architectural Specification  
+HKD is a language toolchain, not a security sandbox. Running untrusted HKD source grants the program the capabilities available through its runtime, operating-system account, and deployment environment. Use operating-system isolation for untrusted workloads.
 
----
+## Compiler and runtime
 
-## 1. Trust Boundaries
+- The TypeScript compiler and reference VM process source and bytecode in the privileges of the hosting Node.js process.
+- The Zig runtime interprets HKD bytecode. JIT dispatch and native-code AOT are unavailable; experimental emitters are not an execution boundary.
+- The language does not expose arbitrary raw pointer operations as a general application feature, but this is not a formal memory-safety or sandbox guarantee.
+- Package integrity checks and archive path validation reduce specific tampering and extraction risks; they do not establish that third-party package code is trustworthy.
 
-HKD establishes distinct security boundaries across execution tiers:
+## Containers
 
-```text
-┌─────────────────────────────────────────────────────────┐
-│                    Host Environment                     │
-│  (Host OS, Filesystem, Process Environment, Networking) │
-└────────────────────────────┬────────────────────────────┘
-                             │ System Calls / I/O APIs
-┌────────────────────────────▼────────────────────────────┐
-│              Standard Library Platform Layer            │
-│         (std.io, std.fs, std.http, std.process)         │
-└────────────────────────────┬────────────────────────────┘
-                             │ Capability Gating
-┌────────────────────────────▼────────────────────────────┐
-│                    HKD Virtual Machine                  │
-│       (Stack VM / Native Zig Runtime / JIT Compiler)     │
-├─────────────────────────────────────────────────────────┤
-│            Guest HKD Code Execution Sandbox             │
-│            (Stack, Heap, Closures, Objects)             │
-└─────────────────────────────────────────────────────────┘
-```
+The CI workflow builds and runs the generated Linux x64 image, checks its configured non-root user, and executes valid and invalid programs. Container isolation depends on the container engine, host kernel, runtime configuration, and deployment settings. Do not treat an image as a substitute for host security controls.
 
----
+## JIT and native code
 
-## 2. Boundary Controls
-
-### 2.1 Memory Isolation
-- Guest HKD code cannot dereference arbitrary raw memory pointers directly.
-- All array lookups are bounds-checked in the VM (`Op.GetIndex`, `Op.SetIndex`).
-- All object and struct field accesses are resolved through string or offset dispatch maps.
-
-### 2.2 Native Code & JIT Boundaries
-- The Baseline and Optimizing JIT emit machine code into memory pages marked `PAGE_EXECUTE_READ` (or W^X equivalent).
-- Code emission occurs into a dedicated code buffer; once written, buffers are sealed before branch execution.
-- If native compilation encounters unsupported constructs or edge conditions, it immediately bails out to the Stack VM reference interpreter without crashing.
-
-### 2.3 Container & Deployment Boundaries
-- Docker container images generated via `hkd container init` enforce non-root user execution (`USER 10001:10001`).
-- Default working directories are isolated in `/app`.
-- Read-only root filesystems and dropped capabilities (`drop: ALL`) are recommended in production deployment configurations.
+HKD 1.1 does not dispatch HKD programs through a JIT and does not compile HKD source to native code. No claim about W^X-protected JIT execution applies to this release.

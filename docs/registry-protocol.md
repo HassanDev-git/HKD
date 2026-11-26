@@ -5,8 +5,8 @@
 The HKD Package Ecosystem operates on a deterministic, content-addressed foundation.
 
 ### Scope Classification
-* **Production-Certified**: Local path dependencies, content-addressed package cache (`~/.hkd/cache/`), `.hkdpack` gzipped tarball archives, offline installation, and lockfile validation (`hkd.lock` v2).
-* **Experimental / Reference Protocol**: Remote HTTP registry client and public registry endpoint (`https://registry.hkdlang.org/api/v1`).
+* **Implemented workflows**: Local path dependencies, package cache (`~/.hkd/cache/`), `.hkdpack` archives, offline installation, and lockfile validation (`hkd.lock` v2).
+* **Configured registry protocol**: The client supports configured registry endpoints. HKD does not currently operate a public registry service.
 
 This document defines the formal HTTP protocol specification for HKD v1 package registries, suitable for self-hosted enterprise mirrors, third-party package indexes, and automated CI publishing pipelines.
 

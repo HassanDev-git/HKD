@@ -106,11 +106,6 @@ jobs:
           HKD_EXPECTED_RUNTIME_SHA256: ${{ matrix.platform == 'Windows ARM64' && needs.windows-arm64-runtime-crossbuild.outputs.runtime-sha256 || '' }}
           ZIG_PACKAGE: ${{ matrix.zig }}
         run: node scripts/ci-zig.cjs
-      - name: Run Jest suite
-        id: jest
-        env:
-          HKD_PREBUILT_RUNTIME: ${{ matrix.platform == 'Windows ARM64' && 'true' || 'false' }}
-        run: npm test
       - name: Run HKD CLI correctness and exit-code smoke checks
         id: cli
         run: node scripts/ci-smoke.cjs
@@ -121,20 +116,21 @@ jobs:
       - name: Record runner and check outcomes
         if: always()
         env:
+          HKD_CI_EVIDENCE_DIR: ${{ runner.temp }}/hkd-ci-evidence
           ZIG_PACKAGE: ${{ matrix.zig }}
           HKD_MATRIX_PLATFORM: ${{ matrix.platform }}
           HKD_MATRIX_NODE: ${{ matrix.node }}
           HKD_ZIG_VERSION: ${{ steps.zig.outputs.version }}
           HKD_PREBUILT_RUNTIME: ${{ matrix.platform == 'Windows ARM64' && 'true' || 'false' }}
           HKD_NATIVE_RUNTIME_SHA256: ${{ steps.zig.outputs.runtime_sha256 }}
-          HKD_CI_OUTCOMES: '{"lint":"${{ steps.lint.outcome }}","typecheck":"${{ steps.typecheck.outcome }}","build":"${{ steps.build.outcome }}","zig":"${{ steps.zig.outcome }}","jest":"${{ steps.jest.outcome }}","cli":"${{ steps.cli.outcome }}","package":"${{ steps.package.outcome }}"}'
+          HKD_CI_OUTCOMES: '{"lint":"${{ steps.lint.outcome }}","typecheck":"${{ steps.typecheck.outcome }}","build":"${{ steps.build.outcome }}","zig":"${{ steps.zig.outcome }}","jest":"NOT_RUN_PRIVATE_ARCHIVE","cli":"${{ steps.cli.outcome }}","package":"${{ steps.package.outcome }}"}'
         run: node scripts/ci-evidence.cjs
       - name: Preserve machine-readable runner evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: hkd-ci-evidence-${{ matrix.platform }}-node-${{ matrix.node }}
-          path: artifacts/ci-evidence/
+          path: ${{ runner.temp }}/hkd-ci-evidence/
           if-no-files-found: error
 
   lint-and-audit:
@@ -147,6 +143,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Scan source and configuration for secrets
+        run: npx ts-node scripts/secret-scan.ts
       - run: npm run build
       - name: System Health Doctor
         run: node dist/cli/main.js doctor
@@ -205,6 +203,7 @@ jobs:
       - name: Record container runner outcomes
         if: always()
         env:
+          HKD_CI_EVIDENCE_DIR: ${{ runner.temp }}/hkd-ci-evidence
           HKD_MATRIX_PLATFORM: Container Ubuntu x64
           HKD_MATRIX_NODE: 24
           HKD_CI_OUTCOMES: '{"buildx":"${{ steps.buildx.outcome }}","image":"${{ steps.image.outcome }}","validRuntime":"${{ steps.valid_runtime.outcome }}","invalidRuntime":"${{ steps.invalid_runtime.outcome }}"}'
@@ -215,6 +214,6 @@ jobs:
         with:
           name: hkd-container-runtime-evidence
           path: |
-            artifacts/ci-evidence/
+            ${{ runner.temp }}/hkd-ci-evidence/
             ${{ runner.temp }}/hkd-container-*.out
           if-no-files-found: warn

@@ -6,7 +6,7 @@ This document specifies the syntax, semantics, and execution model of the HKD Pr
 A conforming HKD implementation must:
 1. Accept any syntactically and semantically valid HKD program as defined herein.
 2. Reject any program containing syntax or static semantic errors with diagnostic error codes in the `E100`–`E399` range.
-3. Produce identical runtime output, side effects, and exit codes across all execution tiers (Reference VM, Native JIT, Native AOT).
+3. Produce identical runtime output, side effects, and exit codes across the currently implemented TypeScript reference VM and Zig bytecode interpreter when both support the program's features.
 
 ---
 

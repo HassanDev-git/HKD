@@ -44,9 +44,6 @@ HKD VM Debug Controller (src/vm/vm.ts)
 
 ---
 
-## 3. JIT & Native Debugging Mode
+## 3. Runtime Boundary
 
-When debugging, the runtime automatically operates in debug-compatible mode (Tier 0 Stack VM or hot deoptimization to VM frames upon breakpoint entry). This ensures:
-* 100% accurate variable inspection at exact source statement boundaries.
-* Zero compiler optimization artifacts obscuring variable states.
-* Immediate, transparent deoptimization when stepping through hot code paths.
+The debugger works with the runtime and bytecode paths supported by the CLI. HKD 1.1 does not dispatch programs through a JIT and does not provide JIT deoptimization or native-code debugging.

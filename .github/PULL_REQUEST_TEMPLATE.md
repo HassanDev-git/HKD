@@ -7,22 +7,20 @@
 ## Changes Proposed
 - [ ] Compiler / Front-end (Lexer, Parser, AST, Semantics)
 - [ ] Intermediate Representation / Optimization (HIR, MIR)
-- [ ] Virtual Machine / Runtime (Stack VM, Native Zig VM, JIT, AOT)
+- [ ] Virtual Machine / Runtime (TypeScript reference VM, Zig bytecode interpreter)
 - [ ] Standard Library (Result, Iterators, Collections, System)
 - [ ] Tooling (CLI, Package Manager, LSP, DAP, Formatter, Linter)
-- [ ] Documentation / Benchmarks / Examples
+- [ ] Documentation / Examples / CI
 
 ## Quality & Verification Checklist
-- [ ] Code passes TypeScript compilation without errors (`npm run build && npx tsc --noEmit`)
-- [ ] All automated test suites pass cleanly (`npm test`)
-- [ ] Minimal reproducible regression test added for bug fixes
-- [ ] Conformance and compatibility contracts verified (`npm test tests/compatibility/`)
-- [ ] Zero breaking changes to frozen Edition 2026 syntax, bytecode ISA, or runtime ABI
-- [ ] Secret sanitization check passes (`npx tsx scripts/secret-scan.ts`)
-- [ ] No synthetic response SLAs introduced into documentation
-- [ ] Any HIGH or CRITICAL severity issue is treated as a release blocker (no unilateral waivers)
+- [ ] TypeScript checks pass (`npm run lint`, `npm run typecheck`, `npm run build`)
+- [ ] Relevant CLI or HKD source-level checks are recorded with actual results
+- [ ] Bug fixes include a minimal reproducer and verified expected behavior
+- [ ] Public CI checks pass; Jest is not included in this public repository or run by CI
+- [ ] Secret scan passes (`npx ts-node scripts/secret-scan.ts`)
+- [ ] Documentation distinguishes implemented, experimental, and unavailable features
 
 ## Evidence & Test Logs
 ```shell
-# Paste relevant test execution logs or CLI output here
+# Paste relevant command output and CI results here. Do not claim archived tests ran in public CI.
 ```

@@ -1,37 +1,7 @@
-# HKD Production Runtime Specification
+# Runtime Operations
 
-## 1. Production Mode Execution
+The HKD CLI runs on Node.js 18 or newer. The optional Zig runtime interprets HKD bytecode and is built with Zig 0.16.0 in CI. See [platform support](platform-support.md) for the exact runner coverage.
 
-When executed with `--production` or `HKD_ENV=production`:
-- Verbose debug assertions and trace logs are disabled.
-- Structured JSON logging is enabled by default.
-- Signal interception traps are registered for `SIGINT` and `SIGTERM`.
-- Resource and connection quotas are strictly enforced.
-- Secrets detected in environment configurations or log parameters are automatically redacted.
+HKD does not sandbox source programs. Run production workloads with the least operating-system privilege needed and apply the isolation controls appropriate to your environment. For containers, review the generated Dockerfile and host runtime configuration; CI's Linux x64 non-root check is scoped to that workflow image.
 
----
-
-## 2. Graceful Shutdown Protocol
-
-Upon receiving `SIGTERM` or `SIGINT`:
-1. **Quiesce Listener**: Stop accepting new TCP/HTTP connections on all open listeners.
-2. **Drain In-Flight Requests**: Allow active requests to complete up to a configurable shutdown deadline (default: 5,000ms).
-3. **Cancel Pending Tasks**: Terminate long-polling or queued background tasks.
-4. **Flush I/O Buffers**: Flush all pending structured log records and file streams.
-5. **Release Sockets & Descriptors**: Close all socket handles and native file descriptors.
-6. **Exit**: Exit cleanly with standardized code `0`.
-
----
-
-## 3. Exit Code Standard
-
-HKD implements standard exit codes across the compiler, runtime, and deployment tools:
-
-| Code | Meaning | Example |
-| :--- | :--- | :--- |
-| `0` | Success | Clean termination, tests passed, artifact verified |
-| `1` | Runtime / Application Error | Unhandled panic, exception in user code |
-| `2` | CLI Usage / Argument Error | Invalid flag, missing required parameter |
-| `3` | Configuration / Environment Error | Missing mandatory config key, invalid type |
-| `4` | Dependency / Build Error | Lockfile mismatch, compilation error, resolver failure |
-| `5` | Deployment / Validation Error | Healthcheck failed, pre-flight check error |
+JIT dispatch, native-code AOT, signed release packages, and official pre-built platform packages are not available in this repository.
