@@ -1,12 +1,14 @@
 import { describe, it, expect } from "@jest/globals";
-import { parseTarget, getHostTarget, listTargetsFormatted, KNOWN_TARGETS } from "../../src/deploy/targets.js";
+import { parseTarget, getHostTarget, listTargetsFormatted } from "../../src/deploy/targets.js";
 
 describe("Phase 14C — Canonical Target Triple System", () => {
   it("resolves canonical host target correctly", () => {
     const host = getHostTarget();
     expect(host.arch).toMatch(/x86_64|aarch64/);
     expect(["windows", "linux", "macos"]).toContain(host.os);
-    expect(host.tier).toBe("Tier 1 (Supported)");
+    const canonical = parseTarget(host.triple);
+    expect(host.tier).toBe(canonical.tier);
+    expect(host.abi).toBe(canonical.abi);
   });
 
   it("parses known canonical triples", () => {

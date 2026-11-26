@@ -582,19 +582,7 @@ pub fn main(init: std.process.Init) !void {
     } else {
         // Inspect self executable file for embedded standalone payload
         var found_standalone = false;
-        var exe_buf: [1024]u8 = undefined;
-        var exe_len: usize = 0;
-
-        if (comptime builtin.os.tag == .windows) {
-            const kernel32 = struct {
-                extern "kernel32" fn GetModuleFileNameA(hModule: ?*anyopaque, lpFilename: [*]u8, nSize: u32) callconv(.winapi) u32;
-            };
-            exe_len = kernel32.GetModuleFileNameA(null, &exe_buf, 1024);
-        }
-
-        if (exe_len > 0) {
-            const exe_path = exe_buf[0..exe_len];
-            if (std.Io.Dir.openFile(.cwd(), global_io, exe_path, .{})) |self_file| {
+        if (std.process.openExecutable(global_io, .{})) |self_file| {
                 defer self_file.close(global_io);
                 if (self_file.stat(global_io)) |st| {
                     if (st.size > 16) {
@@ -616,8 +604,7 @@ pub fn main(init: std.process.Init) !void {
                         } else |_| {}
                     }
                 } else |_| {}
-            } else |_| {}
-        }
+        } else |_| {}
 
         if (!found_standalone) {
             std.debug.print("USAGE: hkd-runtime [options] <file.hkdb>\n", .{});

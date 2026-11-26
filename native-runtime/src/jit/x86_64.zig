@@ -36,7 +36,7 @@ pub const CmpCond = enum(u8) {
 
 // ─── Executable Buffer with W^X Protection ──────────────────────────────────
 
-pub const page_alignment: usize = if (builtin.os.tag.isDarwin()) 16384 else 4096;
+pub const page_alignment: usize = if (builtin.os.tag.isDarwin() and builtin.cpu.arch == .aarch64) 16384 else 4096;
 
 pub const ExecutableBuffer = struct {
     ptr: [*]align(page_alignment) u8,
