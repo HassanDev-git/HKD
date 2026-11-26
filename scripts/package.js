@@ -4,6 +4,7 @@ const os = require("os");
 const { spawnSync } = require("child_process");
 const crypto = require("crypto");
 const zlib = require("zlib");
+const esbuild = require("esbuild");
 const { resolvePackagingTarget } = require("./package-platform.cjs");
 
 const IS_WIN = process.platform === "win32";
@@ -59,8 +60,12 @@ function build() {
 
 function bundle() {
   console.log("Bundling JS entry point...");
-  const esbuildPath = path.join(rootDir, "node_modules", "esbuild", "bin", "esbuild");
-  run(process.execPath, [esbuildPath, path.join(stagedCompiledDir, "cli", "main.js"), "--bundle", "--platform=node", `--outfile=${stagedBundlePath}`]);
+  esbuild.buildSync({
+    entryPoints: [path.join(stagedCompiledDir, "cli", "main.js")],
+    bundle: true,
+    platform: "node",
+    outfile: stagedBundlePath,
+  });
 }
 
 function generateBlob() {
