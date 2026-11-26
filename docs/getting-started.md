@@ -1,6 +1,6 @@
 # Getting Started with HKD
 
-Welcome to HKD (v1.1.0), a high-performance, statically typed, systems programming language featuring deterministic memory management, zero-cost abstractions, first-class structured concurrency, and a unified developer ecosystem.
+Welcome to HKD 1.1.1, a statically typed programming language with a TypeScript compiler and reference VM, an optional Zig bytecode interpreter, and command-line tooling. Some language and runtime capabilities remain experimental or unavailable; see [known limitations](known-limitations.md).
 
 ---
 
@@ -12,12 +12,14 @@ Welcome to HKD (v1.1.0), a high-performance, statically typed, systems programmi
 - **Zig**: The repository pins the `@zigc/cli` 0.16.x toolchain for native-runtime builds (`npx zig build`).
 
 ### Installation
-Clone the repository and build the TypeScript distribution:
+To use a published standalone distribution, download the archive for your operating system and architecture from [GitHub Releases](https://github.com/HassanDev-git/HKD/releases/latest), verify it against `SHA256SUMS`, extract it, then run `hkd.exe --help` on Windows or `./hkd --help` on Linux/macOS. Add the extracted directory to your `PATH` to invoke `hkd` from any directory. The standalone executable bundles Node.js.
+
+To build from source, clone the repository and build the TypeScript distribution:
 
 ```bash
 git clone https://github.com/HassanDev-git/HKD.git
 cd HKD
-npm install
+npm ci
 npm run build
 ```
 

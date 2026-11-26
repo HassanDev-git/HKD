@@ -1,6 +1,6 @@
 {
   "name": "hkd",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "The HKD Programming Language — compiler, VM, CLI, and standard library",
   "main": "dist/index.js",
   "bin": {

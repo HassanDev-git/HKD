@@ -544,7 +544,7 @@ pub fn main(init: std.process.Init) !void {
             std.debug.print("  --skip-validation  Bypass bytecode pre-validation\n", .{});
             std.process.exit(0);
         } else if (std.mem.eql(u8, arg, "--version") or std.mem.eql(u8, arg, "-v")) {
-            std.debug.print("HKD 1.1.0\n", .{});
+            std.debug.print("HKD 1.1.1\n", .{});
             std.process.exit(0);
         } else {
             file_path_opt = arg;

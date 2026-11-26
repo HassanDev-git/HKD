@@ -14,6 +14,7 @@ const PLATFORM_LABEL = packagingTarget.platformLabel;
 
 // Directories
 const rootDir = path.resolve(__dirname, "..");
+const packageVersion = JSON.parse(fs.readFileSync(path.join(rootDir, "package.json"), "utf-8")).version;
 const distDir = process.env.HKD_DIST_DIR
   ? path.resolve(process.env.HKD_DIST_DIR)
   : path.join(rootDir, "dist");
@@ -234,7 +235,7 @@ function extractVerifiedSingleFileZip(archivePath, destinationDir) {
 }
 
 function makeWindowsArchive() {
-  const archiveName = `hkd-v1.1.0-windows-${HOST_ARCH}.zip`;
+  const archiveName = `hkd-v${packageVersion}-windows-${HOST_ARCH}.zip`;
   const stagedArchive = path.join(stagingDir, archiveName);
   createSingleFileZip(releaseExePath, stagedArchive);
   return stagedArchive;
@@ -253,7 +254,7 @@ function makeTarPackage() {
     ["docs/getting-started.md", "docs/getting-started.md"],
     ["docs/cli-reference.md", "docs/cli-reference.md"],
     ["docs/known-limitations.md", "docs/known-limitations.md"],
-    ["docs/release-notes-1.1.0.md", "docs/release-notes-1.1.0.md"],
+    [`docs/release-notes-${packageVersion}.md`, `docs/release-notes-${packageVersion}.md`],
   ];
   for (const [source, destination] of documentation) {
     const sourcePath = path.join(rootDir, source);
@@ -285,7 +286,7 @@ function makeTarPackage() {
     "docs/getting-started.md",
     "docs/cli-reference.md",
     "docs/known-limitations.md",
-    "docs/release-notes-1.1.0.md",
+    `docs/release-notes-${packageVersion}.md`,
   ];
   const files = payloadNames.map((file) => {
     const fullPath = path.join(stagedPackageDir, file);
@@ -299,6 +300,8 @@ function makeTarPackage() {
     os: process.platform,
     sourceCommit: process.env.GITHUB_SHA || null,
     nodeVersion: process.version,
+    zigVersion: process.env.HKD_ZIG_VERSION || null,
+    buildRunner: process.env.HKD_BUILD_RUNNER || process.env.RUNNER_NAME || `${os.platform()}-${os.arch()}`,
     buildTimestamp: new Date().toISOString(),
     files,
   };
@@ -394,7 +397,7 @@ function runArchiveSmokeTests(stagedArchive) {
     console.log(`  ✓ ZIP ${name}`);
   };
 
-  run("version", ["--version"], 0, "HKD 1.1.0");
+  run("version", ["--version"], 0, `HKD ${packageVersion}`);
   run("help", ["--help"], 0, "USAGE:");
 
   const validSource = path.join(sourceDir, "valid.hkd");
@@ -455,13 +458,13 @@ function publishArtifacts(stagedArchive, packageArchive) {
 
   const entries = [];
   const exeRel = path.relative(distDir, finalExePath).replace(/\\/g, "/");
-  entries.push({ binaryName: exeRel, sourcePath: finalExePath, name: `hkd-1.1.0-${platformName}` });
+  entries.push({ binaryName: exeRel, sourcePath: finalExePath, name: `hkd-${manifest.version}-${platformName}` });
 
   if (IS_WIN) {
-    const archiveName = `hkd-v1.1.0-windows-${HOST_ARCH}.zip`;
+    const archiveName = `hkd-v${manifest.version}-windows-${HOST_ARCH}.zip`;
     const finalArchive = path.join(distDir, "releases", archiveName);
     fs.copyFileSync(stagedArchive, finalArchive);
-    entries.push({ binaryName: `releases/${archiveName}`, sourcePath: finalArchive, name: `hkd-1.1.0-${platformName}-zip` });
+    entries.push({ binaryName: `releases/${archiveName}`, sourcePath: finalArchive, name: `hkd-${manifest.version}-${platformName}-zip` });
   }
 
   const packageName = path.basename(packageArchive);
@@ -498,7 +501,7 @@ function publishArtifacts(stagedArchive, packageArchive) {
     if (fs.existsSync(notesPath)) {
       let notes = fs.readFileSync(notesPath, "utf-8");
       notes = notes.replace(new RegExp(`^([a-f0-9]{64})  windows-${HOST_ARCH}\\/hkd\\.exe\\r?$`, "m"), `${sha256(finalExePath)}  windows-${HOST_ARCH}/hkd.exe`);
-      const archiveName = `hkd-v1.1.0-windows-${HOST_ARCH}.zip`;
+      const archiveName = `hkd-v${manifest.version}-windows-${HOST_ARCH}.zip`;
       notes = notes.replace(new RegExp(`^([a-f0-9]{64})  ${archiveName.replaceAll(".", "\\.")}\\r?$`, "m"), `${sha256(path.join(distDir, "releases", archiveName))}  ${archiveName}`);
       fs.writeFileSync(notesPath, notes, "utf-8");
     }
@@ -529,8 +532,8 @@ function runSmokeTests() {
     console.log("  ✓ PASS");
   };
 
-  runTest("Version Command", ["version"], 0, "HKD 1.1.0");
-  runTest("Version flag", ["--version"], 0, "HKD 1.1.0");
+  runTest("Version Command", ["version"], 0, `HKD ${packageVersion}`);
+  runTest("Version flag", ["--version"], 0, `HKD ${packageVersion}`);
   runTest("No-argument usage", [], 0, "USAGE:");
   runTest("Help Command", ["help"], 0, "USAGE:");
   runTest("Valid program execution", ["run", "examples/structs/structs.hkd"], 0, "=== HKD Structs ===");

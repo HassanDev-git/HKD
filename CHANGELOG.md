@@ -1,6 +1,13 @@
 # Changelog
 
-User-visible notes for published HKD versions. This file does not claim unpublished builds or verification beyond the stated scope.
+User-visible notes for HKD versions. Verification outcomes are limited to the evidence stated in each entry and the associated release manifest.
+
+## 1.1.1 — 2026-11-26 (tagged publication requires successful release verification)
+
+- Modernized release packaging and gated publication on six native-host package build and smoke-verification jobs.
+- Added release-wide SHA-256 checksums and a provenance manifest for the exact source commit and runner toolchains.
+- Carries forward compiler, Zig runtime, package security, benchmark validation, and CI hardening from Phases 10.3–10.8.
+- Publication is gated on the six-platform tag-triggered workflow and successful package-manifest/checksum aggregation.
 
 ## 1.1.0 — 2026-09-04
 

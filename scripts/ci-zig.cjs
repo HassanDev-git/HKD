@@ -37,7 +37,8 @@ assert.ok(fs.existsSync(runtimePath), `Native runtime build output missing: ${ru
 const runtimeSmoke = spawnSync(runtimePath, ["--version"], { encoding: "utf8", timeout: 10000 });
 if (runtimeSmoke.error) throw runtimeSmoke.error;
 assert.equal(runtimeSmoke.status, 0, `Native runtime execution failed: ${runtimeSmoke.stderr}`);
-assert.match(`${runtimeSmoke.stdout}\n${runtimeSmoke.stderr}`, /HKD 1\.1\.0/);
+const expectedVersion = require("../package.json").version;
+assert.match(`${runtimeSmoke.stdout}\n${runtimeSmoke.stderr}`, new RegExp(`HKD ${expectedVersion.replaceAll(".", "\\.")}`));
 const runtimeSha256 = crypto.createHash("sha256").update(fs.readFileSync(runtimePath)).digest("hex");
 if (process.env.HKD_EXPECTED_RUNTIME_SHA256) {
   assert.equal(runtimeSha256, process.env.HKD_EXPECTED_RUNTIME_SHA256, "Downloaded runtime SHA-256 does not match the cross-build job output");

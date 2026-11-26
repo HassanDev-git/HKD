@@ -6,7 +6,7 @@
 HKD is a modern, statically typed, memory-safe, embeddable programming language engineered for high performance, deterministic concurrency, and developer joy. It combines clean ergonomics with a dual-runtime model (an ultra-fast native Zig bytecode engine and an extensible reference VM).
 
 ### What is the current version?
-HKD 1.1.0 (Public Developer Preview).
+The source tree package version is 1.1.1. Check [GitHub Releases](https://github.com/HassanDev-git/HKD/releases) for the latest published version.
 
 ---
 
@@ -33,8 +33,8 @@ Yes. HKD compiles all source modules according to their declared edition and lin
 ## Installation & Setup
 
 ### How do I install HKD?
-- **Windows**: Download `hkd-v1.1.0-windows-x64.zip` from GitHub Releases, extract to a directory (e.g. `C:\tools\hkd`), and add the directory to your system `PATH`.
-- **Node.js / npm (Preview)**: Run `npm install -g hkd` or clone the repository and run `npm run build && npm link`.
+- **Standalone**: Download the archive for your OS and architecture from [GitHub Releases](https://github.com/HassanDev-git/HKD/releases), verify its SHA-256 checksum, and extract it. The executable bundles Node.js.
+- **From source**: Install Node.js 18 or newer, clone the repository, run `npm ci && npm run build`, then use `node dist/cli/main.js` or `npm link`.
 - **Self-Diagnostic**: Verify your installation at any time by running:
   ```bash
   hkd doctor

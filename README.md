@@ -1,7 +1,7 @@
 # HKD Programming Language
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Release: 1.1.0](https://img.shields.io/badge/Release-1.1.0-brightgreen.svg)](docs/release-notes-1.1.0.md)
+[![Release: 1.1.1](https://img.shields.io/badge/Release-1.1.1-brightgreen.svg)](docs/release-notes-1.1.1.md)
 
 **HKD** is a statically typed programming language under active development. This repository contains its TypeScript compiler and reference VM, a Zig bytecode interpreter, package manager, command-line tools, language server, debugger protocol support, and VS Code extension.
 
@@ -46,7 +46,7 @@ HKD combines a statically typed language with a small compiler and runtime toolc
 
 ## Installation
 
-Pre-built packages and a public npm installation are not currently provided. Build the CLI from source with Node.js 18 or newer and npm:
+Verified standalone packages are published on [GitHub Releases](https://github.com/HassanDev-git/HKD/releases) after native build and smoke checks for Windows x64/ARM64, Linux x64/ARM64, and macOS x64/ARM64. Check the release page for currently available versions. Published standalone packages include a bundled Node.js runtime. To build from source, use Node.js 18 or newer and npm:
 
 ```bash
 git clone https://github.com/HassanDev-git/HKD.git
@@ -55,6 +55,8 @@ npm ci
 npm run build
 node dist/cli/main.js --help
 ```
+
+When a release provides an archive matching your operating system and architecture, extract it, then run `hkd.exe --help` on Windows or `./hkd --help` on Linux/macOS. Add the extracted directory to `PATH` to use `hkd` from any terminal. Verify the downloaded archive against `SHA256SUMS` from the release page.
 
 The TypeScript reference VM is available after the build. CI builds and tests the optional Zig runtime for its configured target runners.
 

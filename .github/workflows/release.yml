@@ -1,58 +1,173 @@
-name: HKD Production Release
+name: HKD Verified Release
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: hkd-release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build-release:
-    name: Build & Package Release Bundle
-    runs-on: ${{ matrix.os }}
+  build-and-verify:
+    name: ${{ matrix.platform }} native package
+    runs-on: ${{ matrix.runner }}
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - os: windows-2025
+          - runner: windows-2025
+            id: windows-x64
             platform: Windows x64
-            target: x86_64-windows
-          - os: windows-11-arm
+            zig: win32-x64
+          - runner: windows-11-arm
+            id: windows-arm64
             platform: Windows ARM64
-            target: aarch64-windows
-          - os: ubuntu-24.04
+            zig: win32-arm64
+          - runner: ubuntu-24.04
+            id: linux-x64
             platform: Linux x64
-            target: x86_64-linux
-          - os: ubuntu-24.04-arm
+            zig: linux-x64
+          - runner: ubuntu-24.04-arm
+            id: linux-arm64
             platform: Linux ARM64
-            target: aarch64-linux
-          - os: macos-15-intel
+            zig: linux-arm64
+          - runner: macos-15-intel
+            id: macos-x64
             platform: macOS x64
-            target: x86_64-macos
-          - os: macos-15
+            zig: darwin-x64
+          - runner: macos-15
+            id: macos-arm64
             platform: macOS ARM64
-            target: aarch64-macos
-
+            zig: darwin-arm64
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js 24
-        uses: actions/setup-node@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Verify release tag matches package version
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          expected="v$(node -p "require('./package.json').version")"
+          test "$GITHUB_REF_NAME" = "$expected" || { echo "Tag $GITHUB_REF_NAME does not match package version $expected" >&2; exit 1; }
+      - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Install dependencies
+          cache: npm
+      - name: Install locked dependencies
         run: npm ci
-      - name: Compile Compiler
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build TypeScript CLI
         run: npm run build
-      - name: Run Pre-Flight Deployment Check
-        run: node dist/cli/main.js deploy check --target ${{ matrix.target }} --profile release
-      - name: Build & Package Release
-        run: node dist/cli/main.js release --target ${{ matrix.target }} --profile release
-      - name: Generate CycloneDX SBOM
-        run: node dist/cli/main.js sbom
-      - name: Upload Release Artifacts
+      - name: Run Zig tests and ReleaseFast runtime startup
+        id: zig
+        env:
+          ZIG_PACKAGE: ${{ matrix.zig }}
+          HKD_NATIVE_OUTPUT_DIR: ${{ runner.temp }}/hkd-runtime
+        run: node scripts/ci-zig.cjs
+      - name: Run CLI correctness and exit-code checks
+        run: node scripts/ci-smoke.cjs
+      - name: Build and verify standalone release package
+        env:
+          HKD_BUILD_RUNNER: ${{ matrix.runner }}
+          HKD_ZIG_VERSION: ${{ steps.zig.outputs.version }}
+          HKD_DIST_DIR: ${{ runner.temp }}/hkd-release-dist
+        run: npm run package
+      - name: Verify package provenance for this runner
+        shell: bash
+        env:
+          EXPECTED_COMMIT: ${{ github.sha }}
+          PACKAGE_ID: ${{ matrix.id }}
+          HKD_DIST_DIR: ${{ runner.temp }}/hkd-release-dist
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const dir = path.join(process.env.HKD_DIST_DIR, 'releases');
+          const files = fs.readdirSync(dir).filter((name) => name.endsWith('.tar.gz'));
+          if (files.length !== 1 || !files[0].includes(`-${process.env.PACKAGE_ID}.tar.gz`)) {
+            throw new Error(`Expected one package for ${process.env.PACKAGE_ID}; got ${files.join(', ')}`);
+          }
+          const { execFileSync } = require('node:child_process');
+          const manifest = JSON.parse(execFileSync('tar', ['-xOzf', path.join(dir, files[0]), './manifest.json'], { encoding: 'utf8' }));
+          if (manifest.sourceCommit !== process.env.EXPECTED_COMMIT) throw new Error(`Wrong source commit: ${manifest.sourceCommit}`);
+          if (!manifest.zigVersion || !manifest.buildRunner || !manifest.nodeVersion) throw new Error('Missing build provenance');
+          console.log(JSON.stringify({ package: files[0], sourceCommit: manifest.sourceCommit, runner: manifest.buildRunner, node: manifest.nodeVersion, zig: manifest.zigVersion }, null, 2));
+          NODE
+      - name: Upload verified platform package
         uses: actions/upload-artifact@v4
         with:
-          name: hkd-release-${{ matrix.platform }}
-          path: target/releases/*-${{ matrix.target }}-release/
+          name: hkd-release-${{ matrix.id }}
+          path: ${{ runner.temp }}/hkd-release-dist/releases/*.tar.gz
           if-no-files-found: error
+          retention-days: 30
+
+  assemble-release-candidate:
+    name: Assemble verified release bundle
+    needs: build-and-verify
+    runs-on: ubuntu-24.04
+    if: always() && needs.build-and-verify.result == 'success'
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Download all six native packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: hkd-release-*
+          path: release-assets
+          merge-multiple: true
+      - name: Generate and validate release manifest and checksums
+        env:
+          HKD_RELEASE_DIR: release-assets
+        run: node scripts/create-release-manifest.cjs
+      - name: Preserve verified release candidate bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: hkd-${{ github.event_name == 'push' && github.ref_name || format('candidate-{0}', github.sha) }}
+          path: |
+            release-assets/*.tar.gz
+            release-assets/SHA256SUMS
+            release-assets/release-manifest.json
+            release-assets/RELEASE_NOTES.md
+          if-no-files-found: error
+          retention-days: 90
+  publish-release:
+    name: Publish official GitHub Release
+    needs: assemble-release-candidate
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && needs.assemble-release-candidate.result == 'success'
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Download verified release bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: hkd-${{ github.ref_name }}
+          path: release-assets
+      - name: Publish the verified assets and release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          test "$TAG_NAME" = "v$version"
+          gh release create "$TAG_NAME" release-assets/*.tar.gz release-assets/SHA256SUMS release-assets/release-manifest.json --verify-tag --title "HKD $version" --notes-file release-assets/RELEASE_NOTES.md --latest

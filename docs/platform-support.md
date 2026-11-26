@@ -1,6 +1,6 @@
 # Platform Support
 
-HKD 1.1.0 is a Node.js application with an optional Zig bytecode interpreter. The CI workflow exercises native builds and runtime smoke checks on these hosted runners:
+HKD 1.1.1 is a Node.js application with an optional Zig bytecode interpreter. The CI workflow exercises native builds and runtime smoke checks on these hosted runners:
 
 | Runner | Node.js | Zig/runtime evidence |
 |---|---:|---|
@@ -11,7 +11,7 @@ HKD 1.1.0 is a Node.js application with an optional Zig bytecode interpreter. Th
 | macOS x64 | 24 | Native Zig tests, ReleaseFast runtime, CLI smoke checks, standalone package build and execution |
 | macOS ARM64 | 24 | Native Zig tests, ReleaseFast runtime, CLI smoke checks, standalone package build and execution |
 
-The workflow packages HKD as a TAR.GZ with the executable, user documentation, installation instructions, a source-commit manifest, and SHA-256 sums. Each native runner extracts the package in a clean directory and checks version, help, valid program execution, and invalid-program diagnostics. Successful packages are retained as seven-day workflow artifacts for that run; these are validation artifacts, not official releases. The workflow also builds and runs a Linux x64 container image, checks non-root execution, and verifies diagnostics for an invalid HKD program. These results apply to the exact workflow revision and hosted runner images; they do not certify every supported Node.js version, Linux distribution, or deployment environment.
+The workflow packages HKD as a TAR.GZ with the executable, user documentation, installation instructions, a source-commit manifest, and SHA-256 sums. Each native runner extracts the package in a clean directory and checks version, help, valid program execution, and invalid-program diagnostics. The release workflow additionally generates a release-wide manifest and checksums, and publishes only after all six native jobs succeed. The workflow also builds and runs a Linux x64 container image, checks non-root execution, and verifies diagnostics for an invalid HKD program. These results apply to the exact workflow revision and hosted runner images; they do not certify every supported Node.js version, Linux distribution, or deployment environment.
 
 No official release packages are published by this repository. Cross-builds are not described as runtime certification unless the target executable is run on an architecture-matched runner.
 
