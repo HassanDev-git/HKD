@@ -70,13 +70,22 @@ fs.writeFileSync(path.join(releaseDir, "SHA256SUMS"), `${packages.map((item) => 
 const downloads = packages.map((item) => `- [${item.platform} ${item.architecture}](https://github.com/${process.env.GITHUB_REPOSITORY}/releases/download/v${pkg.version}/${item.file})`).join("\n");
 const workflowUrl = `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
 const notes = fs.readFileSync(path.join(root, "docs", `release-notes-${pkg.version}.md`), "utf8");
+const notesWithPermalinks = notes.replace(/\]\((?!https?:\/\/|#|mailto:)([^)]+)\)/g, (_match, href) => {
+  const target = path.posix.normalize(path.posix.join("docs", href.replaceAll("\\", "/")));
+  if (target === ".." || target.startsWith("../")) throw new Error(`Release note link escapes the repository: ${href}`);
+  return `](https://github.com/${process.env.GITHUB_REPOSITORY}/blob/${sourceCommit}/${target})`;
+});
 const windowsArchive = `hkd-v${pkg.version}-windows-x64.tar.gz`;
+const windowsArmArchive = `hkd-v${pkg.version}-windows-arm64.tar.gz`;
 const linuxArchive = `hkd-v${pkg.version}-linux-x64.tar.gz`;
+const linuxArmArchive = `hkd-v${pkg.version}-linux-arm64.tar.gz`;
+const macosArchive = `hkd-v${pkg.version}-macos-x64.tar.gz`;
+const macosArmArchive = `hkd-v${pkg.version}-macos-arm64.tar.gz`;
 const firstProgram = 'fn main() {\n    println("Hello, HKD")\n}\n';
 const tick = String.fromCharCode(96);
 const fence = tick.repeat(3);
 const releaseNotes = [
-  notes.trim(),
+  notesWithPermalinks.trim(),
   "## Downloads",
   downloads,
   `- [SHA256SUMS](https://github.com/${process.env.GITHUB_REPOSITORY}/releases/download/v${pkg.version}/SHA256SUMS)`,
@@ -84,12 +93,12 @@ const releaseNotes = [
   "## Installation",
   "Choose the archive for your OS and architecture, download it, and extract it to a directory you control. Add that directory to PATH to run HKD from any terminal. The standalone executable bundles Node.js.",
   "### Windows",
-  `Extract ${windowsArchive} with PowerShell (Windows includes tar):`,
-  `${fence}powershell\nNew-Item -ItemType Directory -Force "$HOME\\tools\\hkd" | Out-Null\ntar -xzf .\\${windowsArchive} -C "$HOME\\tools\\hkd"\n$env:Path += ";$HOME\\tools\\hkd"\n.\\hkd.exe --version\n${fence}`,
+  `Set $archive to the package matching your Windows architecture: ${windowsArchive} (x64) or ${windowsArmArchive} (ARM64). Extract it with PowerShell (Windows includes tar):`,
+  `${fence}powershell\n$archive = ".\\${windowsArchive}" # use ${windowsArmArchive} on Windows ARM64\nNew-Item -ItemType Directory -Force "$HOME\\tools\\hkd" | Out-Null\ntar -xzf $archive -C "$HOME\\tools\\hkd"\n$env:Path += ";$HOME\\tools\\hkd"\nhkd.exe --version\n${fence}`,
   "Add the extracted directory to your User PATH in Windows Settings for future terminals.",
   "### Linux and macOS",
-  `Download the matching architecture archive (for example, ${linuxArchive}), then extract and run:`,
-  `${fence}sh\ntar -xzf ${linuxArchive}\nchmod +x ./hkd\n./hkd --version\nexport PATH="$PATH:/path/to/extracted/hkd-directory"\n${fence}`,
+  `Download the matching OS and architecture archive: Linux x64 (${linuxArchive}), Linux ARM64 (${linuxArmArchive}), macOS x64 (${macosArchive}), or macOS ARM64 (${macosArmArchive}). Set the filename below to the package you downloaded:`,
+  `${fence}sh\narchive="${linuxArchive}" # replace with the matching Linux or macOS archive above\ntar -xzf "$archive"\nchmod +x ./hkd\n./hkd --version\nexport PATH="$PATH:/path/to/extracted/hkd-directory"\n${fence}`,
   "Add the PATH export to your shell profile to keep it across terminal sessions.",
   "### Run a first program",
   `Save as ${tick}hello.hkd${tick}:\n\n${fence}hkd\n${firstProgram}${fence}`,

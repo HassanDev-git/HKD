@@ -7,6 +7,8 @@ HKD is a statically typed programming language with a TypeScript compiler and re
 - Adds native-runner release packaging and smoke verification for Windows x64/ARM64, Linux x64/ARM64, and macOS x64/ARM64.
 - Adds per-package source, runner, toolchain, size, and SHA-256 provenance plus release-wide checksums.
 - Updates release automation to verify every platform package before publication.
+- Rejects archive extraction paths that escape the destination or target symbolic links, and validates every benchmark raw sample before comparison.
+- Exercises the Linux x64 container build and runtime, including non-root execution and invalid-program diagnostics, in CI.
 - Includes the Phase 10.3–10.8 compiler/runtime, security, benchmark, CI, and cross-platform hardening already present in the source history.
 
 ## Compatibility and boundaries
