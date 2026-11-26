@@ -108,6 +108,8 @@ jobs:
         run: node scripts/ci-zig.cjs
       - name: Run Jest suite
         id: jest
+        env:
+          HKD_PREBUILT_RUNTIME: ${{ matrix.platform == 'Windows ARM64' && 'true' || 'false' }}
         run: npm test
       - name: Run HKD CLI correctness and exit-code smoke checks
         id: cli

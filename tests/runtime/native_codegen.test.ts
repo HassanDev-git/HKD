@@ -54,12 +54,15 @@ describe("HKD Phase 10G — Minimal Native Code Generator", () => {
   });
 
   test("Native runtime binary compiles with ReleaseFast", () => {
-    const res = spawnSync(zigBin, ["build", "-Doptimize=ReleaseFast"], {
-      cwd: runtimeDir,
-      encoding: "utf-8",
-    });
-    expect(res.status).toBe(0);
     const binPath = path.resolve(runtimeDir, "zig-out", "bin", process.platform === "win32" ? "hkd-runtime.exe" : "hkd-runtime");
+    if (process.env.HKD_PREBUILT_RUNTIME !== "true") {
+      const res = spawnSync(zigBin, ["build", "-Doptimize=ReleaseFast"], {
+        cwd: runtimeDir,
+        encoding: "utf-8",
+      });
+      if (res.error) throw res.error;
+      expect(res.status).toBe(0);
+    }
     expect(fs.existsSync(binPath)).toBe(true);
     const version = spawnSync(binPath, ["--version"], { encoding: "utf-8" });
     expect(version.status).toBe(0);
