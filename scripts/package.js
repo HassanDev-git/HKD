@@ -27,6 +27,8 @@ let releaseExePath = "";
 let stagedBundlePath = "";
 let stagedCompiledDir = "";
 let stagedSeaBlobPath = "";
+let stagedPackageDir = "";
+let stagedPackageArchive = "";
 const finalExePath = path.join(releaseDir, exeName);
 
 function run(file, args) {
@@ -44,6 +46,9 @@ function clean() {
   stagedBundlePath = path.join(stagingDir, "bundle.js");
   stagedCompiledDir = path.join(stagingDir, "compiled");
   stagedSeaBlobPath = path.join(stagingDir, "sea-prep.blob");
+  stagedPackageDir = path.join(stagingDir, "package");
+  const pkg = JSON.parse(fs.readFileSync(path.join(rootDir, "package.json"), "utf-8"));
+  stagedPackageArchive = path.join(stagingDir, `hkd-v${pkg.version}-${platformName}.tar.gz`);
 }
 
 function build() {
@@ -230,6 +235,139 @@ function makeWindowsArchive() {
   return stagedArchive;
 }
 
+function makeTarPackage() {
+  const pkg = JSON.parse(fs.readFileSync(path.join(rootDir, "package.json"), "utf-8"));
+  fs.mkdirSync(stagedPackageDir, { recursive: true });
+  const stagedPackageExecutable = path.join(stagedPackageDir, exeName);
+  fs.copyFileSync(releaseExePath, stagedPackageExecutable);
+  if (!IS_WIN) fs.chmodSync(stagedPackageExecutable, 0o755);
+
+  const documentation = [
+    ["README.md", "README.md"],
+    ["LICENSE", "LICENSE"],
+    ["docs/getting-started.md", "docs/getting-started.md"],
+    ["docs/cli-reference.md", "docs/cli-reference.md"],
+    ["docs/known-limitations.md", "docs/known-limitations.md"],
+    ["docs/release-notes-1.1.0.md", "docs/release-notes-1.1.0.md"],
+  ];
+  for (const [source, destination] of documentation) {
+    const sourcePath = path.join(rootDir, source);
+    if (!fs.existsSync(sourcePath)) throw new Error(`Required package documentation is missing: ${source}`);
+    const destinationPath = path.join(stagedPackageDir, destination);
+    fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
+    fs.copyFileSync(sourcePath, destinationPath);
+  }
+
+  const installText = [
+    `HKD ${pkg.version} standalone package for ${platformName}`,
+    "",
+    "This package includes the HKD command-line executable and user documentation.",
+    "The executable bundles Node.js and the TypeScript reference VM; a separate Node.js installation is not required.",
+    "",
+    IS_WIN ? "Run: .\\hkd.exe --help" : "Run: chmod +x ./hkd && ./hkd --help",
+    "",
+    "The executable interprets HKD bytecode. JIT dispatch and native-code AOT are unavailable.",
+    "See README.md and docs/ for usage and limitations.",
+    "",
+  ].join("\n");
+  fs.writeFileSync(path.join(stagedPackageDir, "INSTALL.txt"), installText, "utf-8");
+
+  const payloadNames = [
+    exeName,
+    "README.md",
+    "LICENSE",
+    "INSTALL.txt",
+    "docs/getting-started.md",
+    "docs/cli-reference.md",
+    "docs/known-limitations.md",
+    "docs/release-notes-1.1.0.md",
+  ];
+  const files = payloadNames.map((file) => {
+    const fullPath = path.join(stagedPackageDir, file);
+    return { path: file.replace(/\\/g, "/"), sha256: sha256(fullPath), sizeBytes: fs.statSync(fullPath).size };
+  });
+  const packageManifest = {
+    name: pkg.name,
+    version: pkg.version,
+    target: platformName,
+    architecture: process.arch,
+    os: process.platform,
+    sourceCommit: process.env.GITHUB_SHA || null,
+    nodeVersion: process.version,
+    buildTimestamp: new Date().toISOString(),
+    files,
+  };
+  fs.writeFileSync(path.join(stagedPackageDir, "manifest.json"), `${JSON.stringify(packageManifest, null, 2)}\n`, "utf-8");
+  const manifestFile = { path: "manifest.json", sha256: sha256(path.join(stagedPackageDir, "manifest.json")) };
+  const sums = [...files, manifestFile].map((file) => `${file.sha256}  ${file.path}`);
+  fs.writeFileSync(path.join(stagedPackageDir, "SHA256SUMS"), `${sums.join("\n")}\n`, "utf-8");
+  run("tar", ["-czf", stagedPackageArchive, "-C", stagedPackageDir, "."]);
+  return stagedPackageArchive;
+}
+
+function runTarPackageSmokeTests(archivePath) {
+  const isolatedRoot = fs.mkdtempSync(path.join(os.tmpdir(), "hkd-package-isolated-"));
+  const extractDir = path.join(isolatedRoot, "extracted");
+  const callerDir = path.join(isolatedRoot, "caller");
+  const sourceDir = path.join(isolatedRoot, "source");
+  fs.mkdirSync(extractDir, { recursive: true });
+  fs.mkdirSync(callerDir, { recursive: true });
+  fs.mkdirSync(sourceDir, { recursive: true });
+  try {
+    run("tar", ["-xzf", archivePath, "-C", extractDir]);
+    const pkg = JSON.parse(fs.readFileSync(path.join(rootDir, "package.json"), "utf-8"));
+    const manifestPath = path.join(extractDir, "manifest.json");
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+    if (manifest.version !== pkg.version || manifest.target !== platformName || !Array.isArray(manifest.files)) {
+      throw new Error("Extracted package manifest does not match the current host package");
+    }
+    for (const file of manifest.files) {
+      const relative = file.path.replace(/\\/g, "/");
+      if (path.posix.isAbsolute(relative) || relative.split("/").includes("..")) {
+        throw new Error(`Unsafe path in generated package manifest: ${file.path}`);
+      }
+      const fullPath = path.resolve(extractDir, ...relative.split("/"));
+      if (!fullPath.startsWith(`${path.resolve(extractDir)}${path.sep}`) || !fs.existsSync(fullPath)) {
+        throw new Error(`Package payload is missing or outside the extraction directory: ${file.path}`);
+      }
+      if (sha256(fullPath) !== file.sha256 || fs.statSync(fullPath).size !== file.sizeBytes) {
+        throw new Error(`Package payload integrity mismatch: ${file.path}`);
+      }
+    }
+
+    const sums = fs.readFileSync(path.join(extractDir, "SHA256SUMS"), "utf-8").trim().split(/\r?\n/);
+    if (sums.length !== manifest.files.length + 1) throw new Error("SHA256SUMS does not cover every package payload and manifest");
+    for (const line of sums) {
+      const [expectedHash, ...nameParts] = line.trim().split(/\s+/);
+      const name = nameParts.join("  ");
+      const fullPath = path.resolve(extractDir, ...name.replace(/\\/g, "/").split("/"));
+      if (!fullPath.startsWith(`${path.resolve(extractDir)}${path.sep}`) || !fs.existsSync(fullPath) || sha256(fullPath) !== expectedHash) {
+        throw new Error(`Extracted package SHA256SUMS verification failed for ${name}`);
+      }
+    }
+    const executable = path.join(extractDir, exeName);
+    const runExtracted = (name, args, expectedCode, expectedText) => {
+      const result = spawnSync(executable, args, { cwd: callerDir, encoding: "utf-8", timeout: 30000 });
+      const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+      if (result.error || result.status !== expectedCode || !output.includes(expectedText)) {
+        throw new Error(`Extracted package smoke failed (${name}): exit=${result.status}; output=${output.slice(0, 1000)}`);
+      }
+      console.log(`  ✓ Package ${name}`);
+    };
+    runExtracted("version", ["--version"], 0, `HKD ${pkg.version}`);
+    runExtracted("help", ["--help"], 0, "USAGE:");
+
+    const valid = path.join(sourceDir, "valid.hkd");
+    fs.writeFileSync(valid, 'println("HKD extracted package passed");\n', "utf-8");
+    runExtracted("valid program from a clean working directory", ["run", valid], 0, "HKD extracted package passed");
+    const invalid = path.join(sourceDir, "invalid.hkd");
+    fs.writeFileSync(invalid, "let = ;\n", "utf-8");
+    runExtracted("invalid program diagnostic", ["run", invalid], 1, "HKD Error");
+  } finally {
+    fs.rmSync(isolatedRoot, { recursive: true, force: true });
+  }
+}
+
 function runArchiveSmokeTests(stagedArchive) {
   if (!IS_WIN) return;
   const isolatedRoot = fs.mkdtempSync(path.join(os.tmpdir(), "hkd-zip-isolated-"));
@@ -268,7 +406,7 @@ function runArchiveSmokeTests(stagedArchive) {
   }
 }
 
-function publishArtifacts(stagedArchive) {
+function publishArtifacts(stagedArchive, packageArchive) {
   const manifestPath = path.join(distDir, "artifacts.json");
   const manifest = fs.existsSync(manifestPath)
     ? JSON.parse(fs.readFileSync(manifestPath, "utf-8"))
@@ -321,10 +459,20 @@ function publishArtifacts(stagedArchive) {
     entries.push({ binaryName: `releases/${archiveName}`, sourcePath: finalArchive, name: `hkd-1.1.0-${platformName}-zip` });
   }
 
+  const packageName = path.basename(packageArchive);
+  const finalPackageArchive = path.join(distDir, "releases", packageName);
+  fs.copyFileSync(packageArchive, finalPackageArchive);
+  entries.push({ binaryName: `releases/${packageName}`, sourcePath: finalPackageArchive, name: `hkd-${manifest.version}-${platformName}-package` });
+
   for (const entry of entries) {
     let artifact = manifest.artifacts.find((item) => item.binaryName === entry.binaryName);
     if (!artifact) {
-      artifact = { name: entry.name, target: platformName, architecture: process.arch, os: process.platform, binaryName: entry.binaryName, checksum: "", sizeBytes: 0, format: entry.binaryName.endsWith(".zip") ? "zip-archive" : "standalone-binary" };
+      const format = entry.binaryName.endsWith(".zip")
+        ? "zip-archive"
+        : entry.binaryName.endsWith(".tar.gz")
+          ? "tar-gzip-package"
+          : "standalone-binary";
+      artifact = { name: entry.name, target: platformName, architecture: process.arch, os: process.platform, binaryName: entry.binaryName, checksum: "", sizeBytes: 0, format };
       manifest.artifacts.push(artifact);
     }
     artifact.checksum = sha256(entry.sourcePath);
@@ -431,7 +579,9 @@ function main() {
       stagedArchive = makeWindowsArchive();
       runArchiveSmokeTests(stagedArchive);
     }
-    publishArtifacts(stagedArchive);
+    const packageArchive = makeTarPackage();
+    runTarPackageSmokeTests(packageArchive);
+    publishArtifacts(stagedArchive, packageArchive);
     console.log("Packaging process completed successfully!");
   } catch (error) {
     console.error("Packaging failed:", error);
