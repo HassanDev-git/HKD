@@ -14,8 +14,34 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  windows-arm64-runtime-crossbuild:
+    name: Cross-build Windows ARM64 native runtime
+    runs-on: ubuntu-24.04
+    outputs:
+      runtime-sha256: ${{ steps.build.outputs.runtime_sha256 }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Build Windows ARM64 runtime using Linux Zig host
+        id: build
+        run: node scripts/ci-zig-crossbuild-windows-arm64.cjs
+      - name: Preserve Windows ARM64 runtime for native execution
+        uses: actions/upload-artifact@v6
+        with:
+          name: hkd-release-native-runtime-windows-arm64
+          path: native-runtime/zig-out/bin/hkd-runtime.exe
+          if-no-files-found: error
+
   build-and-verify:
     name: ${{ matrix.platform }} native package
+    needs: windows-arm64-runtime-crossbuild
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -67,11 +93,19 @@ jobs:
         run: npm run typecheck
       - name: Build TypeScript CLI
         run: npm run build
+      - name: Download Windows ARM64 native runtime built on Linux
+        if: matrix.id == 'windows-arm64'
+        uses: actions/download-artifact@v7
+        with:
+          name: hkd-release-native-runtime-windows-arm64
+          path: ${{ runner.temp }}/hkd-runtime
       - name: Run Zig tests and ReleaseFast runtime startup
         id: zig
         env:
           ZIG_PACKAGE: ${{ matrix.zig }}
           HKD_NATIVE_OUTPUT_DIR: ${{ runner.temp }}/hkd-runtime
+          HKD_PREBUILT_RUNTIME: ${{ matrix.id == 'windows-arm64' && 'true' || 'false' }}
+          HKD_EXPECTED_RUNTIME_SHA256: ${{ matrix.id == 'windows-arm64' && needs.windows-arm64-runtime-crossbuild.outputs.runtime-sha256 || '' }}
         run: node scripts/ci-zig.cjs
       - name: Run CLI correctness and exit-code checks
         run: node scripts/ci-smoke.cjs
