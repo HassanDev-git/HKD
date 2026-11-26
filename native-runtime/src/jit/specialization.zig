@@ -126,16 +126,21 @@ test "Specialization manager with budget" {
 
     const fn_id: usize = 0x12345678;
     const fn_ptr = try spec_mgr.compileIntSpecialization(fn_id);
+
+    if (comptime builtin.cpu.arch != .x86_64) {
+        try std.testing.expect(fn_ptr == null);
+        try std.testing.expect(spec_mgr.getSpecialized(fn_id, .IntInt) == null);
+        return;
+    }
+
     try std.testing.expect(fn_ptr != null);
 
     const looked_up = spec_mgr.getSpecialized(fn_id, .IntInt);
     try std.testing.expect(looked_up != null);
     try std.testing.expectEqual(fn_ptr.?, looked_up.?);
 
-    if (comptime builtin.cpu.arch == .x86_64) {
-        const NativeAddFn = *const fn (i64, i64) callconv(.c) i64;
-        const add_fn: NativeAddFn = @ptrCast(@alignCast(looked_up.?));
-        const res = add_fn(25, 17);
-        try std.testing.expectEqual(@as(i64, 42), res);
-    }
+    const NativeAddFn = *const fn (i64, i64) callconv(.c) i64;
+    const add_fn: NativeAddFn = @ptrCast(@alignCast(looked_up.?));
+    const res = add_fn(25, 17);
+    try std.testing.expectEqual(@as(i64, 42), res);
 }

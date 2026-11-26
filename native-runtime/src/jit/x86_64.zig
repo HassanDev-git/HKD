@@ -66,10 +66,7 @@ pub const ExecutableBuffer = struct {
             };
         } else {
             // Linux / macOS POSIX mmap
-            const PROT_READ = 0x1;
-            const PROT_WRITE = 0x2;
-
-            const res = std.posix.mmap(null, rounded_capacity, PROT_READ | PROT_WRITE, .{ .TYPE = .PRIVATE, .ANONYMOUS = true }, -1, 0) catch return error.OutOfMemory;
+            const res = std.posix.mmap(null, rounded_capacity, .{ .READ = true, .WRITE = true }, .{ .TYPE = .PRIVATE, .ANONYMOUS = true }, -1, 0) catch return error.OutOfMemory;
 
             return ExecutableBuffer{
                 .ptr = @alignCast(res.ptr),
@@ -101,9 +98,7 @@ pub const ExecutableBuffer = struct {
             const success = kernel32.VirtualProtect(self.ptr, self.capacity, kernel32.PAGE_EXECUTE_READ, &old_protect);
             if (success == 0) return error.AccessDenied;
         } else {
-            const PROT_READ = 0x1;
-            const PROT_EXEC = 0x4;
-            std.posix.mprotect(@alignCast(self.ptr[0..self.capacity]), PROT_READ | PROT_EXEC) catch return error.AccessDenied;
+            std.process.protectMemory(@alignCast(self.ptr[0..self.capacity]), .{ .read = true, .execute = true }) catch return error.AccessDenied;
         }
 
         self.is_executable = true;
