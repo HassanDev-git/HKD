@@ -31,6 +31,12 @@ const { VM } = require("../../../dist/vm/vm.js");
 const { runFile } = require("../../../dist/runtime/index.js");
 
 const ROOT_DIR = path.resolve(__dirname, "../../../");
+if (!process.env.HKD_BENCHMARK_COMMAND) {
+  const args = process.argv.slice(2);
+  const outputIndex = args.indexOf("--out");
+  if (outputIndex >= 0) args.splice(outputIndex, 2, "<report-path>");
+  process.env.HKD_BENCHMARK_COMMAND = ["node", "benchmarks/phase9/runner/run_baseline.cjs", ...args].join(" ");
+}
 const CLI_PATH = path.join(ROOT_DIR, "dist", "cli", "main.js");
 const NATIVE_EXE = path.join(
   ROOT_DIR,
@@ -165,7 +171,7 @@ function runBaselineSuite(options = {}) {
     // 1. Warmup (3 iterations, not included in statistics)
     for (let u = 0; u < 3; u++) {
       const warmRes = executeIteration(w);
-      if (warmRes.exitCode !== 0) {
+      if (warmRes.exitCode !== 0 || !verifyOutput(w, warmRes.stdout)) {
         console.error(`\nFAILED in warmup ${u + 1}: ${warmRes.stderr || warmRes.stdout}`);
         allWorkloadsPassed = false;
         break;
@@ -190,7 +196,7 @@ function runBaselineSuite(options = {}) {
       if (m === 4) finalRss = res.endRss;
       if (res.peakRss > maxRss) maxRss = res.peakRss;
 
-      if (res.exitCode !== 0) {
+      if (res.exitCode !== 0 || !verifyOutput(w, res.stdout)) {
         console.error(`\nFAILED in measured iteration ${m + 1}: ${res.stderr || res.stdout}`);
         allWorkloadsPassed = false;
         break;
@@ -223,13 +229,14 @@ function runBaselineSuite(options = {}) {
       description: w.description,
       iterations: {
         warmup: 3,
-        measured: 5,
+      measured: 5,
       },
       samples_ms: measuredSamples,
       statistics_ms: {
         min: stats.min,
         max: stats.max,
         mean: stats.mean,
+        standard_deviation: stats.standardDeviation,
         median: stats.median,
         p95: stats.p95,
         p99: stats.p99,
@@ -269,6 +276,12 @@ function runBaselineSuite(options = {}) {
       cpu_logical_cores: env.cpuLogicalCores,
       total_memory_bytes: env.totalMemoryBytes,
       node_version: env.nodeVersion,
+      zig_version: env.zigVersion,
+      benchmark_command: env.benchmarkCommand,
+      cpu_load_average_1m: env.cpuLoadAverage1m,
+      cpu_frequency_mhz: env.cpuFrequencyMhz,
+      power_mode: env.powerMode,
+      thermal_information: env.thermalInformation,
       typescript_version: env.typescriptVersion,
       hkd_version: env.hkdVersion,
       build_mode: env.buildMode,
@@ -293,6 +306,7 @@ function runBaselineSuite(options = {}) {
     const targetOut = path.resolve(customOut);
     fs.mkdirSync(path.dirname(targetOut), { recursive: true });
     fs.writeFileSync(targetOut, JSON.stringify(baselineReport, null, 2), "utf-8");
+    generateMarkdownReport(baselineReport, targetOut.replace(/\.json$/i, ".md"));
     console.log(`\n================================================================================`);
     console.log(`Candidate JSON generated: ${customOut}`);
     console.log(`================================================================================`);
@@ -310,7 +324,7 @@ function runBaselineSuite(options = {}) {
   return baselineReport;
 }
 
-function generateMarkdownReport(report) {
+function generateMarkdownReport(report, outputPath = path.join(ROOT_DIR, "benchmarks", "baseline_v1.md")) {
   const mdLines = [
     "# HKD Phase 9A — Authoritative Performance Baseline v1",
     "",
@@ -339,6 +353,12 @@ function generateMarkdownReport(report) {
     `| **Logical Cores** | ${report.environment.cpu_logical_cores} |`,
     `| **Total RAM** | ${(report.environment.total_memory_bytes / (1024 * 1024 * 1024)).toFixed(2)} GB |`,
     `| **Node.js Runtime** | \`${report.environment.node_version}\` |`,
+    `| **Zig Toolchain** | \`${report.environment.zig_version}\` |`,
+    `| **Benchmark Command** | \`${report.environment.benchmark_command}\` |`,
+    `| **CPU Load (1m)** | \`${report.environment.cpu_load_average_1m}\` |`,
+    `| **CPU Frequency** | \`${report.environment.cpu_frequency_mhz}\` |`,
+    `| **Power Mode** | \`${report.environment.power_mode}\` |`,
+    `| **Thermal Data** | \`${report.environment.thermal_information}\` |`,
     `| **TypeScript Toolchain** | \`${report.environment.typescript_version}\` |`,
     `| **Build Mode** | \`${report.environment.build_mode}\` |`,
     `| **Runner Version** | \`${report.environment.runner_version}\` |`,
@@ -351,7 +371,7 @@ function generateMarkdownReport(report) {
     "- **Warmup**: 3 unrecorded warmup passes precede measurement to eliminate JIT compilation or cache misses.",
     "- **Sample Size**: 5 recorded iterations per workload.",
     "- **Primary Metric**: **Median** (robust against environmental outliers and thread scheduling interruptions).",
-    "- **Secondary Metrics**: Mean, Min, Max, p95, p99.",
+    "- **Secondary Metrics**: Mean, Sample Standard Deviation, Min, Max, p95, p99.",
     "- **Timing Engine**: Monotonic high-resolution clock (`performance.now()`).",
     "- **Memory**: Real-time RSS tracking (`process.memoryUsage().rss`).",
     "- **Allocations**: Node/V8 heap instrumentation limitation noted; native allocation counters documented as unavailable.",
@@ -395,7 +415,7 @@ function generateMarkdownReport(report) {
     mdLines.push(`- **Description:** ${w.description}`);
     mdLines.push(`- **Execution Type:** \`${w.execution_type}\``);
     mdLines.push(`- **Samples (ms):** \`[${w.samples_ms.join(", ")}]\``);
-    mdLines.push(`- **Statistical Summary:** Min: \`${s.min}\` ms | Median: \`${s.median}\` ms | Mean: \`${s.mean}\` ms | Max: \`${s.max}\` ms | p95: \`${s.p95}\` ms | p99: \`${s.p99}\` ms`);
+    mdLines.push(`- **Statistical Summary:** Min: \`${s.min}\` ms | Median: \`${s.median}\` ms | Mean: \`${s.mean}\` ms | Sample SD: \`${s.standard_deviation}\` ms | Max: \`${s.max}\` ms | p95: \`${s.p95}\` ms | p99: \`${s.p99}\` ms`);
     mdLines.push(`- **Peak RSS:** \`${(w.memory.peak_rss_bytes / (1024 * 1024)).toFixed(2)} MB\``);
     mdLines.push(`- **Verified Output:** \`${w.correctness.actual_output.trim()}\``);
     mdLines.push("");
@@ -423,8 +443,7 @@ function generateMarkdownReport(report) {
   mdLines.push("```");
   mdLines.push("");
 
-  const mdPath = path.join(ROOT_DIR, "benchmarks", "baseline_v1.md");
-  fs.writeFileSync(mdPath, mdLines.join("\n"), "utf-8");
+  fs.writeFileSync(outputPath, mdLines.join("\n"), "utf-8");
 }
 
 if (require.main === module) {

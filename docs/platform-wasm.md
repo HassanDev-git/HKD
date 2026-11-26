@@ -1,5 +1,7 @@
 # HKD WebAssembly (WASM) Architecture & Feasibility Study
 
+> Historical phase document: statements below reflect the design or audit claims made when this document was written. They are not current validation evidence and do not establish present release readiness, implemented JIT/AOT, or platform support. For the current Windows x64 audit scope and evidence, see `artifacts/phase10.3-final-release-verification.json` and `docs/known-limitations.md`.
+
 - **Target Platforms**: `wasm32-unknown-unknown` (Browser/Edge Sandbox), `wasm32-wasi` (Wasmtime/Wasmer Serverless)
 - **Status**: Research & Feasibility Specification (Phase 18 Milestone)
 - **Target Release**: HKD 1.2 / 1.3

@@ -1,5 +1,7 @@
 # HKD 1.1.0 — High-Performance Toolchain & Developer Platform
 
+Repository copy updated with the locally rebuilt Windows x64 recovery artifacts on 2026-10-24. No GitHub release or tag was changed.
+
 We are proud to release **HKD 1.1.0** — featuring a dual-engine execution architecture (Reference Stack VM + High-Performance Register VM), optimizing compiler pipeline, Native Zig runtime parity, first-class structured concurrency, and a unified developer platform.
 
 ---
@@ -16,9 +18,10 @@ We are proud to release **HKD 1.1.0** — featuring a dual-engine execution arch
 - **Call Frame Pooling**: Aggressively lowers recursion overhead by recycling execution frames.
 - **Deterministic String Hashing**: FNV-1a fast-path hashing with interned string table reuse.
 
-### 3. Windows Executable Experience (Phase 10 Hardened)
-- **Zero-Flash Double Click**: Resolved the Windows Explorer console flash issue. Double-clicking `hkd.exe` now displays an informative welcome banner with guidance on opening PowerShell/Terminal and holds the window open until Enter is pressed.
-- **Terminal Transparency**: Running `hkd` from any terminal continues to execute with zero delay.
+### 3. Windows Command-Line Executable
+- The Windows x64 executable embeds the Node runtime and CLI bundle.
+- It is a command-line tool: run it from PowerShell or Windows Terminal to keep output visible. With no arguments it prints help and exits.
+- Regular `hkd run` commands use the included TypeScript VM when the companion native runtime is absent. `--jit` is explicitly unavailable in this release; other native VM flags need `hkd-runtime`.
 
 ### 4. Developer Experience & CLI Tooling
 - **Granular Subcommand Help**: `hkd help <command>`, `hkd <command> --help`, and `hkd <command> -h` are fully supported for all 35+ commands with usage syntax, option flags, and real-world examples.
@@ -35,12 +38,9 @@ We are proud to release **HKD 1.1.0** — featuring a dual-engine execution arch
 
 ## Verification & Quality Gates
 
-- **Test Suites**: **120 / 120 PASS**
-- **Unit & Conformance Tests**: **1,043 / 1,043 PASS**
-- **TypeScript Typecheck**: **0 Errors** (`tsc --noEmit` clean)
-- **Differential Parity**: **100%** (Stack VM ↔ Register VM ↔ Native Zig VM)
-- **Release Verification**: **18 / 18 Quality Gates PASS** (`hkd verify-release`)
-- **Reproducibility**: **100% Bit-for-Bit Deterministic**
+The 2026-11-20 local Windows x64 audit passed 120 Jest suites and 1,048 tests; TypeScript typechecking and 9 Zig runtime unit tests also passed. The rebuilt standalone executable passed version, help, valid/invalid program, clean-directory, and JIT-rejection checks. Its extracted ZIP passed version, help, valid/invalid program, different-directory, and missing-companion-runtime checks. These are host-local checks; no GitHub release was published.
+
+The release verifier reports **HOST TARGET READY** for Windows x64 only. JIT execution and native machine-code AOT are explicitly not implemented and are outside the declared 1.1.0 release contract. Linux, macOS, ARM64, and a built/running container remain unverified. See the dated [Phase 10.3 verification report](../artifacts/phase10.3-final-release-verification.json), [benchmark report](../artifacts/phase10.3-benchmark-final.json), and [known limitations](known-limitations.md).
 
 ---
 
@@ -70,6 +70,6 @@ hkd test
 ## SHA256 Checksums
 
 ```text
-97bf28d810e91818243d8e2304a58188f339ab7615d78ca5eb4ccf6bb1cff142  windows-x64/hkd.exe
-e948ff9818757dc8a9b0f3d99b90d418f88c854aeb1bfe2dd2e36a66545acb8f  hkd-v1.1.0-windows-x64.zip
+bd529a9f746283b5f85dc69e6782e35a7201f3c4b805112864be9aff71144b61  windows-x64/hkd.exe
+f0eacf112b3993e6180dd63fc3cb669f455db0c65c4594bff1ca6134e30d39de  hkd-v1.1.0-windows-x64.zip
 ```

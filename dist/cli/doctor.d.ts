@@ -1,7 +1,7 @@
 /**
  * HKD Tooling Doctor 2.0 (hkd doctor)
  *
- * Comprehensive diagnostics: compiler, native runtime, JIT/AOT readiness,
+ * Diagnostics: compiler, optional native bytecode runtime, JIT/AOT status,
  * target architectures, LSP/DAP servers, package cache, containerization, and environment.
  */
 export interface DoctorCheck {

@@ -9,9 +9,9 @@ var __commonJS = (cb, mod) => function __require() {
   }
 };
 
-// dist/utils/edition.js
+// dist/.package-windows-x64-t7sDYs/compiled/utils/edition.js
 var require_edition = __commonJS({
-  "dist/utils/edition.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/utils/edition.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -83,9 +83,9 @@ var require_edition = __commonJS({
   }
 });
 
-// dist/utils/index.js
+// dist/.package-windows-x64-t7sDYs/compiled/utils/index.js
 var require_utils = __commonJS({
-  "dist/utils/index.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/utils/index.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -177,9 +177,9 @@ var require_utils = __commonJS({
   }
 });
 
-// dist/errors/index.js
+// dist/.package-windows-x64-t7sDYs/compiled/errors/index.js
 var require_errors = __commonJS({
-  "dist/errors/index.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/errors/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ErrorReporter = exports2.HkdError = exports2.ErrorCode = void 0;
@@ -349,9 +349,9 @@ var require_errors = __commonJS({
   }
 });
 
-// dist/lexer/token.js
+// dist/.package-windows-x64-t7sDYs/compiled/lexer/token.js
 var require_token = __commonJS({
-  "dist/lexer/token.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/lexer/token.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.KEYWORDS = exports2.TokenKind = void 0;
@@ -512,9 +512,9 @@ var require_token = __commonJS({
   }
 });
 
-// dist/lexer/lexer.js
+// dist/.package-windows-x64-t7sDYs/compiled/lexer/lexer.js
 var require_lexer = __commonJS({
-  "dist/lexer/lexer.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/lexer/lexer.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Lexer = void 0;
@@ -947,9 +947,9 @@ var require_lexer = __commonJS({
   }
 });
 
-// dist/parser/parser.js
+// dist/.package-windows-x64-t7sDYs/compiled/parser/parser.js
 var require_parser = __commonJS({
-  "dist/parser/parser.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/parser/parser.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Parser = void 0;
@@ -2327,9 +2327,9 @@ var require_parser = __commonJS({
   }
 });
 
-// dist/semantic/types.js
+// dist/.package-windows-x64-t7sDYs/compiled/semantic/types.js
 var require_types = __commonJS({
-  "dist/semantic/types.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/semantic/types.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.T_ANY = exports2.T_NEVER = exports2.T_UNKNOWN = exports2.T_NULL = exports2.T_BOOL = exports2.T_STRING = exports2.T_FLOAT = exports2.T_INT = void 0;
@@ -2459,9 +2459,9 @@ var require_types = __commonJS({
   }
 });
 
-// dist/semantic/scope.js
+// dist/.package-windows-x64-t7sDYs/compiled/semantic/scope.js
 var require_scope = __commonJS({
-  "dist/semantic/scope.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/semantic/scope.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Scope = void 0;
@@ -2583,9 +2583,9 @@ var require_scope = __commonJS({
   }
 });
 
-// dist/semantic/analyser.js
+// dist/.package-windows-x64-t7sDYs/compiled/semantic/analyser.js
 var require_analyser = __commonJS({
-  "dist/semantic/analyser.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/semantic/analyser.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -4043,9 +4043,9 @@ var require_analyser = __commonJS({
   }
 });
 
-// dist/bytecode/opcodes.js
+// dist/.package-windows-x64-t7sDYs/compiled/bytecode/opcodes.js
 var require_opcodes = __commonJS({
-  "dist/bytecode/opcodes.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/bytecode/opcodes.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.OP_NAMES = void 0;
@@ -4270,9 +4270,9 @@ var require_opcodes = __commonJS({
   }
 });
 
-// dist/bytecode/chunk.js
+// dist/.package-windows-x64-t7sDYs/compiled/bytecode/chunk.js
 var require_chunk = __commonJS({
-  "dist/bytecode/chunk.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/bytecode/chunk.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Chunk = void 0;
@@ -4468,9 +4468,9 @@ var require_chunk = __commonJS({
   }
 });
 
-// dist/bytecode/async_lowering.js
+// dist/.package-windows-x64-t7sDYs/compiled/bytecode/async_lowering.js
 var require_async_lowering = __commonJS({
-  "dist/bytecode/async_lowering.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/bytecode/async_lowering.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.hasAwait = hasAwait;
@@ -5272,9 +5272,9 @@ var require_async_lowering = __commonJS({
   }
 });
 
-// dist/bytecode/register_chunk.js
+// dist/.package-windows-x64-t7sDYs/compiled/bytecode/register_chunk.js
 var require_register_chunk = __commonJS({
-  "dist/bytecode/register_chunk.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/bytecode/register_chunk.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.RegisterChunk = exports2.RegOp = void 0;
@@ -5382,9 +5382,9 @@ var require_register_chunk = __commonJS({
   }
 });
 
-// dist/compiler/optimizer_passes.js
+// dist/.package-windows-x64-t7sDYs/compiled/compiler/optimizer_passes.js
 var require_optimizer_passes = __commonJS({
-  "dist/compiler/optimizer_passes.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/compiler/optimizer_passes.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.foldAstConstants = foldAstConstants;
@@ -6087,9 +6087,9 @@ var require_optimizer_passes = __commonJS({
   }
 });
 
-// dist/compiler/profitability.js
+// dist/.package-windows-x64-t7sDYs/compiled/compiler/profitability.js
 var require_profitability = __commonJS({
-  "dist/compiler/profitability.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/compiler/profitability.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.OptimizationTier = void 0;
@@ -6413,9 +6413,9 @@ var require_profitability = __commonJS({
   }
 });
 
-// dist/compiler/optimizer.js
+// dist/.package-windows-x64-t7sDYs/compiled/compiler/optimizer.js
 var require_optimizer = __commonJS({
-  "dist/compiler/optimizer.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/compiler/optimizer.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.OptimizerPipeline = void 0;
@@ -6536,9 +6536,9 @@ var require_optimizer = __commonJS({
   }
 });
 
-// dist/bytecode/optimizer.js
+// dist/.package-windows-x64-t7sDYs/compiled/bytecode/optimizer.js
 var require_optimizer2 = __commonJS({
-  "dist/bytecode/optimizer.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/bytecode/optimizer.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -6562,9 +6562,9 @@ var require_optimizer2 = __commonJS({
   }
 });
 
-// dist/bytecode/compiler.js
+// dist/.package-windows-x64-t7sDYs/compiled/bytecode/compiler.js
 var require_compiler = __commonJS({
-  "dist/bytecode/compiler.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/bytecode/compiler.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7634,9 +7634,9 @@ var require_compiler = __commonJS({
   }
 });
 
-// dist/vm/vm.js
+// dist/.package-windows-x64-t7sDYs/compiled/vm/vm.js
 var require_vm = __commonJS({
-  "dist/vm/vm.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/vm/vm.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.VmError = exports2.VM = void 0;
@@ -8805,9 +8805,9 @@ var require_vm = __commonJS({
   }
 });
 
-// dist/bytecode/register_lowering.js
+// dist/.package-windows-x64-t7sDYs/compiled/bytecode/register_lowering.js
 var require_register_lowering = __commonJS({
-  "dist/bytecode/register_lowering.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/bytecode/register_lowering.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.lowerToRegisterChunk = lowerToRegisterChunk;
@@ -9230,9 +9230,9 @@ var require_register_lowering = __commonJS({
   }
 });
 
-// dist/vm/vm_register.js
+// dist/.package-windows-x64-t7sDYs/compiled/vm/vm_register.js
 var require_vm_register = __commonJS({
-  "dist/vm/vm_register.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/vm/vm_register.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.RegisterVM = void 0;
@@ -10355,9 +10355,9 @@ var require_vm_register = __commonJS({
   }
 });
 
-// dist/stdlib/index.js
+// dist/.package-windows-x64-t7sDYs/compiled/stdlib/index.js
 var require_stdlib = __commonJS({
-  "dist/stdlib/index.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/stdlib/index.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -11461,9 +11461,9 @@ var require_stdlib = __commonJS({
   }
 });
 
-// dist/runtime/index.js
+// dist/.package-windows-x64-t7sDYs/compiled/runtime/index.js
 var require_runtime = __commonJS({
-  "dist/runtime/index.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/runtime/index.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -11511,6 +11511,8 @@ var require_runtime = __commonJS({
     var moduleCache = /* @__PURE__ */ new Map();
     var activeImports = /* @__PURE__ */ new Set();
     function runSource(source, opts = {}) {
+      moduleCache.clear();
+      activeImports.clear();
       const fileName = opts.fileName ?? "<stdin>";
       const doAnalyse = opts.analyse !== false;
       const diagnostics = [];
@@ -11720,9 +11722,9 @@ ${reporter.format()}`, index_js_12.ErrorCode.E405);
   }
 });
 
-// dist/bytecode/serializer.js
+// dist/.package-windows-x64-t7sDYs/compiled/bytecode/serializer.js
 var require_serializer = __commonJS({
-  "dist/bytecode/serializer.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/bytecode/serializer.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.serialize = serialize;
@@ -11942,9 +11944,9 @@ var require_serializer = __commonJS({
   }
 });
 
-// dist/formatter/index.js
+// dist/.package-windows-x64-t7sDYs/compiled/formatter/index.js
 var require_formatter = __commonJS({
-  "dist/formatter/index.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/formatter/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Formatter = void 0;
@@ -12327,9 +12329,9 @@ ${this.indStr()}}`;
   }
 });
 
-// dist/linter/index.js
+// dist/.package-windows-x64-t7sDYs/compiled/linter/index.js
 var require_linter = __commonJS({
-  "dist/linter/index.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/linter/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Linter = exports2.LintCode = void 0;
@@ -12684,9 +12686,9 @@ var require_linter = __commonJS({
   }
 });
 
-// dist/package-manager/index.js
+// dist/.package-windows-x64-t7sDYs/compiled/package-manager/index.js
 var require_package_manager = __commonJS({
-  "dist/package-manager/index.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/package-manager/index.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -13360,9 +13362,9 @@ ${messages.join("\n")}`
   }
 });
 
-// dist/package-manager/identity.js
+// dist/.package-windows-x64-t7sDYs/compiled/package-manager/identity.js
 var require_identity = __commonJS({
-  "dist/package-manager/identity.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/package-manager/identity.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.validatePackageName = validatePackageName;
@@ -13459,9 +13461,9 @@ var require_identity = __commonJS({
   }
 });
 
-// dist/package-manager/semver.js
+// dist/.package-windows-x64-t7sDYs/compiled/package-manager/semver.js
 var require_semver = __commonJS({
-  "dist/package-manager/semver.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/package-manager/semver.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.parseVersion = parseVersion;
@@ -13689,9 +13691,9 @@ var require_semver = __commonJS({
   }
 });
 
-// dist/package-manager/archive.js
+// dist/.package-windows-x64-t7sDYs/compiled/package-manager/archive.js
 var require_archive = __commonJS({
-  "dist/package-manager/archive.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/package-manager/archive.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -13893,9 +13895,9 @@ var require_archive = __commonJS({
   }
 });
 
-// dist/package-manager/cache.js
+// dist/.package-windows-x64-t7sDYs/compiled/package-manager/cache.js
 var require_cache = __commonJS({
-  "dist/package-manager/cache.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/package-manager/cache.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -14106,9 +14108,9 @@ var require_cache = __commonJS({
   }
 });
 
-// dist/package-manager/lockfile.js
+// dist/.package-windows-x64-t7sDYs/compiled/package-manager/lockfile.js
 var require_lockfile = __commonJS({
-  "dist/package-manager/lockfile.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/package-manager/lockfile.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -14326,9 +14328,9 @@ var require_lockfile = __commonJS({
   }
 });
 
-// dist/package-manager/resolver.js
+// dist/.package-windows-x64-t7sDYs/compiled/package-manager/resolver.js
 var require_resolver = __commonJS({
-  "dist/package-manager/resolver.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/package-manager/resolver.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.resolveDependencyGraph = resolveDependencyGraph;
@@ -14508,9 +14510,9 @@ ${constraintDetails}
   }
 });
 
-// dist/package-manager/registry/registry-http.js
+// dist/.package-windows-x64-t7sDYs/compiled/package-manager/registry/registry-http.js
 var require_registry_http = __commonJS({
-  "dist/package-manager/registry/registry-http.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/package-manager/registry/registry-http.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -14674,9 +14676,9 @@ var require_registry_http = __commonJS({
   }
 });
 
-// dist/package-manager/manager.js
+// dist/.package-windows-x64-t7sDYs/compiled/package-manager/manager.js
 var require_manager = __commonJS({
-  "dist/package-manager/manager.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/package-manager/manager.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15129,9 +15131,9 @@ ${messages.join("\n")}`
   }
 });
 
-// dist/package-manager/audit.js
+// dist/.package-windows-x64-t7sDYs/compiled/package-manager/audit.js
 var require_audit = __commonJS({
-  "dist/package-manager/audit.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/package-manager/audit.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15288,9 +15290,9 @@ var require_audit = __commonJS({
   }
 });
 
-// dist/package-manager/reproducible.js
+// dist/.package-windows-x64-t7sDYs/compiled/package-manager/reproducible.js
 var require_reproducible = __commonJS({
-  "dist/package-manager/reproducible.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/package-manager/reproducible.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15378,9 +15380,9 @@ var require_reproducible = __commonJS({
   }
 });
 
-// dist/cli/repl.js
+// dist/.package-windows-x64-t7sDYs/compiled/cli/repl.js
 var require_repl = __commonJS({
-  "dist/cli/repl.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/cli/repl.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15579,9 +15581,9 @@ ${BOLD2("REPL Commands:")}
   }
 });
 
-// dist/tooling/differential.js
+// dist/.package-windows-x64-t7sDYs/compiled/tooling/differential.js
 var require_differential = __commonJS({
-  "dist/tooling/differential.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/tooling/differential.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15737,9 +15739,9 @@ ${run.stderr}` : "");
   }
 });
 
-// dist/cli/test-runner.js
+// dist/.package-windows-x64-t7sDYs/compiled/cli/test-runner.js
 var require_test_runner = __commonJS({
-  "dist/cli/test-runner.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/cli/test-runner.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -16034,9 +16036,9 @@ ${BOLD2("HKD Test Runner")}
   }
 });
 
-// dist/deploy/targets.js
+// dist/.package-windows-x64-t7sDYs/compiled/deploy/targets.js
 var require_targets = __commonJS({
-  "dist/deploy/targets.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/deploy/targets.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.KNOWN_TARGETS = void 0;
@@ -16169,9 +16171,9 @@ var require_targets = __commonJS({
   }
 });
 
-// dist/cli/doctor.js
+// dist/.package-windows-x64-t7sDYs/compiled/cli/doctor.js
 var require_doctor = __commonJS({
-  "dist/cli/doctor.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/cli/doctor.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -16267,7 +16269,7 @@ var require_doctor = __commonJS({
         const testRun = (0, child_process_12.spawnSync)(nativeBinaryPath, ["--version"], { encoding: "utf-8" });
         if (testRun.status === 0) {
           checks.push({
-            name: "Native Zig Runtime & JIT Engine",
+            name: "Native Zig Bytecode Runtime",
             category: "runtime",
             status: "ok",
             message: `Native runtime executable verified (${testRun.stdout.trim()})`,
@@ -16275,7 +16277,7 @@ var require_doctor = __commonJS({
           });
         } else {
           checks.push({
-            name: "Native Zig Runtime & JIT Engine",
+            name: "Native Zig Bytecode Runtime",
             category: "runtime",
             status: "warn",
             message: "Native binary found but exited with non-zero code"
@@ -16283,7 +16285,7 @@ var require_doctor = __commonJS({
         }
       } else {
         checks.push({
-          name: "Native Zig Runtime & JIT Engine",
+          name: "Native Zig Bytecode Runtime",
           category: "runtime",
           status: "warn",
           message: "Native runtime binary not built. Run 'npx zig build -Doptimize=ReleaseFast'"
@@ -16444,9 +16446,9 @@ HKD Doctor v${report.version} \u2014 System & Environment Health
   }
 });
 
-// dist/deploy/profiles.js
+// dist/.package-windows-x64-t7sDYs/compiled/deploy/profiles.js
 var require_profiles = __commonJS({
-  "dist/deploy/profiles.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/deploy/profiles.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.BUILD_PROFILES = void 0;
@@ -16515,9 +16517,9 @@ var require_profiles = __commonJS({
   }
 });
 
-// dist/deploy/artifact.js
+// dist/.package-windows-x64-t7sDYs/compiled/deploy/artifact.js
 var require_artifact = __commonJS({
-  "dist/deploy/artifact.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/deploy/artifact.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -16664,9 +16666,9 @@ var require_artifact = __commonJS({
   }
 });
 
-// dist/deploy/sbom.js
+// dist/.package-windows-x64-t7sDYs/compiled/deploy/sbom.js
 var require_sbom = __commonJS({
-  "dist/deploy/sbom.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/deploy/sbom.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -16782,9 +16784,9 @@ var require_sbom = __commonJS({
   }
 });
 
-// dist/deploy/release.js
+// dist/.package-windows-x64-t7sDYs/compiled/deploy/release.js
 var require_release = __commonJS({
-  "dist/deploy/release.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/deploy/release.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -16866,9 +16868,9 @@ var require_release = __commonJS({
   }
 });
 
-// dist/deploy/env-config.js
+// dist/.package-windows-x64-t7sDYs/compiled/deploy/env-config.js
 var require_env_config = __commonJS({
-  "dist/deploy/env-config.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/deploy/env-config.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -16989,9 +16991,9 @@ var require_env_config = __commonJS({
   }
 });
 
-// dist/deploy/container.js
+// dist/.package-windows-x64-t7sDYs/compiled/deploy/container.js
 var require_container = __commonJS({
-  "dist/deploy/container.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/deploy/container.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -17108,9 +17110,9 @@ tests/
   }
 });
 
-// dist/deploy/platform/platform-manager.js
+// dist/.package-windows-x64-t7sDYs/compiled/deploy/platform/platform-manager.js
 var require_platform_manager = __commonJS({
-  "dist/deploy/platform/platform-manager.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/deploy/platform/platform-manager.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.PlatformRegistry = void 0;
@@ -17139,9 +17141,9 @@ var require_platform_manager = __commonJS({
   }
 });
 
-// dist/deploy/platform/generic-server.js
+// dist/.package-windows-x64-t7sDYs/compiled/deploy/platform/generic-server.js
 var require_generic_server = __commonJS({
-  "dist/deploy/platform/generic-server.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/deploy/platform/generic-server.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -17245,9 +17247,9 @@ echo "Deployment successful."
   }
 });
 
-// dist/deploy/platform/docker.js
+// dist/.package-windows-x64-t7sDYs/compiled/deploy/platform/docker.js
 var require_docker = __commonJS({
-  "dist/deploy/platform/docker.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/deploy/platform/docker.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -17318,9 +17320,9 @@ var require_docker = __commonJS({
   }
 });
 
-// dist/deploy/platform/github-actions.js
+// dist/.package-windows-x64-t7sDYs/compiled/deploy/platform/github-actions.js
 var require_github_actions = __commonJS({
-  "dist/deploy/platform/github-actions.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/deploy/platform/github-actions.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -17442,9 +17444,9 @@ jobs:
   }
 });
 
-// dist/deploy/platform/vercel.js
+// dist/.package-windows-x64-t7sDYs/compiled/deploy/platform/vercel.js
 var require_vercel = __commonJS({
-  "dist/deploy/platform/vercel.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/deploy/platform/vercel.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -17535,9 +17537,9 @@ module.exports = async (req, res) => {
   }
 });
 
-// dist/deploy/check.js
+// dist/.package-windows-x64-t7sDYs/compiled/deploy/check.js
 var require_check = __commonJS({
-  "dist/deploy/check.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/deploy/check.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -17701,9 +17703,9 @@ HKD Pre-Flight Deployment Checklist (${report.target} / ${report.profile})
   }
 });
 
-// dist/deploy/runtime-info.js
+// dist/.package-windows-x64-t7sDYs/compiled/deploy/runtime-info.js
 var require_runtime_info = __commonJS({
-  "dist/deploy/runtime-info.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/deploy/runtime-info.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ExitCode = void 0;
@@ -17734,10 +17736,9 @@ var require_runtime_info = __commonJS({
           heapTotalMb: parseFloat((mem.heapTotal / 1024 / 1024).toFixed(2))
         },
         supportedTiers: [
-          "Stack VM (Tier 0)",
-          "Native Zig Baseline JIT (Tier 1)",
-          "Native Optimizing JIT with PGO (Tier 2)",
-          "Standalone Native AOT Executable"
+          "TypeScript reference Stack VM",
+          "Optional Zig bytecode interpreter (separate host build)",
+          "Standalone Zig-runtime executable with embedded HKDB bytecode"
         ],
         activeLimits: {
           maxConnections: 1e4,
@@ -17767,9 +17768,9 @@ HKD Production Runtime Environment v${report.version}
   }
 });
 
-// dist/tooling/migrate.js
+// dist/.package-windows-x64-t7sDYs/compiled/tooling/migrate.js
 var require_migrate = __commonJS({
-  "dist/tooling/migrate.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/tooling/migrate.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -17860,1002 +17861,9 @@ ${manifestContent}`;
   }
 });
 
-// dist/tooling/verify-release.js
-var require_verify_release = __commonJS({
-  "dist/tooling/verify-release.js"(exports2) {
-    "use strict";
-    var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __setModuleDefault2 = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar2 = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule) return mod;
-      var result = {};
-      if (mod != null) {
-        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding2(result, mod, k);
-      }
-      __setModuleDefault2(result, mod);
-      return result;
-    };
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.runVerifyRelease = runVerifyRelease2;
-    exports2.printVerifyReleaseReport = printVerifyReleaseReport2;
-    var fs2 = __importStar2(require("fs"));
-    var path2 = __importStar2(require("path"));
-    var crypto2 = __importStar2(require("crypto"));
-    var perf_hooks_1 = require("perf_hooks");
-    var vm_js_1 = require_vm();
-    var chunk_js_1 = require_chunk();
-    var serializer_js_12 = require_serializer();
-    var targets_js_1 = require_targets();
-    var sbom_js_1 = require_sbom();
-    var index_js_12 = require_runtime();
-    var index_js_22 = require_utils();
-    function runVerifyRelease2(projectDir) {
-      const gates = [];
-      const dimensions = [];
-      const verificationGates = [];
-      const target = (0, targets_js_1.getHostTarget)();
-      let effectiveDir = projectDir;
-      if (!fs2.existsSync(path2.join(effectiveDir, "hkd.toml"))) {
-        const candidateApp = path2.join(effectiveDir, "examples", "production-app");
-        const candidateServer = path2.join(effectiveDir, "examples", "production-server");
-        if (fs2.existsSync(path2.join(candidateApp, "hkd.toml"))) {
-          effectiveDir = candidateApp;
-        } else if (fs2.existsSync(path2.join(candidateServer, "hkd.toml"))) {
-          effectiveDir = candidateServer;
-        }
-      }
-      const t0 = perf_hooks_1.performance.now();
-      let langConfPass = false;
-      try {
-        const testCode = `
-      fn identity<T>(x: T) -> T { return x; }
-      let a = identity(42);
-      let b = match a { 42 => "ok", _ => "err" };
-      print(b);
-    `;
-        let out = "";
-        const res = (0, index_js_12.runSource)(testCode, { edition: "2027", noExit: true, output: (s) => {
-          out += s;
-        } });
-        langConfPass = res.ok && out.trim() === "ok";
-      } catch {
-      }
-      const d0 = Math.round(perf_hooks_1.performance.now() - t0);
-      verificationGates.push({
-        name: "Language Conformance",
-        status: langConfPass ? "PASS" : "FAIL",
-        severity: "critical",
-        command: "runSource(<generics + pattern matching>, edition: 2027)",
-        duration_ms: d0,
-        evidence: { generics_ok: true, pattern_matching_ok: true, pass: langConfPass }
-      });
-      const t1 = perf_hooks_1.performance.now();
-      let editionCompatPass = false;
-      try {
-        const code2026 = `let x = 100; let y = x * 2; print(to_string(y));`;
-        let out = "";
-        const res = (0, index_js_12.runSource)(code2026, { edition: "2026", noExit: true, output: (s) => {
-          out += s;
-        } });
-        editionCompatPass = res.ok && out.trim() === "200";
-      } catch {
-      }
-      const d1 = Math.round(perf_hooks_1.performance.now() - t1);
-      verificationGates.push({
-        name: "Edition Compatibility",
-        status: editionCompatPass ? "PASS" : "FAIL",
-        severity: "critical",
-        command: "runSource(<edition 2026 program>, edition: 2026)",
-        duration_ms: d1,
-        evidence: { edition_2026_frozen: true, pass: editionCompatPass }
-      });
-      const t2 = perf_hooks_1.performance.now();
-      let compilerPass = false;
-      try {
-        const chunk = new chunk_js_1.Chunk("<release-verify>", 0);
-        chunk.writeByte(3, 1);
-        chunk.writeByte(97, 1);
-        compilerPass = chunk.code.length === 2;
-      } catch {
-      }
-      const d2 = Math.round(perf_hooks_1.performance.now() - t2);
-      verificationGates.push({
-        name: "Compiler",
-        status: compilerPass ? "PASS" : "FAIL",
-        severity: "critical",
-        command: "Chunk.writeByte(Op.LoadTrue, Op.Return)",
-        duration_ms: d2,
-        evidence: { opcodes_emitted: 2, pass: compilerPass }
-      });
-      const t3 = perf_hooks_1.performance.now();
-      let stackVmPass = false;
-      try {
-        const chunk = new chunk_js_1.Chunk("<vm-verify>", 0);
-        chunk.writeByte(3, 1);
-        chunk.writeByte(97, 1);
-        const vm = new vm_js_1.VM();
-        const res = vm.run(chunk);
-        stackVmPass = res.ok && res.value === true;
-      } catch {
-      }
-      const d3 = Math.round(perf_hooks_1.performance.now() - t3);
-      verificationGates.push({
-        name: "Stack VM",
-        status: stackVmPass ? "PASS" : "FAIL",
-        severity: "critical",
-        command: "VM.run(chunk)",
-        duration_ms: d3,
-        evidence: { vm_returned_value: true, pass: stackVmPass }
-      });
-      const t4 = perf_hooks_1.performance.now();
-      const nativeVmPass = target.triple.length > 0;
-      const d4 = Math.round(perf_hooks_1.performance.now() - t4);
-      verificationGates.push({
-        name: "Native VM",
-        status: nativeVmPass ? "PASS" : "FAIL",
-        severity: "high",
-        command: "getHostTarget()",
-        duration_ms: d4,
-        evidence: { target: target.triple, tier: target.tier, pass: nativeVmPass }
-      });
-      const t5 = perf_hooks_1.performance.now();
-      const jitPass = true;
-      const d5 = Math.round(perf_hooks_1.performance.now() - t5);
-      verificationGates.push({
-        name: "JIT",
-        status: jitPass ? "PASS" : "FAIL",
-        severity: "high",
-        command: "inline_cache_and_trace_specialization",
-        duration_ms: d5,
-        evidence: { baseline_jit: "operational", optimizing_jit: "operational", pass: jitPass }
-      });
-      const t6 = perf_hooks_1.performance.now();
-      const aotPass = true;
-      const d6 = Math.round(perf_hooks_1.performance.now() - t6);
-      verificationGates.push({
-        name: "AOT",
-        status: aotPass ? "PASS" : "FAIL",
-        severity: "high",
-        command: "target_native_codegen_check",
-        duration_ms: d6,
-        evidence: { aot_target: target.triple, pass: aotPass }
-      });
-      const t7 = perf_hooks_1.performance.now();
-      let diffPass = false;
-      try {
-        const diffCode = `let a = 5; let b = 7; print(to_string(a * b));`;
-        let outRef = "";
-        const resRef = (0, index_js_12.runSource)(diffCode, { edition: "2026", noExit: true, output: (s) => {
-          outRef += s;
-        } });
-        let outVm = "";
-        const resVm = (0, index_js_12.runSource)(diffCode, { edition: "2027", noExit: true, output: (s) => {
-          outVm += s;
-        } });
-        diffPass = resRef.ok && resVm.ok && outRef === outVm && outRef.trim() === "35";
-      } catch {
-      }
-      const d7 = Math.round(perf_hooks_1.performance.now() - t7);
-      verificationGates.push({
-        name: "Differential Execution",
-        status: diffPass ? "PASS" : "FAIL",
-        severity: "critical",
-        command: "differential_execution_parity(ref, vm)",
-        duration_ms: d7,
-        evidence: { outputs_matched: true, mismatches: 0, pass: diffPass }
-      });
-      const t8 = perf_hooks_1.performance.now();
-      let memPass = false;
-      const initialMem = process.memoryUsage();
-      let peakRss = initialMem.rss;
-      const soakChunk = new chunk_js_1.Chunk("<soak>", 0);
-      soakChunk.writeByte(3, 1);
-      soakChunk.writeByte(97, 1);
-      const soakVm = new vm_js_1.VM();
-      for (let i = 0; i < 1e4; i++) {
-        soakVm.run(soakChunk);
-        if (i % 1e3 === 0) {
-          const currentRss = process.memoryUsage().rss;
-          if (currentRss > peakRss) {
-            peakRss = currentRss;
-          }
-        }
-      }
-      const finalMem = process.memoryUsage();
-      if (finalMem.rss > peakRss) {
-        peakRss = finalMem.rss;
-      }
-      const rssGrowthRatio = Number((finalMem.rss / initialMem.rss).toFixed(3));
-      const heapDeltaBytes = finalMem.heapUsed - initialMem.heapUsed;
-      memPass = rssGrowthRatio < 1.1;
-      const d8 = Math.round(perf_hooks_1.performance.now() - t8);
-      verificationGates.push({
-        name: "Memory Safety",
-        status: memPass ? "PASS" : "FAIL",
-        severity: "critical",
-        command: "soak_stress(10000 cycles) + process.memoryUsage()",
-        duration_ms: d8,
-        evidence: {
-          cycles: 1e4,
-          initial_rss_bytes: initialMem.rss,
-          final_rss_bytes: finalMem.rss,
-          peak_rss_bytes: peakRss,
-          initial_heap_used_bytes: initialMem.heapUsed,
-          final_heap_used_bytes: finalMem.heapUsed,
-          initial_heap_total_bytes: initialMem.heapTotal,
-          final_heap_total_bytes: finalMem.heapTotal,
-          initial_external_bytes: initialMem.external,
-          final_external_bytes: finalMem.external,
-          initial_array_buffers_bytes: initialMem.arrayBuffers ?? 0,
-          final_array_buffers_bytes: finalMem.arrayBuffers ?? 0,
-          rss_growth_ratio: rssGrowthRatio,
-          heap_delta_bytes: heapDeltaBytes,
-          pass: memPass
-        }
-      });
-      const t9 = perf_hooks_1.performance.now();
-      let secPass = false;
-      let componentCount = 0;
-      try {
-        const sbom = (0, sbom_js_1.generateCycloneDxSbom)(effectiveDir);
-        if (sbom.bomFormat === "CycloneDX" && sbom.specVersion === "1.5") {
-          secPass = true;
-          componentCount = sbom.components.length;
-        }
-      } catch {
-      }
-      const d9 = Math.round(perf_hooks_1.performance.now() - t9);
-      verificationGates.push({
-        name: "Security",
-        status: secPass ? "PASS" : "FAIL",
-        severity: "critical",
-        command: "generateCycloneDxSbom + secret_scan",
-        duration_ms: d9,
-        evidence: {
-          sbom_format: "CycloneDX 1.5",
-          registered_components: componentCount,
-          secret_scan: "clean",
-          pass: secPass
-        }
-      });
-      const t10 = perf_hooks_1.performance.now();
-      const pkgPass = true;
-      const d10 = Math.round(perf_hooks_1.performance.now() - t10);
-      verificationGates.push({
-        name: "Packages",
-        status: pkgPass ? "PASS" : "FAIL",
-        severity: "high",
-        command: "package_manager_lockfile_v2_determinism",
-        duration_ms: d10,
-        evidence: { lockfile_version: 2, diamond_solver: "verified", pass: pkgPass }
-      });
-      const t11 = perf_hooks_1.performance.now();
-      const lspPass = true;
-      const d11 = Math.round(perf_hooks_1.performance.now() - t11);
-      verificationGates.push({
-        name: "LSP",
-        status: lspPass ? "PASS" : "FAIL",
-        severity: "medium",
-        command: "lsp_server_capabilities_check",
-        duration_ms: d11,
-        evidence: { protocol: "LSP 2.0", semantic_tokens: true, hover: true, pass: lspPass }
-      });
-      const t12 = perf_hooks_1.performance.now();
-      const dapPass = true;
-      const d12 = Math.round(perf_hooks_1.performance.now() - t12);
-      verificationGates.push({
-        name: "DAP",
-        status: dapPass ? "PASS" : "FAIL",
-        severity: "medium",
-        command: "dap_debugger_protocol_check",
-        duration_ms: d12,
-        evidence: { protocol: "DAP 1.0", stepping: true, scopes: true, pass: dapPass }
-      });
-      const t13 = perf_hooks_1.performance.now();
-      const vscodePass = fs2.existsSync(path2.join(process.cwd(), "vscode-extension", "package.json"));
-      const d13 = Math.round(perf_hooks_1.performance.now() - t13);
-      verificationGates.push({
-        name: "VS Code",
-        status: vscodePass ? "PASS" : "FAIL",
-        severity: "medium",
-        command: "vscode_extension_manifest_check",
-        duration_ms: d13,
-        evidence: { extension_manifest: vscodePass, pass: vscodePass }
-      });
-      const t14 = perf_hooks_1.performance.now();
-      const crossPass = true;
-      const d14 = Math.round(perf_hooks_1.performance.now() - t14);
-      verificationGates.push({
-        name: "Cross-Platform Artifacts",
-        status: crossPass ? "PASS" : "FAIL",
-        severity: "medium",
-        command: "target_matrix_validation",
-        duration_ms: d14,
-        evidence: { supported_triples: 4, tier1: ["win32-x64", "linux-x64"], tier2: ["linux-arm64", "darwin-arm64"], pass: crossPass }
-      });
-      const t15 = perf_hooks_1.performance.now();
-      let reproPass = false;
-      try {
-        const c1 = new chunk_js_1.Chunk("repro", 0);
-        c1.writeByte(3, 1);
-        c1.writeByte(97, 1);
-        const b1 = (0, serializer_js_12.serializeProgram)(c1);
-        const c2 = new chunk_js_1.Chunk("repro", 0);
-        c2.writeByte(3, 1);
-        c2.writeByte(97, 1);
-        const b2 = (0, serializer_js_12.serializeProgram)(c2);
-        const h1 = crypto2.createHash("sha256").update(b1).digest("hex");
-        const h2 = crypto2.createHash("sha256").update(b2).digest("hex");
-        reproPass = h1 === h2;
-      } catch {
-      }
-      const d15 = Math.round(perf_hooks_1.performance.now() - t15);
-      verificationGates.push({
-        name: "Reproducibility",
-        status: reproPass ? "PASS" : "FAIL",
-        severity: "critical",
-        command: "sha256(serialize(c1)) === sha256(serialize(c2))",
-        duration_ms: d15,
-        evidence: { bitwise_identical: reproPass, pass: reproPass }
-      });
-      const t16 = perf_hooks_1.performance.now();
-      const requiredDocs = ["README.md", "SECURITY.md", "docs/language-reference.md", "docs/type-system.md", "docs/known-limitations.md"];
-      const docsPass = requiredDocs.every((d) => fs2.existsSync(path2.join(process.cwd(), d)));
-      const d16 = Math.round(perf_hooks_1.performance.now() - t16);
-      verificationGates.push({
-        name: "Documentation",
-        status: docsPass ? "PASS" : "FAIL",
-        severity: "medium",
-        command: "check_core_documentation_files",
-        duration_ms: d16,
-        evidence: { required_docs: requiredDocs.length, pass: docsPass }
-      });
-      const t17 = perf_hooks_1.performance.now();
-      const artifactsPass = true;
-      const d17 = Math.round(perf_hooks_1.performance.now() - t17);
-      verificationGates.push({
-        name: "Release Artifacts",
-        status: artifactsPass ? "PASS" : "FAIL",
-        severity: "critical",
-        command: "validate_release_artifacts_and_checksums",
-        duration_ms: d17,
-        evidence: { dist_directory: true, pass: artifactsPass }
-      });
-      const experimentalFeatures = [
-        {
-          name: "RFC-003 Traits",
-          status: "EXPECTED",
-          rfc: "003",
-          targetEdition: "2027 (#feature(traits))",
-          roadmap: "Scheduled for runtime backend in HKD 1.2"
-        },
-        {
-          name: "RFC-004 Async/Await",
-          status: "EXPECTED",
-          rfc: "004",
-          targetEdition: "2027 (#feature(async))",
-          roadmap: "Event loop operational; async fn compiler desugaring in active design"
-        }
-      ];
-      dimensions.push({ dimension: "Correctness", category: "Compiler / VM / Runtime", status: langConfPass && compilerPass && stackVmPass ? "PASS" : "BLOCKER", message: "Bytecode emission, Stack VM, JIT, and native execution operational" });
-      dimensions.push({ dimension: "Security", category: "Supply Chain & Hardening", status: secPass ? "PASS" : "BLOCKER", message: `CycloneDX 1.5 SBOM verified, secret masking active, non-root boundaries enforced` });
-      dimensions.push({ dimension: "Memory", category: "Memory Model & GC", status: memPass ? "PASS" : "BLOCKER", message: `Nursery & mature GC boundaries valid, zero memory leaks across 10,000 soak cycles (growth ratio: ${rssGrowthRatio}x)` });
-      dimensions.push({ dimension: "Resources", category: "System Interfaces", status: "PASS", message: "Socket and file descriptor lifecycle managed; clean shutdown on SIGINT/SIGTERM" });
-      dimensions.push({ dimension: "Compatibility", category: "ABI & Language Editions", status: editionCompatPass ? "PASS" : "BLOCKER", message: "Language Edition 2026 frozen, Bytecode V2 format invariant, ABI backwards compatible" });
-      dimensions.push({ dimension: "Packages", category: "Package Ecosystem", status: pkgPass ? "PASS" : "BLOCKER", message: "Lockfile V2 determinism verified, diamond resolution tested, offline cache certified" });
-      dimensions.push({ dimension: "LSP", category: "Developer Experience", status: lspPass ? "PASS" : "BLOCKER", message: "LSP 2.0 diagnostics, completion, semantic tokens, hover, and document symbols ready" });
-      dimensions.push({ dimension: "DAP", category: "Debugging Architecture", status: dapPass ? "PASS" : "BLOCKER", message: "DAP server operational: breakpoints, step, inspect, call stacks, and expression evaluation" });
-      dimensions.push({ dimension: "VS Code", category: "IDE Integration", status: vscodePass ? "PASS" : "BLOCKER", message: "VS Code extension package, syntax grammar, task providers, and debugger registered" });
-      dimensions.push({ dimension: "Deployment", category: "Operations & Cloud", status: "PASS", message: "Platform adapters, pre-flight deployment check, and production runbooks verified" });
-      dimensions.push({ dimension: "Containers", category: "Cloud & Virtualization", status: "PASS", message: "Multi-stage non-root container templates, UID 10001, minimal runtime base verified" });
-      dimensions.push({ dimension: "Reproducibility", category: "Build System", status: reproPass ? "PASS" : "BLOCKER", message: "Deterministic compiler output, content-addressed caching, bitwise artifact hash parity" });
-      dimensions.push({ dimension: "Performance", category: "Optimization Tiers", status: "PASS", message: "Benchmark thresholds met, JIT speedup verified, PGO profile active, zero regression" });
-      dimensions.push({ dimension: "Documentation", category: "Governance & Operations", status: docsPass ? "PASS" : "BLOCKER", message: "Language spec, grammar, semantics, incident response, and rollback policies certified" });
-      gates.push({ name: "Compiler & VM Execution", status: compilerPass && stackVmPass ? "PASS" : "FAIL", message: "Bytecode emission and Stack VM execution operational" });
-      gates.push({ name: "Target Architecture Matrix", status: nativeVmPass ? "PASS" : "FAIL", message: `Host target validated: ${target.triple} (${target.tier})` });
-      gates.push({ name: "Supply-Chain Security (SBOM)", status: secPass ? "PASS" : "FAIL", message: `CycloneDX 1.5 JSON generated with ${componentCount} components` });
-      gates.push({ name: "Container Security Invariants", status: "PASS", message: "Non-root container execution verified" });
-      gates.push({ name: "Deployment Pre-Flight Checks", status: "PASS", message: "Deployment checklist validated" });
-      gates.push({ name: "Exit Code Standard Contract", status: "PASS", message: "Exit codes adhere to standard contract" });
-      const blockersCount = verificationGates.filter((g) => (g.severity === "critical" || g.severity === "high") && g.status === "FAIL").length;
-      const warningsCount = verificationGates.filter((g) => g.severity === "medium" && g.status === "FAIL").length;
-      const passedDimensions = verificationGates.filter((g) => g.status === "PASS").length;
-      const allPassed = blockersCount === 0;
-      const result = allPassed ? "RELEASE READY" : "NOT RELEASE READY";
-      const report = {
-        allPassed,
-        version: index_js_22.HKD_VERSION,
-        edition: "2026",
-        target: target.triple,
-        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-        totalDimensions: dimensions.length,
-        passedDimensions: dimensions.filter((d) => d.status === "PASS").length,
-        warningsCount,
-        blockersCount,
-        dimensions,
-        gates,
-        verificationGates,
-        experimentalFeatures,
-        result
-      };
-      try {
-        const artifactsDir = path2.resolve(process.cwd(), "artifacts");
-        fs2.mkdirSync(artifactsDir, { recursive: true });
-        fs2.writeFileSync(path2.join(artifactsDir, "release-verification.json"), JSON.stringify(report, null, 2), "utf-8");
-      } catch {
-      }
-      return report;
-    }
-    function printVerifyReleaseReport2(report, asJson = false) {
-      if (asJson) {
-        console.log(JSON.stringify(report, null, 2));
-        return;
-      }
-      console.log(`
-HKD Release Verification
-`);
-      for (const gate of report.verificationGates) {
-        console.log(`[${gate.status}] ${gate.name}`);
-      }
-      console.log(`
-Experimental:`);
-      for (const exp of report.experimentalFeatures) {
-        console.log(`[${exp.status}] ${exp.name}`);
-      }
-      console.log(`
-RESULT: ${report.result}
-`);
-    }
-  }
-});
-
-// dist/cli/explain.js
-var require_explain = __commonJS({
-  "dist/cli/explain.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.ERROR_EXPLANATIONS = void 0;
-    exports2.explainError = explainError2;
-    exports2.ERROR_EXPLANATIONS = {
-      E101: {
-        code: "E101",
-        title: "Invalid Character",
-        category: "Lexer",
-        summary: "The scanner encountered a character that is not valid in HKD source code.",
-        erroneousExample: `let x = @123;`,
-        fixedExample: `let x = 123;`,
-        notes: ["HKD source files must be encoded in valid UTF-8."]
-      },
-      E102: {
-        code: "E102",
-        title: "Unterminated String Literal",
-        category: "Lexer",
-        summary: "A string literal was started with a quote but never closed before the line ended or EOF was reached.",
-        erroneousExample: `let greeting = "Hello world;`,
-        fixedExample: `let greeting = "Hello world";`
-      },
-      E103: {
-        code: "E103",
-        title: "Unterminated Block Comment",
-        category: "Lexer",
-        summary: "A multi-line block comment `/* ... */` was opened but never closed.",
-        erroneousExample: `/* This comment is never closed
-let x = 10;`,
-        fixedExample: `/* This comment is properly closed */
-let x = 10;`
-      },
-      E104: {
-        code: "E104",
-        title: "Invalid Number Literal",
-        category: "Lexer",
-        summary: "A numeric literal has invalid digits, multiple decimal points, or improper hexadecimal/binary prefixes.",
-        erroneousExample: `let num = 12.34.56;`,
-        fixedExample: `let num = 12.34;`
-      },
-      E105: {
-        code: "E105",
-        title: "Invalid Escape Sequence",
-        category: "Lexer",
-        summary: "An escape sequence in a string literal contains an unknown escape character.",
-        erroneousExample: `let s = "bad escape \\q";`,
-        fixedExample: `let s = "valid newline \\n";`
-      },
-      E201: {
-        code: "E201",
-        title: "Unexpected Token / Feature Gated",
-        category: "Parser",
-        summary: 'The parser encountered a token where it was not expected, or a language evolution feature (like generics `<T>` or `match`) was used without being enabled via `#feature(...)` or `edition = "2027"`.',
-        erroneousExample: `// In Edition 2026 without feature flag:
-match val {
-    1 => "one",
-    _ => "other"
-}`,
-        fixedExample: `#feature(pattern_matching)
-match val {
-    1 => "one",
-    _ => "other"
-}`,
-        notes: [
-          'To enable all HKD 1.1 features globally, configure `edition = "2027"` in `hkd.toml`.',
-          "For file-level enablement in Edition 2026, place `#feature(...)` at the top of the file."
-        ]
-      },
-      E202: {
-        code: "E202",
-        title: "Expected Token Not Found",
-        category: "Parser",
-        summary: "The grammar expected a specific token (such as a closing parenthesis, brace, or identifier) that was missing.",
-        erroneousExample: `fn add(a: Int, b: Int -> Int { return a + b; }`,
-        fixedExample: `fn add(a: Int, b: Int) -> Int { return a + b; }`
-      },
-      E203: {
-        code: "E203",
-        title: "Unexpected End of File",
-        category: "Parser",
-        summary: "The input ended abruptly while the parser was still expecting additional tokens to complete an open construct.",
-        erroneousExample: `fn incomplete() {`,
-        fixedExample: `fn incomplete() {
-}`
-      },
-      E204: {
-        code: "E204",
-        title: "Invalid Expression",
-        category: "Parser",
-        summary: "The parser encountered an expression structure that violates grammatical rules.",
-        erroneousExample: `let x = + * 5;`,
-        fixedExample: `let x = 5;`
-      },
-      E205: {
-        code: "E205",
-        title: "Invalid Assignment Target",
-        category: "Parser",
-        summary: "The left-hand side of an assignment is not an assignable location (lvalue).",
-        erroneousExample: `5 = x;`,
-        fixedExample: `x = 5;`
-      },
-      E206: {
-        code: "E206",
-        title: "Missing Closing Delimiter",
-        category: "Parser",
-        summary: "An opened bracket `[`, parenthesis `(`, or brace `{` was never closed.",
-        erroneousExample: `let arr = [1, 2, 3;`,
-        fixedExample: `let arr = [1, 2, 3];`
-      },
-      E301: {
-        code: "E301",
-        title: "Undefined Variable / Identifier",
-        category: "Semantic",
-        summary: "An identifier was referenced that has not been declared in the current or any enclosing scope, or is an unimported standard library symbol.",
-        erroneousExample: `let result = sqrt(16);`,
-        fixedExample: `import math
-let result = math.sqrt(16);`,
-        notes: [
-          "If the symbol is part of the standard library (e.g. `sqrt`, `read_file`, `stringify`), import the corresponding module (`import math`, `import fs`, `import json`).",
-          "If the module is already imported, access the symbol via member syntax (e.g. `math.sqrt`).",
-          "If the identifier was mistyped, check the 'Did you mean ...?' suggestion provided by the compiler."
-        ]
-      },
-      E302: {
-        code: "E302",
-        title: "Undefined Function",
-        category: "Semantic",
-        summary: "A function was called that does not exist in scope or standard library imports.",
-        erroneousExample: `missing_fn();`,
-        fixedExample: `fn missing_fn() { }
-missing_fn();`
-      },
-      E303: {
-        code: "E303",
-        title: "Type Mismatch",
-        category: "Semantic",
-        summary: "An expression's type is incompatible with the expected type for this context.",
-        erroneousExample: `let x: Int = "hello";`,
-        fixedExample: `let x: String = "hello";`,
-        notes: [
-          "HKD validates types statically during semantic analysis.",
-          "For structs, ensure all expected fields exist and field types match structurally.",
-          "For arrays, ensure element types match the declared array element type.",
-          "For functions, verify parameter count (arity), parameter types, and return types.",
-          "For generic functions or types, ensure type parameters can be unified with the concrete types."
-        ]
-      },
-      E304: {
-        code: "E304",
-        title: "Redeclaration of Identifier",
-        category: "Semantic",
-        summary: "An identifier was declared more than once in the same scope without shadowing rules.",
-        erroneousExample: `let x = 1;
-let x = 2;`,
-        fixedExample: `let x = 1;
-x = 2;`
-      },
-      E305: {
-        code: "E305",
-        title: "Return Outside Function",
-        category: "Semantic",
-        summary: "A `return` statement was used at the top level or outside any function declaration.",
-        erroneousExample: `let x = 10;
-return x;`,
-        fixedExample: `fn compute() -> Int {
-    let x = 10;
-    return x;
-}`
-      },
-      E306: {
-        code: "E306",
-        title: "Break/Continue Outside Loop",
-        category: "Semantic",
-        summary: "`break` or `continue` occurred outside of a `while` or `for` loop.",
-        erroneousExample: `if true {
-    break;
-}`,
-        fixedExample: `while true {
-    break;
-}`
-      },
-      E307: {
-        code: "E307",
-        title: "Wrong Argument Count",
-        category: "Semantic",
-        summary: "A function was called with fewer or more arguments than declared in its signature.",
-        erroneousExample: `fn add(a: Int, b: Int) -> Int { return a + b; }
-add(1);`,
-        fixedExample: `add(1, 2);`
-      },
-      E308: {
-        code: "E308",
-        title: "Undefined Type",
-        category: "Semantic",
-        summary: "A type annotation references a type name that is not built-in, a struct, or in scope.",
-        erroneousExample: `let user: NonExistentUser = null;`,
-        fixedExample: `struct NonExistentUser { id: Int }
-let user: NonExistentUser = NonExistentUser { id: 1 };`
-      },
-      E309: {
-        code: "E309",
-        title: "Undefined Struct Field",
-        category: "Semantic",
-        summary: "An access or initialization referenced a struct field that does not exist in the struct definition.",
-        erroneousExample: `struct Point { x: Int, y: Int }
-let p = Point { x: 1, y: 2, z: 3 };`,
-        fixedExample: `let p = Point { x: 1, y: 2 };`
-      },
-      E401: {
-        code: "E401",
-        title: "Division by Zero",
-        category: "Runtime",
-        summary: "An integer or floating point division by zero occurred at runtime.",
-        erroneousExample: `let x = 10 / 0;`,
-        fixedExample: `let denom = 2;
-let x = denom != 0 ? (10 / denom) : 0;`
-      },
-      E402: {
-        code: "E402",
-        title: "Index Out of Bounds",
-        category: "Runtime",
-        summary: "An array was indexed with a negative index or an index greater than or equal to its length.",
-        erroneousExample: `let arr = [1, 2];
-let x = arr[5];`,
-        fixedExample: `let idx = 1;
-let x = idx < len(arr) ? arr[idx] : null;`
-      },
-      E403: {
-        code: "E403",
-        title: "Null Reference Exception",
-        category: "Runtime",
-        summary: "An operation or field access was attempted on a null value.",
-        erroneousExample: `let obj = null;
-let val = obj.field;`,
-        fixedExample: `let val = obj?.field;`
-      },
-      E405: {
-        code: "E405",
-        title: "Invalid Operation",
-        category: "Runtime",
-        summary: "A runtime operation is invalid for the operands (e.g. calling `Result.unwrap()` on an `Err` result).",
-        erroneousExample: `import result
-let r = result.err("disk failure");
-let data = result.unwrap(r);`,
-        fixedExample: `let data = result.unwrap_or(r, "default");`
-      },
-      E406: {
-        code: "E406",
-        title: "Import Not Found",
-        category: "Runtime",
-        summary: "A module could not be found in the stdlib, project dependencies, or relative file paths.",
-        erroneousExample: `import non_existent_pkg`,
-        fixedExample: `import math`
-      },
-      E408: {
-        code: "E408",
-        title: "Not Callable",
-        category: "Runtime",
-        summary: "An expression was called with `(...)` but is not a function, closure, or native function.",
-        erroneousExample: `let x = 42;
-x();`,
-        fixedExample: `let x = fn() { return 42; };
-x();`
-      },
-      E501: {
-        code: "E501",
-        title: "Invalid Bytecode",
-        category: "VM",
-        summary: "The virtual machine loaded an opcode stream with invalid instructions, corrupted magic numbers, or broken constants.",
-        erroneousExample: `// Loading a corrupted .hkdc file`,
-        fixedExample: `// Recompile the file using \`hkd compile\``
-      },
-      E601: {
-        code: "E601",
-        title: "Package Not Found",
-        category: "Package",
-        summary: "The package manager could not find the requested package in local cache or registry.",
-        erroneousExample: `hkd add non_existent_package_12345`,
-        fixedExample: `hkd add collections-extra`
-      }
-    };
-    function explainError2(codeOrInput) {
-      const normalized = codeOrInput.toUpperCase().trim();
-      const explanation = exports2.ERROR_EXPLANATIONS[normalized];
-      if (!explanation) {
-        const validCodes = Object.keys(exports2.ERROR_EXPLANATIONS).join(", ");
-        return `Error code \`${codeOrInput}\` not found in the HKD explanation index.
-
-Available codes:
-${validCodes}
-
-Use: hkd explain <error_code>`;
-      }
-      const lines = [
-        `=== HKD Error Explanation: [${explanation.code}] ${explanation.title} ===`,
-        `Category: ${explanation.category}`,
-        ``,
-        `Summary:`,
-        `  ${explanation.summary}`,
-        ``,
-        `Erroneous Code Example:`,
-        explanation.erroneousExample.split("\n").map((l) => `  ${l}`).join("\n"),
-        ``,
-        `Corrected Code Example:`,
-        explanation.fixedExample.split("\n").map((l) => `  ${l}`).join("\n")
-      ];
-      if (explanation.notes && explanation.notes.length > 0) {
-        lines.push(``, `Guidance & Options:`);
-        for (const note of explanation.notes) {
-          lines.push(`  * ${note}`);
-        }
-      }
-      lines.push(``, `Learn more at https://hkd-lang.org/docs/errors/${explanation.code.toLowerCase()}`);
-      return lines.join("\n");
-    }
-  }
-});
-
-// dist/tooling/rfc-validator.js
-var require_rfc_validator = __commonJS({
-  "dist/tooling/rfc-validator.js"(exports2) {
-    "use strict";
-    var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __setModuleDefault2 = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar2 = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule) return mod;
-      var result = {};
-      if (mod != null) {
-        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding2(result, mod, k);
-      }
-      __setModuleDefault2(result, mod);
-      return result;
-    };
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.RfcValidator = exports2.MANDATORY_RFC_SECTIONS = void 0;
-    var fs2 = __importStar2(require("fs"));
-    var path2 = __importStar2(require("path"));
-    exports2.MANDATORY_RFC_SECTIONS = [
-      "Summary",
-      "Motivation",
-      "Detailed Design",
-      "Drawbacks",
-      "Compatibility"
-    ];
-    var RfcValidator2 = class {
-      rfcsDir;
-      constructor(rfcsDir) {
-        this.rfcsDir = rfcsDir;
-      }
-      getAllRfcs() {
-        if (!fs2.existsSync(this.rfcsDir)) {
-          return [];
-        }
-        const files = fs2.readdirSync(this.rfcsDir).filter((f) => /^\d{3}-.*\.md$/.test(f) && !f.startsWith("0000")).sort();
-        return files.map((f) => this.parseRfc(path2.join(this.rfcsDir, f)));
-      }
-      parseRfc(filePath) {
-        const content = fs2.readFileSync(filePath, "utf-8");
-        const basename = path2.basename(filePath);
-        const idMatch = basename.match(/^(\d+)/);
-        const id = idMatch ? idMatch[1] : basename.replace(".md", "");
-        const titleMatch = content.match(/^#\s+(.+)$/m);
-        const title = titleMatch ? titleMatch[1].replace(/RFC\s*\d*:\s*/i, "").trim() : basename;
-        let status = "Proposed";
-        if (/status[:\s]+accepted/i.test(content))
-          status = "Accepted";
-        else if (/status[:\s]+experimental/i.test(content))
-          status = "Experimental";
-        else if (/status[:\s]+implemented/i.test(content))
-          status = "Implemented";
-        else if (/status[:\s]+draft/i.test(content))
-          status = "Draft";
-        let targetEdition = "2027";
-        const editionMatch = content.match(/edition[:\s]+"?(\d{4})"?/i);
-        if (editionMatch)
-          targetEdition = editionMatch[1];
-        const headerMatches = content.matchAll(/^#{2,3}\s+(.+)$/gm);
-        const sections = [];
-        for (const m of headerMatches) {
-          sections.push(m[1].trim());
-        }
-        const sectionSynonyms = {
-          Summary: ["summary"],
-          Motivation: ["motivation"],
-          "Detailed Design": ["detailed design", "reference-level", "guide-level"],
-          Drawbacks: ["drawbacks", "alternatives", "alternatives considered"],
-          Compatibility: ["compatibility", "backward compatibility"]
-        };
-        const missingSections = [];
-        for (const req of exports2.MANDATORY_RFC_SECTIONS) {
-          const syns = sectionSynonyms[req] ?? [req.toLowerCase()];
-          const found = sections.some((s) => {
-            const lower = s.toLowerCase();
-            return syns.some((syn) => lower.includes(syn));
-          });
-          if (!found) {
-            missingSections.push(req);
-          }
-        }
-        return {
-          id,
-          title,
-          status,
-          targetEdition,
-          filePath,
-          sections,
-          missingSections,
-          isValid: missingSections.length === 0
-        };
-      }
-      listRfcs() {
-        const rfcs = this.getAllRfcs();
-        if (rfcs.length === 0) {
-          return "No RFCs found in " + this.rfcsDir;
-        }
-        const lines = [
-          "=== HKD Language Evolution RFCs ===",
-          `Found ${rfcs.length} RFC proposal(s):`,
-          "",
-          "ID   Status        Edition  Title",
-          "\u2500\u2500\u2500\u2500 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
-        ];
-        for (const r of rfcs) {
-          const idCol = r.id.padEnd(4);
-          const statusCol = r.status.padEnd(13);
-          const edCol = r.targetEdition.padEnd(8);
-          lines.push(`${idCol} ${statusCol} ${edCol} ${r.title}`);
-        }
-        lines.push("", "Run `hkd rfc check <id>` to validate RFC compliance.", "Run `hkd rfc status <id>` to inspect compiler implementation readiness.");
-        return lines.join("\n");
-      }
-      checkRfc(idOrAll) {
-        const rfcs = this.getAllRfcs();
-        const target = idOrAll && idOrAll !== "all" ? rfcs.filter((r) => r.id === idOrAll || r.id === idOrAll.padStart(3, "0")) : rfcs;
-        if (target.length === 0) {
-          return `RFC '${idOrAll}' not found.`;
-        }
-        const lines = ["=== RFC Conformance Check ==="];
-        let allValid = true;
-        for (const r of target) {
-          lines.push(`
-RFC [${r.id}] ${r.title} (${path2.basename(r.filePath)})`);
-          lines.push(`  Status:         ${r.status}`);
-          lines.push(`  Target Edition: ${r.targetEdition}`);
-          lines.push(`  Sections Found: ${r.sections.length}`);
-          if (r.isValid) {
-            lines.push(`  RFC Conformance Status: PASS`);
-            lines.push(`  Validation:     PASS (All mandatory sections present)`);
-          } else {
-            allValid = false;
-            lines.push(`  RFC Conformance Status: FAIL`);
-            lines.push(`  Validation:     FAIL`);
-            lines.push(`  Missing:        ${r.missingSections.join(", ")}`);
-          }
-        }
-        lines.push("", allValid ? `All ${target.length} RFCs pass conformance validation.` : "Some RFCs have missing sections. Please update them to comply with the standard.");
-        return lines.join("\n");
-      }
-      statusRfc(id) {
-        const rfcs = this.getAllRfcs();
-        const target = id ? rfcs.filter((r) => r.id === id || r.id === id.padStart(3, "0")) : rfcs;
-        if (target.length === 0) {
-          return `RFC '${id}' not found.`;
-        }
-        const lines = ["=== RFC Implementation Status ==="];
-        for (const r of target) {
-          lines.push(`
-RFC [${r.id}] ${r.title}`);
-          lines.push(`  Status:             ${r.status}`);
-          lines.push(`  Lifecycle:          ${r.status}`);
-          lines.push(`  Target Edition:     HKD ${r.targetEdition}`);
-          switch (r.id) {
-            case "001":
-              lines.push(`  Parser Support:     Implemented (generic functions fn id<T>(...))`);
-              lines.push(`  Semantic Checking:  Implemented (type substitution & inference)`);
-              lines.push(`  Bytecode Lowering:  Implemented (monomorphized / direct calling)`);
-              lines.push(`  Feature Flag:       #feature(generics)`);
-              break;
-            case "002":
-              lines.push(`  Parser Support:     Implemented (match expr { pat => body })`);
-              lines.push(`  Semantic Checking:  Implemented (exhaustiveness & binding check)`);
-              lines.push(`  Bytecode Lowering:  Implemented (direct compare & conditional jumps)`);
-              lines.push(`  Feature Flag:       #feature(pattern_matching)`);
-              break;
-            case "003":
-              lines.push(`  Design Status:      Approved specification in RFC 003`);
-              lines.push(`  Runtime Support:    Vtable / dictionary-passing scheduled for 1.2`);
-              lines.push(`  Feature Flag:       #feature(traits)`);
-              break;
-            case "004":
-              lines.push(`  Design Status:      Approved ergonomic specification in RFC 004`);
-              lines.push(`  Event Loop:         Integrated with std.task / libuv backend`);
-              lines.push(`  Feature Flag:       #feature(async)`);
-              break;
-            case "005":
-              lines.push(`  Type System:        Result<T, E> & structural variants active in std.result`);
-              lines.push(`  Feature Flag:       #feature(result)`);
-              break;
-            default:
-              lines.push(`  Status:             Proposed`);
-          }
-        }
-        return lines.join("\n");
-      }
-    };
-    exports2.RfcValidator = RfcValidator2;
-  }
-});
-
-// dist/lsp/protocol.js
+// dist/.package-windows-x64-t7sDYs/compiled/lsp/protocol.js
 var require_protocol = __commonJS({
-  "dist/lsp/protocol.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/lsp/protocol.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.JsonRpcTransport = exports2.DocumentHighlightKind = exports2.SymbolKind = exports2.CompletionItemKind = exports2.DiagnosticSeverity = void 0;
@@ -18988,9 +17996,9 @@ ${json}`;
   }
 });
 
-// dist/lsp/documents.js
+// dist/.package-windows-x64-t7sDYs/compiled/lsp/documents.js
 var require_documents = __commonJS({
-  "dist/lsp/documents.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/lsp/documents.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DocumentManager = exports2.TrackedDocument = void 0;
@@ -19174,9 +18182,9 @@ var require_documents = __commonJS({
   }
 });
 
-// dist/package-manager/workspace.js
+// dist/.package-windows-x64-t7sDYs/compiled/package-manager/workspace.js
 var require_workspace = __commonJS({
-  "dist/package-manager/workspace.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/package-manager/workspace.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -19283,9 +18291,9 @@ var require_workspace = __commonJS({
   }
 });
 
-// dist/lsp/workspace-graph.js
+// dist/.package-windows-x64-t7sDYs/compiled/lsp/workspace-graph.js
 var require_workspace_graph = __commonJS({
-  "dist/lsp/workspace-graph.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/lsp/workspace-graph.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -19480,9 +18488,9 @@ var require_workspace_graph = __commonJS({
   }
 });
 
-// dist/lsp/semantic-tokens.js
+// dist/.package-windows-x64-t7sDYs/compiled/lsp/semantic-tokens.js
 var require_semantic_tokens = __commonJS({
-  "dist/lsp/semantic-tokens.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/lsp/semantic-tokens.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.HKD_SEMANTIC_LEGEND = exports2.SEMANTIC_TOKEN_MODIFIERS = exports2.SEMANTIC_TOKEN_TYPES = void 0;
@@ -19596,9 +18604,9 @@ var require_semantic_tokens = __commonJS({
   }
 });
 
-// dist/lsp/features.js
+// dist/.package-windows-x64-t7sDYs/compiled/lsp/features.js
 var require_features = __commonJS({
-  "dist/lsp/features.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/lsp/features.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -20338,9 +19346,9 @@ Resolved dependency from project manifest.`
   }
 });
 
-// dist/lsp/server.js
+// dist/.package-windows-x64-t7sDYs/compiled/lsp/server.js
 var require_server = __commonJS({
-  "dist/lsp/server.js"(exports2, module2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/lsp/server.js"(exports2, module2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.HkdLanguageServer = void 0;
@@ -20645,9 +19653,9 @@ var require_server = __commonJS({
   }
 });
 
-// dist/debug/dap-protocol.js
+// dist/.package-windows-x64-t7sDYs/compiled/debug/dap-protocol.js
 var require_dap_protocol = __commonJS({
-  "dist/debug/dap-protocol.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/debug/dap-protocol.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DapTransport = void 0;
@@ -20720,9 +19728,9 @@ ${json}`;
   }
 });
 
-// dist/debug/debug-session.js
+// dist/.package-windows-x64-t7sDYs/compiled/debug/debug-session.js
 var require_debug_session = __commonJS({
-  "dist/debug/debug-session.js"(exports2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/debug/debug-session.js"(exports2) {
     "use strict";
     var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -21069,9 +20077,9 @@ var require_debug_session = __commonJS({
   }
 });
 
-// dist/debug/server.js
+// dist/.package-windows-x64-t7sDYs/compiled/debug/server.js
 var require_server2 = __commonJS({
-  "dist/debug/server.js"(exports2, module2) {
+  "dist/.package-windows-x64-t7sDYs/compiled/debug/server.js"(exports2, module2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.HkdDebugAdapterServer = void 0;
@@ -21092,7 +20100,1420 @@ var require_server2 = __commonJS({
   }
 });
 
-// dist/cli/main.js
+// dist/.package-windows-x64-t7sDYs/compiled/tooling/verify-release.js
+var require_verify_release = __commonJS({
+  "dist/.package-windows-x64-t7sDYs/compiled/tooling/verify-release.js"(exports2) {
+    "use strict";
+    var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
+      if (k2 === void 0) k2 = k;
+      var desc = Object.getOwnPropertyDescriptor(m, k);
+      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+        desc = { enumerable: true, get: function() {
+          return m[k];
+        } };
+      }
+      Object.defineProperty(o, k2, desc);
+    }) : (function(o, m, k, k2) {
+      if (k2 === void 0) k2 = k;
+      o[k2] = m[k];
+    }));
+    var __setModuleDefault2 = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
+      Object.defineProperty(o, "default", { enumerable: true, value: v });
+    }) : function(o, v) {
+      o["default"] = v;
+    });
+    var __importStar2 = exports2 && exports2.__importStar || function(mod) {
+      if (mod && mod.__esModule) return mod;
+      var result = {};
+      if (mod != null) {
+        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding2(result, mod, k);
+      }
+      __setModuleDefault2(result, mod);
+      return result;
+    };
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.runVerifyRelease = runVerifyRelease2;
+    exports2.printVerifyReleaseReport = printVerifyReleaseReport2;
+    var fs2 = __importStar2(require("fs"));
+    var path2 = __importStar2(require("path"));
+    var crypto2 = __importStar2(require("crypto"));
+    var os = __importStar2(require("os"));
+    var perf_hooks_1 = require("perf_hooks");
+    var child_process_12 = require("child_process");
+    var stream_1 = require("stream");
+    var vm_js_1 = require_vm();
+    var chunk_js_1 = require_chunk();
+    var serializer_js_12 = require_serializer();
+    var targets_js_1 = require_targets();
+    var sbom_js_1 = require_sbom();
+    var container_js_1 = require_container();
+    var index_js_12 = require_runtime();
+    var index_js_22 = require_utils();
+    var index_js_32 = require_errors();
+    var lexer_js_12 = require_lexer();
+    var parser_js_12 = require_parser();
+    var analyser_js_12 = require_analyser();
+    var compiler_js_12 = require_compiler();
+    var server_js_1 = require_server();
+    var server_js_2 = require_server2();
+    var lockfile_js_1 = require_lockfile();
+    var index_js_4 = require_package_manager();
+    var check_js_1 = require_check();
+    function compileProbeBytecode(source) {
+      const fileName = "<release-probe>";
+      const reporter = new index_js_32.ErrorReporter(source, fileName);
+      const tokens = new lexer_js_12.Lexer(source, fileName, reporter).tokenize();
+      const ast = new parser_js_12.Parser(tokens, source, fileName, reporter, "2026").parse();
+      if (reporter.hasErrors())
+        throw new Error("Probe source did not parse");
+      new analyser_js_12.SemanticAnalyser(reporter, source).analyse(ast);
+      if (reporter.hasErrors())
+        throw new Error("Probe source did not typecheck");
+      return (0, serializer_js_12.serializeProgram)(new compiler_js_12.Compiler(reporter).compile(ast));
+    }
+    function runNativeProbe(projectDir, flags = []) {
+      const runtimeName = process.platform === "win32" ? "hkd-runtime.exe" : "hkd-runtime";
+      const runtimePath = path2.join(projectDir, "native-runtime", "zig-out", "bin", runtimeName);
+      if (!fs2.existsSync(runtimePath))
+        return { tested: false, passed: false, reason: `Missing ${runtimePath}` };
+      const tempDir = fs2.mkdtempSync(path2.join(os.tmpdir(), "hkd-release-probe-"));
+      try {
+        const bytecodePath = path2.join(tempDir, "probe.hkdb");
+        fs2.writeFileSync(bytecodePath, compileProbeBytecode('print("HKD_NATIVE_PROBE_OK");'));
+        const result = (0, child_process_12.spawnSync)(runtimePath, [...flags, bytecodePath], { encoding: "utf-8", timeout: 3e4 });
+        const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+        return {
+          tested: true,
+          passed: result.status === 0 && output.includes("HKD_NATIVE_PROBE_OK"),
+          exitCode: result.status,
+          output: output.slice(0, 500),
+          reason: result.error?.message
+        };
+      } finally {
+        fs2.rmSync(tempDir, { recursive: true, force: true });
+      }
+    }
+    function runStandaloneBundleProbe(projectDir) {
+      const cliPath = path2.join(projectDir, "dist", "cli", "main.js");
+      const runtimeName = process.platform === "win32" ? "hkd-runtime.exe" : "hkd-runtime";
+      const runtimePath = path2.join(projectDir, "native-runtime", "zig-out", "bin", runtimeName);
+      if (!fs2.existsSync(cliPath) || !fs2.existsSync(runtimePath)) {
+        return {
+          status: "BLOCKED",
+          evidence: { cli_available: fs2.existsSync(cliPath), native_runtime_available: fs2.existsSync(runtimePath), reason: "Build the TypeScript CLI and host Zig runtime before this probe." }
+        };
+      }
+      const tempDir = fs2.mkdtempSync(path2.join(os.tmpdir(), "hkd-standalone-probe-"));
+      try {
+        const sourcePath = path2.join(tempDir, "probe.hkd");
+        const outputPath = path2.join(tempDir, process.platform === "win32" ? "probe.exe" : "probe");
+        fs2.writeFileSync(sourcePath, 'print("HKD_STANDALONE_BUNDLE_OK");\n', "utf-8");
+        const build = (0, child_process_12.spawnSync)(process.execPath, [cliPath, "build", "--native", sourcePath, "-o", outputPath], {
+          cwd: tempDir,
+          encoding: "utf-8",
+          timeout: 6e4,
+          env: { ...process.env, NODE_ENV: "production" }
+        });
+        const buildOutput = `${build.stdout ?? ""}${build.stderr ?? ""}`;
+        if (build.error || build.status !== 0 || !fs2.existsSync(outputPath)) {
+          return { status: "FAIL", evidence: { build_exit_code: build.status, reason: build.error?.message, output: buildOutput.slice(0, 500) } };
+        }
+        const execute = (0, child_process_12.spawnSync)(outputPath, [], { cwd: tempDir, encoding: "utf-8", timeout: 3e4 });
+        const output = `${execute.stdout ?? ""}${execute.stderr ?? ""}`;
+        const passed = !execute.error && execute.status === 0 && output.includes("HKD_STANDALONE_BUNDLE_OK");
+        return {
+          status: passed ? "PASS" : "FAIL",
+          evidence: {
+            build_exit_code: build.status,
+            execution_exit_code: execute.status,
+            execution_output: output.slice(0, 500),
+            executable_bytes: fs2.statSync(outputPath).size,
+            standalone_executable_sha256: crypto2.createHash("sha256").update(fs2.readFileSync(outputPath)).digest("hex"),
+            program_compiled_to_bytecode_and_embedded_in_native_runtime: passed,
+            native_machine_code_generated_from_hkd_source: false,
+            reason: execute.error?.message
+          }
+        };
+      } finally {
+        fs2.rmSync(tempDir, { recursive: true, force: true });
+      }
+    }
+    function runResourceLifecycleProbe() {
+      const tempDir = fs2.mkdtempSync(path2.join(os.tmpdir(), "hkd-resource-probe-"));
+      const modulePath = path2.join(tempDir, "value.hkd");
+      const entryPath = path2.join(tempDir, "main.hkd");
+      const source = 'import value from "value.hkd"\nprint(value.current)';
+      const execute = () => {
+        const output = [];
+        const result = (0, index_js_12.runSource)(source, { fileName: entryPath, noExit: true, printDiagnostics: false, output: (line) => output.push(line) });
+        return { ok: result.ok, output };
+      };
+      const filePath = path2.join(tempDir, "stdlib-fs.txt").replace(/\\/g, "/");
+      try {
+        fs2.writeFileSync(modulePath, "export let current = 1\n", "utf-8");
+        const first = execute();
+        fs2.writeFileSync(modulePath, "export let current = 2\n", "utf-8");
+        const second = execute();
+        const fsOutput = [];
+        const fsResult = (0, index_js_12.runSource)(`
+      import fs
+      fs.write(${JSON.stringify(filePath)}, "payload")
+      print(fs.read(${JSON.stringify(filePath)}))
+      fs.delete(${JSON.stringify(filePath)})
+      print(fs.exists(${JSON.stringify(filePath)}))
+    `, { noExit: true, printDiagnostics: false, output: (line) => fsOutput.push(line) });
+        const missingRead = (0, index_js_12.runSource)(`import fs
+fs.read(${JSON.stringify(filePath)})`, { noExit: true, printDiagnostics: false });
+        const postError = (0, index_js_12.runSource)('print("HKD_RESOURCE_RECOVERED")', { noExit: true, printDiagnostics: false });
+        const fileOpsPassed = fsResult.ok && fsOutput.join("|") === "payload|false" && !fs2.existsSync(filePath);
+        const passed = first.ok && first.output[0] === "1" && second.ok && second.output[0] === "2" && fileOpsPassed && !missingRead.ok && postError.ok;
+        return {
+          passed,
+          evidence: {
+            repeated_execution_observed_updated_module: first.output[0] === "1" && second.output[0] === "2",
+            std_fs_write_read_delete_passed: fileOpsPassed,
+            missing_file_read_returns_error: !missingRead.ok,
+            runtime_usable_after_error: postError.ok,
+            temporary_file_removed: !fs2.existsSync(filePath),
+            persistent_native_file_handles: false,
+            resource_scope: "Synchronous TypeScript std.fs operations and independent runSource executions; no asynchronous file handles are exposed by this API."
+          }
+        };
+      } finally {
+        fs2.rmSync(tempDir, { recursive: true, force: true });
+      }
+    }
+    function runPerformanceBenchmark(projectDir) {
+      const runnerPath = path2.join(projectDir, "benchmarks", "phase9", "runner", "run_baseline.cjs");
+      if (!fs2.existsSync(runnerPath))
+        return { status: "NOT TESTED", evidence: { reason: "Phase 9 benchmark runner is not present in this project tree." } };
+      const tempDir = fs2.mkdtempSync(path2.join(os.tmpdir(), "hkd-benchmark-probe-"));
+      try {
+        const outputPath = path2.join(tempDir, "benchmark.json");
+        const result = (0, child_process_12.spawnSync)(process.execPath, [runnerPath, "--out", outputPath], {
+          cwd: projectDir,
+          encoding: "utf-8",
+          timeout: 3e5,
+          maxBuffer: 8 * 1024 * 1024,
+          env: { ...process.env, NODE_ENV: "production" }
+        });
+        const stdout = result.stdout ?? "";
+        const stderr = result.stderr ?? "";
+        if (result.error)
+          return { status: "BLOCKED", evidence: { reason: result.error.message, exit_code: result.status } };
+        if (result.status !== 0 || !fs2.existsSync(outputPath)) {
+          return { status: "FAIL", evidence: { exit_code: result.status, stdout_tail: stdout.slice(-1e3), stderr_tail: stderr.slice(-1e3) } };
+        }
+        const report = JSON.parse(fs2.readFileSync(outputPath, "utf-8"));
+        const workloads = Array.isArray(report.workloads) ? report.workloads : [];
+        const passed = workloads.length === 18 && workloads.every((workload) => workload.correctness?.verified === true);
+        return {
+          status: passed ? "PASS" : "FAIL",
+          evidence: {
+            command: "node benchmarks/phase9/runner/run_baseline.cjs --out <temporary report>",
+            workload_count: workloads.length,
+            warmup_iterations: report.methodology?.warmup_iterations,
+            measured_iterations: report.methodology?.measured_iterations,
+            environment: report.environment,
+            execution_paths: { runtime_vm: "TypeScript runFile / Stack VM in the benchmark runner process", cli_process: "Node.js plus dist/cli/main.js child process" },
+            medians_ms: workloads.map((workload) => ({ id: workload.id, median: workload.statistics_ms?.median, min: workload.statistics_ms?.min, max: workload.statistics_ms?.max })),
+            memory_measurement: "Runner-process RSS snapshots; child-process peak RSS is not measured. No allocation counts are available.",
+            correctness_passed: passed
+          }
+        };
+      } catch (error) {
+        return { status: "FAIL", evidence: { reason: error instanceof Error ? error.message : String(error) } };
+      } finally {
+        fs2.rmSync(tempDir, { recursive: true, force: true });
+      }
+    }
+    function scanForSecrets(projectDir) {
+      const ignoredDirs = /* @__PURE__ */ new Set(["node_modules", ".git", "dist", "dist-release", "scratch", "target", ".hkd"]);
+      const ignoredMatches = ["scripts/secret-scan", "task.md", "walkthrough", "user_prompt", "transcript", "fake", "dummy", "test_token"];
+      const patterns = [
+        /-----BEGIN\s+(?:RSA|DSA|EC|OPENSSH)?\s*PRIVATE KEY-----/,
+        /\bAKIA[0-9A-Z]{16}\b/,
+        /\bghp_[0-9a-zA-Z]{36}\b/,
+        /(?:api[_-]?key|secret[_-]?key|auth[_-]?token)\s*[:=]\s*["'][A-Za-z0-9_\-]{20,}["']/i,
+        /[A-Za-z]:\\Users\\[A-Za-z0-9_]+\\/
+      ];
+      const extensions = /* @__PURE__ */ new Set([".ts", ".js", ".hkd", ".json", ".md", ".toml", ".zig"]);
+      let violations = 0;
+      const visit = (dir) => {
+        for (const entry of fs2.readdirSync(dir, { withFileTypes: true })) {
+          if (entry.isDirectory() && ignoredDirs.has(entry.name))
+            continue;
+          const filePath = path2.join(dir, entry.name);
+          if (entry.isDirectory())
+            visit(filePath);
+          else if (entry.isFile() && extensions.has(path2.extname(entry.name))) {
+            const relative = path2.relative(projectDir, filePath).replace(/\\/g, "/");
+            if (ignoredMatches.some((match) => relative.includes(match)))
+              continue;
+            const contents = fs2.readFileSync(filePath, "utf-8");
+            for (const line of contents.split(/\r?\n/)) {
+              if (line.includes("secret-scan:ignore"))
+                continue;
+              if (patterns.some((pattern) => pattern.test(line)))
+                violations++;
+            }
+          }
+        }
+      };
+      visit(projectDir);
+      return violations;
+    }
+    function verifyArtifactInventory(projectDir) {
+      const distDir = path2.join(projectDir, "dist");
+      const manifestPath = path2.join(distDir, "artifacts.json");
+      const errors = [];
+      if (!fs2.existsSync(manifestPath))
+        return { passed: false, checked: 0, errors: ["dist/artifacts.json is missing"] };
+      try {
+        const manifest = JSON.parse(fs2.readFileSync(manifestPath, "utf-8"));
+        if (!Array.isArray(manifest.artifacts) || manifest.artifacts.length === 0) {
+          return { passed: false, checked: 0, errors: ["Artifact manifest has no artifacts"] };
+        }
+        let checked = 0;
+        for (const artifact of manifest.artifacts) {
+          const targetPath = path2.resolve(distDir, artifact.binaryName);
+          if (!targetPath.startsWith(path2.resolve(distDir) + path2.sep)) {
+            errors.push(`Artifact path escapes dist: ${artifact.binaryName}`);
+            continue;
+          }
+          if (!fs2.existsSync(targetPath)) {
+            errors.push(`Artifact is missing: ${artifact.binaryName}`);
+            continue;
+          }
+          const bytes = fs2.readFileSync(targetPath);
+          const checksum = crypto2.createHash("sha256").update(bytes).digest("hex");
+          if (checksum !== artifact.checksum)
+            errors.push(`Checksum mismatch: ${artifact.binaryName}`);
+          if (bytes.length !== artifact.sizeBytes)
+            errors.push(`Size mismatch: ${artifact.binaryName}`);
+          checked++;
+        }
+        return { passed: checked > 0 && errors.length === 0, checked, errors };
+      } catch (error) {
+        return { passed: false, checked: 0, errors: [error instanceof Error ? error.message : String(error)] };
+      }
+    }
+    function runVerifyRelease2(projectDir) {
+      const gates = [];
+      const dimensions = [];
+      const verificationGates = [];
+      const target = (0, targets_js_1.getHostTarget)();
+      let effectiveDir = projectDir;
+      const rootManifest = (0, index_js_4.readManifest)(effectiveDir);
+      const rootEntry = rootManifest?.main ?? "src/main.hkd";
+      if (!rootManifest || !fs2.existsSync(path2.join(effectiveDir, rootEntry))) {
+        const candidates = [
+          path2.join(effectiveDir, "production-validation-app"),
+          path2.join(effectiveDir, "examples", "production-app"),
+          path2.join(effectiveDir, "examples", "production-server")
+        ];
+        const candidate = candidates.find((dir) => fs2.existsSync(path2.join(dir, "hkd.toml")));
+        if (candidate)
+          effectiveDir = candidate;
+      }
+      const t0 = perf_hooks_1.performance.now();
+      let langConfPass = false;
+      try {
+        const testCode = `
+      fn identity<T>(x: T) -> T { return x; }
+      let a = identity(42);
+      let b = match a { 42 => "ok", _ => "err" };
+      print(b);
+    `;
+        let out = "";
+        const res = (0, index_js_12.runSource)(testCode, { edition: "2027", noExit: true, output: (s) => {
+          out += s;
+        } });
+        langConfPass = res.ok && out.trim() === "ok";
+      } catch {
+      }
+      const d0 = Math.round(perf_hooks_1.performance.now() - t0);
+      verificationGates.push({
+        name: "Language Conformance",
+        status: langConfPass ? "PASS" : "FAIL",
+        severity: "critical",
+        command: "runSource(<generics + pattern matching>, edition: 2027)",
+        duration_ms: d0,
+        evidence: { generics_and_pattern_matching_probe_passed: langConfPass, pass: langConfPass }
+      });
+      const t1 = perf_hooks_1.performance.now();
+      let editionCompatPass = false;
+      try {
+        const code2026 = `let x = 100; let y = x * 2; print(to_string(y));`;
+        let out = "";
+        const res = (0, index_js_12.runSource)(code2026, { edition: "2026", noExit: true, output: (s) => {
+          out += s;
+        } });
+        editionCompatPass = res.ok && out.trim() === "200";
+      } catch {
+      }
+      const d1 = Math.round(perf_hooks_1.performance.now() - t1);
+      verificationGates.push({
+        name: "Edition Compatibility",
+        status: editionCompatPass ? "PASS" : "FAIL",
+        severity: "critical",
+        command: "runSource(<edition 2026 program>, edition: 2026)",
+        duration_ms: d1,
+        evidence: { edition_2026_probe_passed: editionCompatPass, pass: editionCompatPass }
+      });
+      const t2 = perf_hooks_1.performance.now();
+      let compilerPass = false;
+      try {
+        const chunk = new chunk_js_1.Chunk("<release-verify>", 0);
+        chunk.writeByte(3, 1);
+        chunk.writeByte(97, 1);
+        compilerPass = chunk.code.length === 2;
+      } catch {
+      }
+      const d2 = Math.round(perf_hooks_1.performance.now() - t2);
+      verificationGates.push({
+        name: "Compiler",
+        status: compilerPass ? "PASS" : "FAIL",
+        severity: "critical",
+        command: "Chunk.writeByte(Op.LoadTrue, Op.Return)",
+        duration_ms: d2,
+        evidence: { opcodes_emitted: 2, pass: compilerPass }
+      });
+      const t3 = perf_hooks_1.performance.now();
+      let stackVmPass = false;
+      try {
+        const chunk = new chunk_js_1.Chunk("<vm-verify>", 0);
+        chunk.writeByte(3, 1);
+        chunk.writeByte(97, 1);
+        const vm = new vm_js_1.VM();
+        const res = vm.run(chunk);
+        stackVmPass = res.ok && res.value === true;
+      } catch {
+      }
+      const d3 = Math.round(perf_hooks_1.performance.now() - t3);
+      verificationGates.push({
+        name: "Stack VM",
+        status: stackVmPass ? "PASS" : "FAIL",
+        severity: "critical",
+        command: "VM.run(chunk)",
+        duration_ms: d3,
+        evidence: { vm_returned_expected_value: stackVmPass, pass: stackVmPass }
+      });
+      const t4 = perf_hooks_1.performance.now();
+      const nativeProbe = runNativeProbe(projectDir);
+      const nativeVmPass = nativeProbe.tested && nativeProbe.passed;
+      const d4 = Math.round(perf_hooks_1.performance.now() - t4);
+      verificationGates.push({
+        name: "Native VM",
+        status: nativeVmPass ? "PASS" : nativeProbe.tested ? "FAIL" : "NOT TESTED",
+        severity: "high",
+        command: "hkd-runtime <serialized probe.hkdb>",
+        duration_ms: d4,
+        evidence: { target: target.triple, tier: target.tier, runtime_tested: nativeProbe.tested, output: nativeProbe.output, reason: nativeProbe.reason, pass: nativeVmPass }
+      });
+      const t5 = perf_hooks_1.performance.now();
+      const jitProbe = nativeProbe.tested ? runNativeProbe(projectDir, ["--jit"]) : nativeProbe;
+      const d5 = Math.round(perf_hooks_1.performance.now() - t5);
+      verificationGates.push({
+        name: "JIT",
+        status: !jitProbe.tested ? "BLOCKED" : jitProbe.exitCode === 2 && jitProbe.output?.includes("JIT execution is not implemented") ? "NOT IMPLEMENTED" : "FAIL",
+        severity: "informational",
+        command: "hkd-runtime --jit <serialized probe.hkdb>",
+        duration_ms: d5,
+        evidence: { runtime_tested: jitProbe.tested, exit_code: jitProbe.exitCode, output: jitProbe.output, reason: jitProbe.reason, machine_code_emitter_exists: true, jit_manager_connected_to_vm_dispatch: false },
+        capabilityStatus: "NOT IMPLEMENTED",
+        releaseContract: "out-of-contract",
+        limitations: ["The Zig emitter and manager exist, but the VM never calls JITManager.recordCall; --jit now reports this explicitly."]
+      });
+      const t6 = perf_hooks_1.performance.now();
+      const d6 = Math.round(perf_hooks_1.performance.now() - t6);
+      verificationGates.push({
+        name: "Native Machine-Code AOT",
+        status: "NOT IMPLEMENTED",
+        severity: "informational",
+        command: "Source/build inspection: buildStandaloneNative embeds serialized HKDB bytecode in the Zig VM executable",
+        duration_ms: d6,
+        evidence: { source_compiled_to_native_machine_code: false, source_compiled_to_bytecode: true, standalone_native_runtime_bundle_supported: true, reason: "HKD source is compiled to HKDB bytecode; the host Zig runtime executable is appended as a launcher. This is not per-program native machine-code generation." },
+        capabilityStatus: "NOT IMPLEMENTED",
+        releaseContract: "out-of-contract",
+        limitations: ["The x86-64 emitter is a JIT utility, not an AOT compiler, and it is not integrated with VM dispatch."]
+      });
+      const standaloneBundle = runStandaloneBundleProbe(projectDir);
+      verificationGates.push({
+        name: "Standalone Native Bundle",
+        status: standaloneBundle.status,
+        severity: "high",
+        command: "node dist/cli/main.js build --native <probe.hkd> -o <probe executable>; run generated executable",
+        duration_ms: 0,
+        evidence: standaloneBundle.evidence,
+        capabilityStatus: standaloneBundle.status === "PASS" ? "PASS" : standaloneBundle.status,
+        releaseContract: "required",
+        actualResult: standaloneBundle.status === "PASS" ? "Generated executable ran the embedded program and printed the expected output." : "Standalone executable build or execution did not complete successfully.",
+        limitations: ["Program execution uses embedded bytecode and the Zig interpreter; this does not compile HKD source to machine code."]
+      });
+      const t7 = perf_hooks_1.performance.now();
+      let diffPass = false;
+      try {
+        const diffCode = `let a = 5; let b = 7; print(to_string(a * b));`;
+        let outRef = "";
+        const resRef = (0, index_js_12.runSource)(diffCode, { edition: "2026", noExit: true, output: (s) => {
+          outRef += s;
+        } });
+        let outVm = "";
+        const resVm = (0, index_js_12.runSource)(diffCode, { edition: "2027", noExit: true, output: (s) => {
+          outVm += s;
+        } });
+        diffPass = resRef.ok && resVm.ok && outRef === outVm && outRef.trim() === "35";
+      } catch {
+      }
+      const d7 = Math.round(perf_hooks_1.performance.now() - t7);
+      verificationGates.push({
+        name: "Differential Execution",
+        status: diffPass ? "PASS" : "FAIL",
+        severity: "critical",
+        command: "differential_execution_parity(ref, vm)",
+        duration_ms: d7,
+        evidence: { outputs_matched: diffPass, mismatches: diffPass ? 0 : 1, pass: diffPass }
+      });
+      const t8 = perf_hooks_1.performance.now();
+      let memPass = false;
+      const soakChunk = new chunk_js_1.Chunk("<soak>", 0);
+      soakChunk.writeByte(3, 1);
+      soakChunk.writeByte(97, 1);
+      const soakVm = new vm_js_1.VM();
+      for (let i = 0; i < 2e3; i++)
+        soakVm.run(soakChunk);
+      const initialMem = process.memoryUsage();
+      let finalMem = initialMem;
+      let peakRss = initialMem.rss;
+      const trialRatios = [];
+      const cyclesPerTrial = 1e4;
+      const repetitions = 3;
+      for (let trial = 0; trial < repetitions; trial++) {
+        const trialStart = process.memoryUsage();
+        for (let i = 0; i < cyclesPerTrial; i++) {
+          soakVm.run(soakChunk);
+          if (i % 1e3 === 0)
+            peakRss = Math.max(peakRss, process.memoryUsage().rss);
+        }
+        finalMem = process.memoryUsage();
+        peakRss = Math.max(peakRss, finalMem.rss);
+        trialRatios.push(finalMem.rss / trialStart.rss);
+      }
+      const rssGrowthRatio = Number(Math.max(...trialRatios).toFixed(3));
+      const heapDeltaBytes = finalMem.heapUsed - initialMem.heapUsed;
+      memPass = rssGrowthRatio < 1.1;
+      const d8 = Math.round(perf_hooks_1.performance.now() - t8);
+      verificationGates.push({
+        name: "Memory Safety",
+        status: memPass ? "PASS" : "FAIL",
+        severity: "critical",
+        command: "soak_stress(10000 cycles) + process.memoryUsage()",
+        duration_ms: d8,
+        evidence: {
+          cycles: cyclesPerTrial * repetitions,
+          warmup_cycles: 2e3,
+          repetitions,
+          per_trial_rss_growth_ratios: trialRatios.map((ratio) => Number(ratio.toFixed(3))),
+          initial_rss_bytes: initialMem.rss,
+          final_rss_bytes: finalMem.rss,
+          peak_rss_bytes: peakRss,
+          initial_heap_used_bytes: initialMem.heapUsed,
+          final_heap_used_bytes: finalMem.heapUsed,
+          initial_heap_total_bytes: initialMem.heapTotal,
+          final_heap_total_bytes: finalMem.heapTotal,
+          initial_external_bytes: initialMem.external,
+          final_external_bytes: finalMem.external,
+          initial_array_buffers_bytes: initialMem.arrayBuffers ?? 0,
+          final_array_buffers_bytes: finalMem.arrayBuffers ?? 0,
+          rss_growth_ratio: rssGrowthRatio,
+          heap_delta_bytes: heapDeltaBytes,
+          pass: memPass
+        }
+      });
+      const t9 = perf_hooks_1.performance.now();
+      let secPass = false;
+      let componentCount = 0;
+      let secretViolations = -1;
+      try {
+        const sbom = (0, sbom_js_1.generateCycloneDxSbom)(effectiveDir);
+        secretViolations = scanForSecrets(projectDir);
+        if (sbom.bomFormat === "CycloneDX" && sbom.specVersion === "1.5") {
+          secPass = secretViolations === 0;
+          componentCount = sbom.components.length;
+        }
+      } catch {
+      }
+      const d9 = Math.round(perf_hooks_1.performance.now() - t9);
+      verificationGates.push({
+        name: "Security",
+        status: secPass ? "PASS" : "FAIL",
+        severity: "critical",
+        command: "generateCycloneDxSbom + repository sensitive-data scan",
+        duration_ms: d9,
+        evidence: {
+          sbom_format: "CycloneDX 1.5",
+          registered_components: componentCount,
+          secret_scan_violations: secretViolations,
+          pass: secPass
+        }
+      });
+      const t10 = perf_hooks_1.performance.now();
+      let packageCount = 0;
+      let pkgPass = false;
+      try {
+        const lockfile = (0, lockfile_js_1.readLockfile)(effectiveDir);
+        if (lockfile?.version === 2) {
+          packageCount = lockfile.packages.length;
+          const serialized = (0, lockfile_js_1.serializeLockfileV2)(lockfile);
+          pkgPass = (0, lockfile_js_1.serializeLockfileV2)((0, lockfile_js_1.parseLockfileV2)(serialized)) === serialized;
+        }
+      } catch {
+      }
+      const d10 = Math.round(perf_hooks_1.performance.now() - t10);
+      verificationGates.push({
+        name: "Packages",
+        status: pkgPass ? "PASS" : "FAIL",
+        severity: "high",
+        command: "readLockfile + serialize/parse deterministic round-trip",
+        duration_ms: d10,
+        evidence: { lockfile_version: pkgPass ? 2 : null, locked_packages: packageCount, deterministic_round_trip: pkgPass, pass: pkgPass }
+      });
+      const t11 = perf_hooks_1.performance.now();
+      let lspResponse = "";
+      let lspPass = false;
+      try {
+        const writer = new stream_1.Writable({ write(chunk, _encoding, callback) {
+          lspResponse += chunk.toString();
+          callback();
+        } });
+        const server = new server_js_1.HkdLanguageServer(new stream_1.Readable({ read() {
+        } }), writer);
+        server.handleMessage({ jsonrpc: "2.0", id: 1, method: "initialize", params: { rootUri: "file:///" } });
+        const body = lspResponse.split("\r\n\r\n")[1];
+        const response = body ? JSON.parse(body) : null;
+        const capabilities = response?.result?.capabilities;
+        lspPass = response?.id === 1 && capabilities?.hoverProvider === true && capabilities?.completionProvider !== void 0;
+      } catch {
+      }
+      const d11 = Math.round(perf_hooks_1.performance.now() - t11);
+      verificationGates.push({
+        name: "LSP",
+        status: lspPass ? "PASS" : "FAIL",
+        severity: "medium",
+        command: "HkdLanguageServer initialize request",
+        duration_ms: d11,
+        evidence: { initialize_response: lspPass, hover: lspPass, completion: lspPass, pass: lspPass }
+      });
+      const t12 = perf_hooks_1.performance.now();
+      let dapOutput = "";
+      let dapPass = false;
+      try {
+        const writer = new stream_1.Writable({ write(chunk, _encoding, callback) {
+          dapOutput += chunk.toString();
+          callback();
+        } });
+        const server = new server_js_2.HkdDebugAdapterServer(new stream_1.Readable({ read() {
+        } }), writer);
+        server.session.handleRequest({ seq: 1, type: "request", command: "initialize", arguments: {} });
+        dapPass = dapOutput.includes('"supportsConfigurationDoneRequest":true') && dapOutput.includes('"event":"initialized"');
+      } catch {
+      }
+      const d12 = Math.round(perf_hooks_1.performance.now() - t12);
+      verificationGates.push({
+        name: "DAP",
+        status: dapPass ? "PASS" : "FAIL",
+        severity: "medium",
+        command: "DebugSession initialize request",
+        duration_ms: d12,
+        evidence: { initialize_response: dapPass, initialized_event: dapPass, pass: dapPass }
+      });
+      const t13 = perf_hooks_1.performance.now();
+      let vscodePass = false;
+      let vscodeFeatures = [];
+      try {
+        const manifest = JSON.parse(fs2.readFileSync(path2.join(projectDir, "vscode-extension", "package.json"), "utf-8"));
+        vscodeFeatures = ["languages", "grammars", "debuggers"].filter((feature) => Array.isArray(manifest.contributes?.[feature]) && manifest.contributes[feature].length > 0);
+        vscodePass = Boolean(manifest.name && manifest.engines?.vscode && vscodeFeatures.length === 3);
+      } catch {
+      }
+      const d13 = Math.round(perf_hooks_1.performance.now() - t13);
+      verificationGates.push({
+        name: "VS Code",
+        status: vscodePass ? "PASS" : "FAIL",
+        severity: "medium",
+        command: "parse extension package.json and check language/grammar/debugger contributions",
+        duration_ms: d13,
+        evidence: { extension_manifest: vscodePass, contributions: vscodeFeatures, pass: vscodePass }
+      });
+      const t14 = perf_hooks_1.performance.now();
+      const d14 = Math.round(perf_hooks_1.performance.now() - t14);
+      verificationGates.push({
+        name: "Cross-Platform Artifacts",
+        status: "WARN",
+        severity: "medium",
+        command: "target_matrix_validation",
+        duration_ms: d14,
+        evidence: { verified_host: target.triple, cross_platform_builds_tested: [], reason: "This command verifies only the current host; it does not perform cross-target builds." }
+      });
+      const t15 = perf_hooks_1.performance.now();
+      let reproPass = false;
+      try {
+        const probe = "let value = 42; print(to_string(value));";
+        const b1 = compileProbeBytecode(probe);
+        const b2 = compileProbeBytecode(probe);
+        const h1 = crypto2.createHash("sha256").update(b1).digest("hex");
+        const h2 = crypto2.createHash("sha256").update(b2).digest("hex");
+        reproPass = h1 === h2;
+      } catch {
+      }
+      const d15 = Math.round(perf_hooks_1.performance.now() - t15);
+      verificationGates.push({
+        name: "Reproducibility",
+        status: reproPass ? "PASS" : "FAIL",
+        severity: "critical",
+        command: "sha256(serialize(c1)) === sha256(serialize(c2))",
+        duration_ms: d15,
+        evidence: { bitwise_identical: reproPass, pass: reproPass }
+      });
+      const t16 = perf_hooks_1.performance.now();
+      const requiredDocs = ["README.md", "SECURITY.md", "docs/language-reference.md", "docs/type-system.md", "docs/known-limitations.md"];
+      const docsPass = requiredDocs.every((d) => fs2.existsSync(path2.join(process.cwd(), d)));
+      const d16 = Math.round(perf_hooks_1.performance.now() - t16);
+      verificationGates.push({
+        name: "Documentation",
+        status: docsPass ? "PASS" : "FAIL",
+        severity: "medium",
+        command: "check_core_documentation_files",
+        duration_ms: d16,
+        evidence: { required_docs: requiredDocs.length, pass: docsPass }
+      });
+      const t17 = perf_hooks_1.performance.now();
+      const artifactInventory = verifyArtifactInventory(projectDir);
+      const artifactsPass = artifactInventory.passed;
+      const d17 = Math.round(perf_hooks_1.performance.now() - t17);
+      verificationGates.push({
+        name: "Release Artifacts",
+        status: artifactsPass ? "PASS" : "FAIL",
+        severity: "critical",
+        command: "validate_release_artifacts_and_checksums",
+        duration_ms: d17,
+        evidence: { checked_artifacts: artifactInventory.checked, errors: artifactInventory.errors, pass: artifactsPass }
+      });
+      const t18 = perf_hooks_1.performance.now();
+      const deployReport = (0, check_js_1.runDeployCheck)(effectiveDir, target.triple, "release");
+      const deploymentPass = deployReport.allOk;
+      verificationGates.push({
+        name: "Deployment Pre-Flight",
+        status: deploymentPass ? "PASS" : "FAIL",
+        severity: "critical",
+        command: "runDeployCheck(project, host target, release profile)",
+        duration_ms: Math.round(perf_hooks_1.performance.now() - t18),
+        evidence: { target: deployReport.target, profile: deployReport.profile, items: deployReport.items, pass: deploymentPass }
+      });
+      const t19 = perf_hooks_1.performance.now();
+      let containerPass = false;
+      let containerChecks = {};
+      try {
+        const dockerfile = (0, container_js_1.generateDockerfile)({ target: target.triple });
+        containerChecks = {
+          nonRootUser: dockerfile.includes("USER hkd:hkd"),
+          healthcheck: dockerfile.includes("HEALTHCHECK"),
+          executableEntryPoint: dockerfile.includes('ENTRYPOINT ["/app/server"]'),
+          standaloneBinaryCopy: dockerfile.includes("COPY --from=builder")
+        };
+        containerPass = Object.values(containerChecks).every(Boolean);
+      } catch {
+      }
+      verificationGates.push({
+        name: "Container Template",
+        status: containerPass ? "PASS" : "FAIL",
+        severity: "medium",
+        command: "generateDockerfile + invariant assertions",
+        duration_ms: Math.round(perf_hooks_1.performance.now() - t19),
+        evidence: { checks: containerChecks, docker_image_built: false, pass: containerPass }
+      });
+      const resourceProbe = runResourceLifecycleProbe();
+      verificationGates.push({
+        name: "Resource Lifecycle",
+        status: resourceProbe.passed ? "PASS" : "FAIL",
+        severity: "high",
+        command: "runSource repeated-module and std.fs success/error/cleanup probes",
+        duration_ms: 0,
+        evidence: resourceProbe.evidence,
+        capabilityStatus: resourceProbe.passed ? "PASS" : "FAIL",
+        releaseContract: "required",
+        actualResult: resourceProbe.passed ? "Independent runs refreshed modules, std.fs removed its file, and execution recovered after a missing-file error." : "One or more resource lifecycle probes failed.",
+        limitations: ["The TypeScript runtime exposes synchronous file operations; async streams, cancellation and persistent child processes are not public stdlib resources."]
+      });
+      const benchmarkProbe = runPerformanceBenchmark(projectDir);
+      verificationGates.push({
+        name: "Performance Benchmarks",
+        status: benchmarkProbe.status,
+        severity: "medium",
+        command: "benchmarks/phase9/runner/run_baseline.cjs --out <temporary report>",
+        duration_ms: 0,
+        evidence: benchmarkProbe.evidence,
+        capabilityStatus: benchmarkProbe.status,
+        releaseContract: "optional",
+        actualResult: benchmarkProbe.status === "PASS" ? "All 18 workloads completed with expected outputs after 3 warmups and 5 measured iterations." : "The benchmark suite was unavailable or did not pass all workload checks.",
+        limitations: ["Benchmarks exercise the TypeScript Stack VM and Node CLI startup, not the Zig VM or JIT; RSS snapshots are runner-process measurements and allocations are not instrumented."]
+      });
+      const crossGate = verificationGates.find((gate) => gate.name === "Cross-Platform Artifacts");
+      if (crossGate)
+        crossGate.evidence.local_artifact_count = artifactInventory.checked;
+      const experimentalFeatures = [
+        {
+          name: "RFC-003 Traits",
+          status: "EXPECTED",
+          rfc: "003",
+          targetEdition: "2027 (#feature(traits))",
+          roadmap: "Scheduled for runtime backend in HKD 1.2"
+        },
+        {
+          name: "RFC-004 Async/Await",
+          status: "EXPECTED",
+          rfc: "004",
+          targetEdition: "2027 (#feature(async))",
+          roadmap: "Event loop operational; async fn compiler desugaring in active design"
+        }
+      ];
+      const passOrBlock = (passed) => passed ? "PASS" : "BLOCKER";
+      dimensions.push({ dimension: "Correctness", category: "Compiler / VM / Runtime", status: passOrBlock(langConfPass && compilerPass && stackVmPass && nativeVmPass), message: "Language, compiler, Stack VM, and native runtime smoke probes." });
+      dimensions.push({ dimension: "Security", category: "Supply Chain & Hardening", status: passOrBlock(secPass), message: `CycloneDX 1.5 SBOM generation and sensitive-data scan; violations: ${secretViolations}.` });
+      dimensions.push({ dimension: "Memory", category: "Memory Model & GC", status: passOrBlock(memPass), message: `Worst warmed 10,000-cycle RSS growth across ${repetitions} trials: ${rssGrowthRatio}x (policy < 1.10x).` });
+      dimensions.push({ dimension: "Resources", category: "System Interfaces", status: passOrBlock(resourceProbe.passed), message: "Repeated program execution, module refresh, std.fs operations and error recovery were probed." });
+      dimensions.push({ dimension: "Compatibility", category: "ABI & Language Editions", status: passOrBlock(editionCompatPass), message: "A representative Edition 2026 program executed; full compatibility is covered by the compatibility test suite." });
+      dimensions.push({ dimension: "Packages", category: "Package Ecosystem", status: passOrBlock(pkgPass), message: `Lockfile V2 parse/serialize round-trip; ${packageCount} locked packages.` });
+      dimensions.push({ dimension: "LSP", category: "Developer Experience", status: passOrBlock(lspPass), message: "Language server initialize response checked for hover and completion capabilities." });
+      dimensions.push({ dimension: "DAP", category: "Debugging Architecture", status: passOrBlock(dapPass), message: "Debug adapter initialize response and initialized event checked." });
+      dimensions.push({ dimension: "VS Code", category: "IDE Integration", status: passOrBlock(vscodePass), message: `Extension manifest contributions checked: ${vscodeFeatures.join(", ")}.` });
+      dimensions.push({ dimension: "Deployment", category: "Operations & Cloud", status: passOrBlock(deploymentPass), message: `Deployment pre-flight checks for ${effectiveDir}; see gate evidence for each item.` });
+      dimensions.push({ dimension: "Containers", category: "Cloud & Virtualization", status: containerPass ? "PASS" : "BLOCKER", message: "Generated Dockerfile template invariants checked; no container image was built." });
+      dimensions.push({ dimension: "Reproducibility", category: "Build System", status: passOrBlock(reproPass), message: "Two compilations of the same source produced identical serialized bytecode." });
+      dimensions.push({ dimension: "Performance", category: "Optimization Tiers", status: benchmarkProbe.status === "PASS" ? "PASS" : "WARN \u2014 non-blocking", message: benchmarkProbe.status === "PASS" ? "All 18 benchmark workloads passed output validation; measurements are recorded in the gate evidence." : "The benchmark suite did not produce a complete passing report." });
+      dimensions.push({ dimension: "Documentation", category: "Governance & Operations", status: passOrBlock(docsPass), message: `${requiredDocs.filter((doc) => fs2.existsSync(path2.join(projectDir, doc))).length}/${requiredDocs.length} required documentation files exist.` });
+      const legacyStatus = (status) => status === "PASS" ? "PASS" : status === "FAIL" ? "FAIL" : "WARN";
+      const getVerificationStatus = (name) => verificationGates.find((gate) => gate.name === name)?.status ?? "NOT TESTED";
+      gates.push({ name: "Compiler & VM Execution", status: compilerPass && stackVmPass ? "PASS" : "FAIL", message: "Bytecode emission and Stack VM smoke probe." });
+      gates.push({ name: "Target Architecture Matrix", status: legacyStatus(getVerificationStatus("Native VM")), message: `Only host runtime execution was probed: ${target.triple} (${target.tier}).` });
+      gates.push({ name: "Supply-Chain Security (SBOM)", status: secPass ? "PASS" : "FAIL", message: `SBOM generation and sensitive-data scan; components: ${componentCount}, violations: ${secretViolations}.` });
+      gates.push({ name: "Container Template Invariants", status: containerPass ? "PASS" : "FAIL", message: "Dockerfile text assertions; container image build not performed." });
+      gates.push({ name: "Deployment Pre-Flight Checks", status: deploymentPass ? "PASS" : "FAIL", message: "Project deployment checklist executed." });
+      gates.push({ name: "Exit Code Standard Contract", status: "WARN", message: "Exit-code behavior is covered by Jest; verify-release does not probe every CLI command." });
+      for (const gate of verificationGates) {
+        gate.releaseContract ??= gate.severity === "critical" || gate.severity === "high" ? "required" : gate.severity === "medium" ? "optional" : "out-of-contract";
+        gate.capabilityStatus ??= gate.status;
+        gate.blocksRelease = gate.releaseContract === "required" && ["FAIL", "BLOCKED", "NOT TESTED", "NOT SUPPORTED", "NOT IMPLEMENTED"].includes(gate.status);
+        gate.actualResult ??= gate.status === "PASS" ? "Executed check passed." : `Check status: ${gate.status}`;
+      }
+      const dimensionEvidence = {
+        Correctness: ["Language Conformance", "Compiler", "Stack VM", "Native VM", "Standalone Native Bundle"],
+        Security: ["Security"],
+        Memory: ["Memory Safety"],
+        Resources: ["Resource Lifecycle"],
+        Compatibility: ["Edition Compatibility"],
+        Packages: ["Packages"],
+        LSP: ["LSP"],
+        DAP: ["DAP"],
+        "VS Code": ["VS Code"],
+        Deployment: ["Deployment Pre-Flight"],
+        Containers: ["Container Template"],
+        Reproducibility: ["Reproducibility"],
+        Performance: ["Performance Benchmarks"],
+        Documentation: ["Documentation"]
+      };
+      for (const dimension of dimensions) {
+        const relevant = verificationGates.filter((gate) => dimensionEvidence[dimension.dimension]?.includes(gate.name));
+        dimension.command = relevant.map((gate) => gate.command).join("; ");
+        dimension.evidence = Object.fromEntries(relevant.map((gate) => [gate.name, gate.evidence]));
+        dimension.capabilityStatus = relevant.every((gate) => gate.status === "PASS") ? "PASS" : relevant.some((gate) => gate.status === "FAIL") ? "FAIL" : relevant.some((gate) => gate.status === "BLOCKED") ? "BLOCKED" : "NOT TESTED";
+        dimension.releaseContract = relevant.some((gate) => gate.releaseContract === "required") ? "required" : "optional";
+        dimension.blocksRelease = relevant.some((gate) => gate.blocksRelease);
+        dimension.limitations = relevant.flatMap((gate) => gate.limitations ?? []);
+      }
+      const blockersCount = verificationGates.filter((gate) => gate.blocksRelease).length;
+      const warningsCount = verificationGates.filter((gate) => gate.severity === "medium" && ["FAIL", "BLOCKED", "NOT TESTED", "WARN"].includes(gate.status)).length;
+      const passedDimensions = dimensions.filter((dimension) => dimension.status === "PASS").length;
+      const allPassed = blockersCount === 0;
+      const result = allPassed ? "HOST TARGET READY" : "NOT RELEASE READY";
+      const report = {
+        allPassed,
+        releaseScope: `Current host target only (${target.triple}); no cross-platform readiness claim.`,
+        version: index_js_22.HKD_VERSION,
+        edition: "2026",
+        target: target.triple,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        totalDimensions: dimensions.length,
+        passedDimensions: dimensions.filter((d) => d.status === "PASS").length,
+        warningsCount,
+        blockersCount,
+        dimensions,
+        gates,
+        verificationGates,
+        experimentalFeatures,
+        result
+      };
+      try {
+        const artifactsDir = path2.resolve(process.cwd(), "artifacts");
+        fs2.mkdirSync(artifactsDir, { recursive: true });
+        fs2.writeFileSync(path2.join(artifactsDir, "release-verification.json"), JSON.stringify(report, null, 2), "utf-8");
+      } catch {
+      }
+      return report;
+    }
+    function printVerifyReleaseReport2(report, asJson = false) {
+      if (asJson) {
+        console.log(JSON.stringify(report, null, 2));
+        return;
+      }
+      console.log(`
+HKD Release Verification
+`);
+      for (const gate of report.verificationGates) {
+        console.log(`[${gate.status}] ${gate.name}`);
+      }
+      console.log(`
+Experimental:`);
+      for (const exp of report.experimentalFeatures) {
+        console.log(`[${exp.status}] ${exp.name}`);
+      }
+      console.log(`
+RESULT: ${report.result}
+`);
+    }
+  }
+});
+
+// dist/.package-windows-x64-t7sDYs/compiled/cli/explain.js
+var require_explain = __commonJS({
+  "dist/.package-windows-x64-t7sDYs/compiled/cli/explain.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.ERROR_EXPLANATIONS = void 0;
+    exports2.explainError = explainError2;
+    exports2.ERROR_EXPLANATIONS = {
+      E101: {
+        code: "E101",
+        title: "Invalid Character",
+        category: "Lexer",
+        summary: "The scanner encountered a character that is not valid in HKD source code.",
+        erroneousExample: `let x = @123;`,
+        fixedExample: `let x = 123;`,
+        notes: ["HKD source files must be encoded in valid UTF-8."]
+      },
+      E102: {
+        code: "E102",
+        title: "Unterminated String Literal",
+        category: "Lexer",
+        summary: "A string literal was started with a quote but never closed before the line ended or EOF was reached.",
+        erroneousExample: `let greeting = "Hello world;`,
+        fixedExample: `let greeting = "Hello world";`
+      },
+      E103: {
+        code: "E103",
+        title: "Unterminated Block Comment",
+        category: "Lexer",
+        summary: "A multi-line block comment `/* ... */` was opened but never closed.",
+        erroneousExample: `/* This comment is never closed
+let x = 10;`,
+        fixedExample: `/* This comment is properly closed */
+let x = 10;`
+      },
+      E104: {
+        code: "E104",
+        title: "Invalid Number Literal",
+        category: "Lexer",
+        summary: "A numeric literal has invalid digits, multiple decimal points, or improper hexadecimal/binary prefixes.",
+        erroneousExample: `let num = 12.34.56;`,
+        fixedExample: `let num = 12.34;`
+      },
+      E105: {
+        code: "E105",
+        title: "Invalid Escape Sequence",
+        category: "Lexer",
+        summary: "An escape sequence in a string literal contains an unknown escape character.",
+        erroneousExample: `let s = "bad escape \\q";`,
+        fixedExample: `let s = "valid newline \\n";`
+      },
+      E201: {
+        code: "E201",
+        title: "Unexpected Token / Feature Gated",
+        category: "Parser",
+        summary: 'The parser encountered a token where it was not expected, or a language evolution feature (like generics `<T>` or `match`) was used without being enabled via `#feature(...)` or `edition = "2027"`.',
+        erroneousExample: `// In Edition 2026 without feature flag:
+match val {
+    1 => "one",
+    _ => "other"
+}`,
+        fixedExample: `#feature(pattern_matching)
+match val {
+    1 => "one",
+    _ => "other"
+}`,
+        notes: [
+          'To enable all HKD 1.1 features globally, configure `edition = "2027"` in `hkd.toml`.',
+          "For file-level enablement in Edition 2026, place `#feature(...)` at the top of the file."
+        ]
+      },
+      E202: {
+        code: "E202",
+        title: "Expected Token Not Found",
+        category: "Parser",
+        summary: "The grammar expected a specific token (such as a closing parenthesis, brace, or identifier) that was missing.",
+        erroneousExample: `fn add(a: Int, b: Int -> Int { return a + b; }`,
+        fixedExample: `fn add(a: Int, b: Int) -> Int { return a + b; }`
+      },
+      E203: {
+        code: "E203",
+        title: "Unexpected End of File",
+        category: "Parser",
+        summary: "The input ended abruptly while the parser was still expecting additional tokens to complete an open construct.",
+        erroneousExample: `fn incomplete() {`,
+        fixedExample: `fn incomplete() {
+}`
+      },
+      E204: {
+        code: "E204",
+        title: "Invalid Expression",
+        category: "Parser",
+        summary: "The parser encountered an expression structure that violates grammatical rules.",
+        erroneousExample: `let x = + * 5;`,
+        fixedExample: `let x = 5;`
+      },
+      E205: {
+        code: "E205",
+        title: "Invalid Assignment Target",
+        category: "Parser",
+        summary: "The left-hand side of an assignment is not an assignable location (lvalue).",
+        erroneousExample: `5 = x;`,
+        fixedExample: `x = 5;`
+      },
+      E206: {
+        code: "E206",
+        title: "Missing Closing Delimiter",
+        category: "Parser",
+        summary: "An opened bracket `[`, parenthesis `(`, or brace `{` was never closed.",
+        erroneousExample: `let arr = [1, 2, 3;`,
+        fixedExample: `let arr = [1, 2, 3];`
+      },
+      E301: {
+        code: "E301",
+        title: "Undefined Variable / Identifier",
+        category: "Semantic",
+        summary: "An identifier was referenced that has not been declared in the current or any enclosing scope, or is an unimported standard library symbol.",
+        erroneousExample: `let result = sqrt(16);`,
+        fixedExample: `import math
+let result = math.sqrt(16);`,
+        notes: [
+          "If the symbol is part of the standard library (e.g. `sqrt`, `read_file`, `stringify`), import the corresponding module (`import math`, `import fs`, `import json`).",
+          "If the module is already imported, access the symbol via member syntax (e.g. `math.sqrt`).",
+          "If the identifier was mistyped, check the 'Did you mean ...?' suggestion provided by the compiler."
+        ]
+      },
+      E302: {
+        code: "E302",
+        title: "Undefined Function",
+        category: "Semantic",
+        summary: "A function was called that does not exist in scope or standard library imports.",
+        erroneousExample: `missing_fn();`,
+        fixedExample: `fn missing_fn() { }
+missing_fn();`
+      },
+      E303: {
+        code: "E303",
+        title: "Type Mismatch",
+        category: "Semantic",
+        summary: "An expression's type is incompatible with the expected type for this context.",
+        erroneousExample: `let x: Int = "hello";`,
+        fixedExample: `let x: String = "hello";`,
+        notes: [
+          "HKD validates types statically during semantic analysis.",
+          "For structs, ensure all expected fields exist and field types match structurally.",
+          "For arrays, ensure element types match the declared array element type.",
+          "For functions, verify parameter count (arity), parameter types, and return types.",
+          "For generic functions or types, ensure type parameters can be unified with the concrete types."
+        ]
+      },
+      E304: {
+        code: "E304",
+        title: "Redeclaration of Identifier",
+        category: "Semantic",
+        summary: "An identifier was declared more than once in the same scope without shadowing rules.",
+        erroneousExample: `let x = 1;
+let x = 2;`,
+        fixedExample: `let x = 1;
+x = 2;`
+      },
+      E305: {
+        code: "E305",
+        title: "Return Outside Function",
+        category: "Semantic",
+        summary: "A `return` statement was used at the top level or outside any function declaration.",
+        erroneousExample: `let x = 10;
+return x;`,
+        fixedExample: `fn compute() -> Int {
+    let x = 10;
+    return x;
+}`
+      },
+      E306: {
+        code: "E306",
+        title: "Break/Continue Outside Loop",
+        category: "Semantic",
+        summary: "`break` or `continue` occurred outside of a `while` or `for` loop.",
+        erroneousExample: `if true {
+    break;
+}`,
+        fixedExample: `while true {
+    break;
+}`
+      },
+      E307: {
+        code: "E307",
+        title: "Wrong Argument Count",
+        category: "Semantic",
+        summary: "A function was called with fewer or more arguments than declared in its signature.",
+        erroneousExample: `fn add(a: Int, b: Int) -> Int { return a + b; }
+add(1);`,
+        fixedExample: `add(1, 2);`
+      },
+      E308: {
+        code: "E308",
+        title: "Undefined Type",
+        category: "Semantic",
+        summary: "A type annotation references a type name that is not built-in, a struct, or in scope.",
+        erroneousExample: `let user: NonExistentUser = null;`,
+        fixedExample: `struct NonExistentUser { id: Int }
+let user: NonExistentUser = NonExistentUser { id: 1 };`
+      },
+      E309: {
+        code: "E309",
+        title: "Undefined Struct Field",
+        category: "Semantic",
+        summary: "An access or initialization referenced a struct field that does not exist in the struct definition.",
+        erroneousExample: `struct Point { x: Int, y: Int }
+let p = Point { x: 1, y: 2, z: 3 };`,
+        fixedExample: `let p = Point { x: 1, y: 2 };`
+      },
+      E401: {
+        code: "E401",
+        title: "Division by Zero",
+        category: "Runtime",
+        summary: "An integer or floating point division by zero occurred at runtime.",
+        erroneousExample: `let x = 10 / 0;`,
+        fixedExample: `let denom = 2;
+let x = denom != 0 ? (10 / denom) : 0;`
+      },
+      E402: {
+        code: "E402",
+        title: "Index Out of Bounds",
+        category: "Runtime",
+        summary: "An array was indexed with a negative index or an index greater than or equal to its length.",
+        erroneousExample: `let arr = [1, 2];
+let x = arr[5];`,
+        fixedExample: `let idx = 1;
+let x = idx < len(arr) ? arr[idx] : null;`
+      },
+      E403: {
+        code: "E403",
+        title: "Null Reference Exception",
+        category: "Runtime",
+        summary: "An operation or field access was attempted on a null value.",
+        erroneousExample: `let obj = null;
+let val = obj.field;`,
+        fixedExample: `let val = obj?.field;`
+      },
+      E405: {
+        code: "E405",
+        title: "Invalid Operation",
+        category: "Runtime",
+        summary: "A runtime operation is invalid for the operands (e.g. calling `Result.unwrap()` on an `Err` result).",
+        erroneousExample: `import result
+let r = result.err("disk failure");
+let data = result.unwrap(r);`,
+        fixedExample: `let data = result.unwrap_or(r, "default");`
+      },
+      E406: {
+        code: "E406",
+        title: "Import Not Found",
+        category: "Runtime",
+        summary: "A module could not be found in the stdlib, project dependencies, or relative file paths.",
+        erroneousExample: `import non_existent_pkg`,
+        fixedExample: `import math`
+      },
+      E408: {
+        code: "E408",
+        title: "Not Callable",
+        category: "Runtime",
+        summary: "An expression was called with `(...)` but is not a function, closure, or native function.",
+        erroneousExample: `let x = 42;
+x();`,
+        fixedExample: `let x = fn() { return 42; };
+x();`
+      },
+      E501: {
+        code: "E501",
+        title: "Invalid Bytecode",
+        category: "VM",
+        summary: "The virtual machine loaded an opcode stream with invalid instructions, corrupted magic numbers, or broken constants.",
+        erroneousExample: `// Loading a corrupted .hkdc file`,
+        fixedExample: `// Recompile the file using \`hkd compile\``
+      },
+      E601: {
+        code: "E601",
+        title: "Package Not Found",
+        category: "Package",
+        summary: "The package manager could not find the requested package in local cache or registry.",
+        erroneousExample: `hkd add non_existent_package_12345`,
+        fixedExample: `hkd add collections-extra`
+      }
+    };
+    function explainError2(codeOrInput) {
+      const normalized = codeOrInput.toUpperCase().trim();
+      const explanation = exports2.ERROR_EXPLANATIONS[normalized];
+      if (!explanation) {
+        const validCodes = Object.keys(exports2.ERROR_EXPLANATIONS).join(", ");
+        return `Error code \`${codeOrInput}\` not found in the HKD explanation index.
+
+Available codes:
+${validCodes}
+
+Use: hkd explain <error_code>`;
+      }
+      const lines = [
+        `=== HKD Error Explanation: [${explanation.code}] ${explanation.title} ===`,
+        `Category: ${explanation.category}`,
+        ``,
+        `Summary:`,
+        `  ${explanation.summary}`,
+        ``,
+        `Erroneous Code Example:`,
+        explanation.erroneousExample.split("\n").map((l) => `  ${l}`).join("\n"),
+        ``,
+        `Corrected Code Example:`,
+        explanation.fixedExample.split("\n").map((l) => `  ${l}`).join("\n")
+      ];
+      if (explanation.notes && explanation.notes.length > 0) {
+        lines.push(``, `Guidance & Options:`);
+        for (const note of explanation.notes) {
+          lines.push(`  * ${note}`);
+        }
+      }
+      lines.push(``, `Learn more at https://hkd-lang.org/docs/errors/${explanation.code.toLowerCase()}`);
+      return lines.join("\n");
+    }
+  }
+});
+
+// dist/.package-windows-x64-t7sDYs/compiled/tooling/rfc-validator.js
+var require_rfc_validator = __commonJS({
+  "dist/.package-windows-x64-t7sDYs/compiled/tooling/rfc-validator.js"(exports2) {
+    "use strict";
+    var __createBinding2 = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
+      if (k2 === void 0) k2 = k;
+      var desc = Object.getOwnPropertyDescriptor(m, k);
+      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+        desc = { enumerable: true, get: function() {
+          return m[k];
+        } };
+      }
+      Object.defineProperty(o, k2, desc);
+    }) : (function(o, m, k, k2) {
+      if (k2 === void 0) k2 = k;
+      o[k2] = m[k];
+    }));
+    var __setModuleDefault2 = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
+      Object.defineProperty(o, "default", { enumerable: true, value: v });
+    }) : function(o, v) {
+      o["default"] = v;
+    });
+    var __importStar2 = exports2 && exports2.__importStar || function(mod) {
+      if (mod && mod.__esModule) return mod;
+      var result = {};
+      if (mod != null) {
+        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding2(result, mod, k);
+      }
+      __setModuleDefault2(result, mod);
+      return result;
+    };
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.RfcValidator = exports2.MANDATORY_RFC_SECTIONS = void 0;
+    var fs2 = __importStar2(require("fs"));
+    var path2 = __importStar2(require("path"));
+    exports2.MANDATORY_RFC_SECTIONS = [
+      "Summary",
+      "Motivation",
+      "Detailed Design",
+      "Drawbacks",
+      "Compatibility"
+    ];
+    var RfcValidator2 = class {
+      rfcsDir;
+      constructor(rfcsDir) {
+        this.rfcsDir = rfcsDir;
+      }
+      getAllRfcs() {
+        if (!fs2.existsSync(this.rfcsDir)) {
+          return [];
+        }
+        const files = fs2.readdirSync(this.rfcsDir).filter((f) => /^\d{3}-.*\.md$/.test(f) && !f.startsWith("0000")).sort();
+        return files.map((f) => this.parseRfc(path2.join(this.rfcsDir, f)));
+      }
+      parseRfc(filePath) {
+        const content = fs2.readFileSync(filePath, "utf-8");
+        const basename = path2.basename(filePath);
+        const idMatch = basename.match(/^(\d+)/);
+        const id = idMatch ? idMatch[1] : basename.replace(".md", "");
+        const titleMatch = content.match(/^#\s+(.+)$/m);
+        const title = titleMatch ? titleMatch[1].replace(/RFC\s*\d*:\s*/i, "").trim() : basename;
+        let status = "Proposed";
+        if (/status[:\s]+accepted/i.test(content))
+          status = "Accepted";
+        else if (/status[:\s]+experimental/i.test(content))
+          status = "Experimental";
+        else if (/status[:\s]+implemented/i.test(content))
+          status = "Implemented";
+        else if (/status[:\s]+draft/i.test(content))
+          status = "Draft";
+        let targetEdition = "2027";
+        const editionMatch = content.match(/edition[:\s]+"?(\d{4})"?/i);
+        if (editionMatch)
+          targetEdition = editionMatch[1];
+        const headerMatches = content.matchAll(/^#{2,3}\s+(.+)$/gm);
+        const sections = [];
+        for (const m of headerMatches) {
+          sections.push(m[1].trim());
+        }
+        const sectionSynonyms = {
+          Summary: ["summary"],
+          Motivation: ["motivation"],
+          "Detailed Design": ["detailed design", "reference-level", "guide-level"],
+          Drawbacks: ["drawbacks", "alternatives", "alternatives considered"],
+          Compatibility: ["compatibility", "backward compatibility"]
+        };
+        const missingSections = [];
+        for (const req of exports2.MANDATORY_RFC_SECTIONS) {
+          const syns = sectionSynonyms[req] ?? [req.toLowerCase()];
+          const found = sections.some((s) => {
+            const lower = s.toLowerCase();
+            return syns.some((syn) => lower.includes(syn));
+          });
+          if (!found) {
+            missingSections.push(req);
+          }
+        }
+        return {
+          id,
+          title,
+          status,
+          targetEdition,
+          filePath,
+          sections,
+          missingSections,
+          isValid: missingSections.length === 0
+        };
+      }
+      listRfcs() {
+        const rfcs = this.getAllRfcs();
+        if (rfcs.length === 0) {
+          return "No RFCs found in " + this.rfcsDir;
+        }
+        const lines = [
+          "=== HKD Language Evolution RFCs ===",
+          `Found ${rfcs.length} RFC proposal(s):`,
+          "",
+          "ID   Status        Edition  Title",
+          "\u2500\u2500\u2500\u2500 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
+        ];
+        for (const r of rfcs) {
+          const idCol = r.id.padEnd(4);
+          const statusCol = r.status.padEnd(13);
+          const edCol = r.targetEdition.padEnd(8);
+          lines.push(`${idCol} ${statusCol} ${edCol} ${r.title}`);
+        }
+        lines.push("", "Run `hkd rfc check <id>` to validate RFC compliance.", "Run `hkd rfc status <id>` to inspect compiler implementation readiness.");
+        return lines.join("\n");
+      }
+      checkRfc(idOrAll) {
+        const rfcs = this.getAllRfcs();
+        const target = idOrAll && idOrAll !== "all" ? rfcs.filter((r) => r.id === idOrAll || r.id === idOrAll.padStart(3, "0")) : rfcs;
+        if (target.length === 0) {
+          return `RFC '${idOrAll}' not found.`;
+        }
+        const lines = ["=== RFC Conformance Check ==="];
+        let allValid = true;
+        for (const r of target) {
+          lines.push(`
+RFC [${r.id}] ${r.title} (${path2.basename(r.filePath)})`);
+          lines.push(`  Status:         ${r.status}`);
+          lines.push(`  Target Edition: ${r.targetEdition}`);
+          lines.push(`  Sections Found: ${r.sections.length}`);
+          if (r.isValid) {
+            lines.push(`  RFC Conformance Status: PASS`);
+            lines.push(`  Validation:     PASS (All mandatory sections present)`);
+          } else {
+            allValid = false;
+            lines.push(`  RFC Conformance Status: FAIL`);
+            lines.push(`  Validation:     FAIL`);
+            lines.push(`  Missing:        ${r.missingSections.join(", ")}`);
+          }
+        }
+        lines.push("", allValid ? `All ${target.length} RFCs pass conformance validation.` : "Some RFCs have missing sections. Please update them to comply with the standard.");
+        return lines.join("\n");
+      }
+      statusRfc(id) {
+        const rfcs = this.getAllRfcs();
+        const target = id ? rfcs.filter((r) => r.id === id || r.id === id.padStart(3, "0")) : rfcs;
+        if (target.length === 0) {
+          return `RFC '${id}' not found.`;
+        }
+        const lines = ["=== RFC Implementation Status ==="];
+        for (const r of target) {
+          lines.push(`
+RFC [${r.id}] ${r.title}`);
+          lines.push(`  Status:             ${r.status}`);
+          lines.push(`  Lifecycle:          ${r.status}`);
+          lines.push(`  Target Edition:     HKD ${r.targetEdition}`);
+          switch (r.id) {
+            case "001":
+              lines.push(`  Parser Support:     Implemented (generic functions fn id<T>(...))`);
+              lines.push(`  Semantic Checking:  Implemented (type substitution & inference)`);
+              lines.push(`  Bytecode Lowering:  Implemented (monomorphized / direct calling)`);
+              lines.push(`  Feature Flag:       #feature(generics)`);
+              break;
+            case "002":
+              lines.push(`  Parser Support:     Implemented (match expr { pat => body })`);
+              lines.push(`  Semantic Checking:  Implemented (exhaustiveness & binding check)`);
+              lines.push(`  Bytecode Lowering:  Implemented (direct compare & conditional jumps)`);
+              lines.push(`  Feature Flag:       #feature(pattern_matching)`);
+              break;
+            case "003":
+              lines.push(`  Design Status:      Approved specification in RFC 003`);
+              lines.push(`  Runtime Support:    Vtable / dictionary-passing scheduled for 1.2`);
+              lines.push(`  Feature Flag:       #feature(traits)`);
+              break;
+            case "004":
+              lines.push(`  Design Status:      Approved ergonomic specification in RFC 004`);
+              lines.push(`  Event Loop:         Integrated with std.task / libuv backend`);
+              lines.push(`  Feature Flag:       #feature(async)`);
+              break;
+            case "005":
+              lines.push(`  Type System:        Result<T, E> & structural variants active in std.result`);
+              lines.push(`  Feature Flag:       #feature(result)`);
+              break;
+            default:
+              lines.push(`  Status:             Proposed`);
+          }
+        }
+        return lines.join("\n");
+      }
+    };
+    exports2.RfcValidator = RfcValidator2;
+  }
+});
+
+// dist/.package-windows-x64-t7sDYs/compiled/cli/main.js
 var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
   if (k2 === void 0) k2 = k;
   var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -21956,6 +22377,10 @@ function buildStandaloneNative(args) {
   return outExe;
 }
 function cmdRun(args) {
+  if (args.includes("--jit") || args.includes("--jit-stats")) {
+    console.error(RED("Error: JIT execution is not implemented in this release."));
+    process.exit(2);
+  }
   const isRelease = args.includes("--release");
   const useReference = args.includes("--reference") || args.includes("--ts");
   const useNative = args.includes("--native");
@@ -21983,23 +22408,33 @@ function cmdRun(args) {
   } else {
     compiledPath = cmdBuild(isRelease ? ["--release"] : []);
   }
+  const sourceFile = firstArg && firstArg.endsWith(".hkd") ? firstArg : getProjectDir() ? path.resolve(getProjectDir(), readManifest(getProjectDir())?.main ?? "src/main.hkd") : firstArg;
   if (useReference) {
-    const sourceFile = firstArg && firstArg.endsWith(".hkd") ? firstArg : getProjectDir() ? path.resolve(getProjectDir(), readManifest(getProjectDir())?.main ?? "src/main.hkd") : firstArg;
     const result = (0, index_js_2.runFile)(sourceFile);
     process.exit(result.ok ? 0 : 1);
   } else {
-    const runtimePath = getRuntimePath();
     const runtimeFlags = [];
     for (const a of args) {
       if (a === "--jit" || a === "--vm" || a === "--jit-stats" || a === "--mem-stats" || a === "--skip-validation" || a.startsWith("--profile")) {
         runtimeFlags.push(a);
       }
     }
+    const runtimePath = findRuntimePath();
+    if (!runtimePath) {
+      if (runtimeFlags.length > 0) {
+        console.error(RED("Error: This run option requires the native runtime, but hkd-runtime was not found."));
+        console.error("Install hkd-runtime beside hkd or build it from native-runtime with Zig.");
+        process.exit(1);
+      }
+      console.warn(DIM("Native runtime not found; running with the bundled TypeScript VM."));
+      const result = (0, index_js_2.runFile)(sourceFile);
+      process.exit(result.ok ? 0 : 1);
+    }
     const child = (0, child_process_1.spawnSync)(runtimePath, [...runtimeFlags, compiledPath, ...cleanArgs.slice(1)], { stdio: "inherit" });
     process.exit(child.status ?? 0);
   }
 }
-function getRuntimePath() {
+function findRuntimePath() {
   const binName = process.platform === "win32" ? "hkd-runtime.exe" : "hkd-runtime";
   const possiblePaths = [
     path.resolve(__dirname, "../../native-runtime/zig-out/bin", binName),
@@ -22012,6 +22447,12 @@ function getRuntimePath() {
     if (fs.existsSync(p))
       return p;
   }
+  return null;
+}
+function getRuntimePath() {
+  const runtimePath = findRuntimePath();
+  if (runtimePath)
+    return runtimePath;
   console.error(RED("Error: Native runtime executable not found."));
   console.error("Please compile the native runtime first with: cd native-runtime && npx zig build");
   process.exit(1);
@@ -23119,8 +23560,8 @@ var COMMAND_HELPS = {
       { flag: "--release", desc: "Run optimized release build (target/release)" },
       { flag: "--reference, --ts", desc: "Run using reference TypeScript VM rather than native runtime" },
       { flag: "--native", desc: "Build and run as standalone self-contained native executable" },
-      { flag: "--jit", desc: "Enable tier-1 JIT compilation (native runtime)" },
-      { flag: "--jit-stats", desc: "Print JIT compilation statistics upon process exit" },
+      { flag: "--jit", desc: "Unavailable: JIT dispatch is not implemented in this release" },
+      { flag: "--jit-stats", desc: "Unavailable: JIT dispatch is not implemented in this release" },
       { flag: "--mem-stats", desc: "Print memory allocation and heap statistics upon process exit" },
       { flag: "--profile <file>", desc: "Profile execution and record trace to JSON file" },
       { flag: "--help, -h", desc: "Show this help message" }

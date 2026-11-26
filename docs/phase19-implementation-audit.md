@@ -1,5 +1,7 @@
 # HKD Phase 19: Comprehensive Implementation Audit & Evidence Matrix
 
+> Historical phase document: statements below reflect the design or audit claims made when this document was written. They are not current validation evidence and do not establish present release readiness, implemented JIT/AOT, or platform support. For the current Windows x64 audit scope and evidence, see `artifacts/phase10.3-final-release-verification.json` and `docs/known-limitations.md`.
+
 **Target Release**: HKD 1.1.0 (Public Production Release)  
 **Audit Scope**: Entire HKD Repository (`src/`, `native-runtime/`, `rfcs/`, `docs/`, `tests/`, `dist/`)  
 **Audit Methodology**: Code inspection, AST traversal, bytecode inspection, test coverage analysis, and execution verification.  

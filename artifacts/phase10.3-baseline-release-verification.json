@@ -1,0 +1,466 @@
+{
+  "allPassed": false,
+  "version": "1.1.0",
+  "edition": "2026",
+  "target": "x86_64-windows",
+  "timestamp": "2026-10-24T01:13:23.108Z",
+  "totalDimensions": 14,
+  "passedDimensions": 12,
+  "warningsCount": 3,
+  "blockersCount": 1,
+  "dimensions": [
+    {
+      "dimension": "Correctness",
+      "category": "Compiler / VM / Runtime",
+      "status": "PASS",
+      "message": "Language, compiler, Stack VM, and native runtime smoke probes."
+    },
+    {
+      "dimension": "Security",
+      "category": "Supply Chain & Hardening",
+      "status": "PASS",
+      "message": "CycloneDX 1.5 SBOM generation and sensitive-data scan; violations: 0."
+    },
+    {
+      "dimension": "Memory",
+      "category": "Memory Model & GC",
+      "status": "PASS",
+      "message": "Worst warmed 10,000-cycle RSS growth across 3 trials: 1.054x (policy < 1.10x)."
+    },
+    {
+      "dimension": "Resources",
+      "category": "System Interfaces",
+      "status": "WARN — non-blocking",
+      "message": "Process and socket lifecycle is covered by Jest integration tests, not this release command."
+    },
+    {
+      "dimension": "Compatibility",
+      "category": "ABI & Language Editions",
+      "status": "PASS",
+      "message": "A representative Edition 2026 program executed; full compatibility is covered by the compatibility test suite."
+    },
+    {
+      "dimension": "Packages",
+      "category": "Package Ecosystem",
+      "status": "PASS",
+      "message": "Lockfile V2 parse/serialize round-trip; 0 locked packages."
+    },
+    {
+      "dimension": "LSP",
+      "category": "Developer Experience",
+      "status": "PASS",
+      "message": "Language server initialize response checked for hover and completion capabilities."
+    },
+    {
+      "dimension": "DAP",
+      "category": "Debugging Architecture",
+      "status": "PASS",
+      "message": "Debug adapter initialize response and initialized event checked."
+    },
+    {
+      "dimension": "VS Code",
+      "category": "IDE Integration",
+      "status": "PASS",
+      "message": "Extension manifest contributions checked: languages, grammars, debuggers."
+    },
+    {
+      "dimension": "Deployment",
+      "category": "Operations & Cloud",
+      "status": "PASS",
+      "message": "Deployment pre-flight checks for C:\\Users\\HASSAN\\OneDrive\\Desktop\\HKD; see gate evidence for each item."
+    },
+    {
+      "dimension": "Containers",
+      "category": "Cloud & Virtualization",
+      "status": "PASS",
+      "message": "Generated Dockerfile template invariants checked; no container image was built."
+    },
+    {
+      "dimension": "Reproducibility",
+      "category": "Build System",
+      "status": "PASS",
+      "message": "Two compilations of the same source produced identical serialized bytecode."
+    },
+    {
+      "dimension": "Performance",
+      "category": "Optimization Tiers",
+      "status": "WARN — non-blocking",
+      "message": "No performance benchmark was run by this command."
+    },
+    {
+      "dimension": "Documentation",
+      "category": "Governance & Operations",
+      "status": "PASS",
+      "message": "5/5 required documentation files exist."
+    }
+  ],
+  "gates": [
+    {
+      "name": "Compiler & VM Execution",
+      "status": "PASS",
+      "message": "Bytecode emission and Stack VM smoke probe."
+    },
+    {
+      "name": "Target Architecture Matrix",
+      "status": "PASS",
+      "message": "Only host runtime execution was probed: x86_64-windows (Tier 1 (Supported))."
+    },
+    {
+      "name": "Supply-Chain Security (SBOM)",
+      "status": "PASS",
+      "message": "SBOM generation and sensitive-data scan; components: 2, violations: 0."
+    },
+    {
+      "name": "Container Template Invariants",
+      "status": "PASS",
+      "message": "Dockerfile text assertions; container image build not performed."
+    },
+    {
+      "name": "Deployment Pre-Flight Checks",
+      "status": "PASS",
+      "message": "Project deployment checklist executed."
+    },
+    {
+      "name": "Exit Code Standard Contract",
+      "status": "WARN",
+      "message": "Exit-code behavior is covered by Jest; verify-release does not probe every CLI command."
+    }
+  ],
+  "verificationGates": [
+    {
+      "name": "Language Conformance",
+      "status": "PASS",
+      "severity": "critical",
+      "command": "runSource(<generics + pattern matching>, edition: 2027)",
+      "duration_ms": 17,
+      "evidence": {
+        "generics_and_pattern_matching_probe_passed": true,
+        "pass": true
+      }
+    },
+    {
+      "name": "Edition Compatibility",
+      "status": "PASS",
+      "severity": "critical",
+      "command": "runSource(<edition 2026 program>, edition: 2026)",
+      "duration_ms": 2,
+      "evidence": {
+        "edition_2026_probe_passed": true,
+        "pass": true
+      }
+    },
+    {
+      "name": "Compiler",
+      "status": "PASS",
+      "severity": "critical",
+      "command": "Chunk.writeByte(Op.LoadTrue, Op.Return)",
+      "duration_ms": 0,
+      "evidence": {
+        "opcodes_emitted": 2,
+        "pass": true
+      }
+    },
+    {
+      "name": "Stack VM",
+      "status": "PASS",
+      "severity": "critical",
+      "command": "VM.run(chunk)",
+      "duration_ms": 0,
+      "evidence": {
+        "vm_returned_expected_value": true,
+        "pass": true
+      }
+    },
+    {
+      "name": "Native VM",
+      "status": "PASS",
+      "severity": "high",
+      "command": "hkd-runtime <serialized probe.hkdb>",
+      "duration_ms": 31,
+      "evidence": {
+        "target": "x86_64-windows",
+        "tier": "Tier 1 (Supported)",
+        "runtime_tested": true,
+        "output": "HKD_NATIVE_PROBE_OK\n",
+        "pass": true
+      }
+    },
+    {
+      "name": "JIT",
+      "status": "PASS",
+      "severity": "high",
+      "command": "hkd-runtime --jit <serialized probe.hkdb>",
+      "duration_ms": 22,
+      "evidence": {
+        "runtime_tested": true,
+        "output": "HKD_NATIVE_PROBE_OK\n",
+        "pass": true
+      }
+    },
+    {
+      "name": "AOT Native Code Generation",
+      "status": "NOT TESTED",
+      "severity": "high",
+      "command": "No AOT machine-code compiler probe is implemented",
+      "duration_ms": 0,
+      "evidence": {
+        "reason": "The CLI standalone native build embeds the bytecode and interpreter; it does not establish AOT machine-code generation."
+      }
+    },
+    {
+      "name": "Differential Execution",
+      "status": "PASS",
+      "severity": "critical",
+      "command": "differential_execution_parity(ref, vm)",
+      "duration_ms": 1,
+      "evidence": {
+        "outputs_matched": true,
+        "mismatches": 0,
+        "pass": true
+      }
+    },
+    {
+      "name": "Memory Safety",
+      "status": "PASS",
+      "severity": "critical",
+      "command": "soak_stress(10000 cycles) + process.memoryUsage()",
+      "duration_ms": 18,
+      "evidence": {
+        "cycles": 30000,
+        "warmup_cycles": 2000,
+        "repetitions": 3,
+        "per_trial_rss_growth_ratios": [
+          1.054,
+          1.007,
+          1.008
+        ],
+        "initial_rss_bytes": 55644160,
+        "final_rss_bytes": 59527168,
+        "peak_rss_bytes": 59527168,
+        "initial_heap_used_bytes": 12315224,
+        "final_heap_used_bytes": 11975592,
+        "initial_heap_total_bytes": 18161664,
+        "final_heap_total_bytes": 19210240,
+        "initial_external_bytes": 2660693,
+        "final_external_bytes": 2595157,
+        "initial_array_buffers_bytes": 209479,
+        "final_array_buffers_bytes": 143903,
+        "rss_growth_ratio": 1.054,
+        "heap_delta_bytes": -339632,
+        "pass": true
+      }
+    },
+    {
+      "name": "Security",
+      "status": "PASS",
+      "severity": "critical",
+      "command": "generateCycloneDxSbom + repository sensitive-data scan",
+      "duration_ms": 792,
+      "evidence": {
+        "sbom_format": "CycloneDX 1.5",
+        "registered_components": 2,
+        "secret_scan_violations": 0,
+        "pass": true
+      }
+    },
+    {
+      "name": "Packages",
+      "status": "PASS",
+      "severity": "high",
+      "command": "readLockfile + serialize/parse deterministic round-trip",
+      "duration_ms": 1,
+      "evidence": {
+        "lockfile_version": 2,
+        "locked_packages": 0,
+        "deterministic_round_trip": true,
+        "pass": true
+      }
+    },
+    {
+      "name": "LSP",
+      "status": "PASS",
+      "severity": "medium",
+      "command": "HkdLanguageServer initialize request",
+      "duration_ms": 3,
+      "evidence": {
+        "initialize_response": true,
+        "hover": true,
+        "completion": true,
+        "pass": true
+      }
+    },
+    {
+      "name": "DAP",
+      "status": "PASS",
+      "severity": "medium",
+      "command": "DebugSession initialize request",
+      "duration_ms": 1,
+      "evidence": {
+        "initialize_response": true,
+        "initialized_event": true,
+        "pass": true
+      }
+    },
+    {
+      "name": "VS Code",
+      "status": "PASS",
+      "severity": "medium",
+      "command": "parse extension package.json and check language/grammar/debugger contributions",
+      "duration_ms": 1,
+      "evidence": {
+        "extension_manifest": true,
+        "contributions": [
+          "languages",
+          "grammars",
+          "debuggers"
+        ],
+        "pass": true
+      }
+    },
+    {
+      "name": "Cross-Platform Artifacts",
+      "status": "WARN",
+      "severity": "medium",
+      "command": "target_matrix_validation",
+      "duration_ms": 0,
+      "evidence": {
+        "verified_host": "x86_64-windows",
+        "cross_platform_builds_tested": [],
+        "reason": "This command verifies only the current host; it does not perform cross-target builds.",
+        "local_artifact_count": 2
+      }
+    },
+    {
+      "name": "Reproducibility",
+      "status": "PASS",
+      "severity": "critical",
+      "command": "sha256(serialize(c1)) === sha256(serialize(c2))",
+      "duration_ms": 3,
+      "evidence": {
+        "bitwise_identical": true,
+        "pass": true
+      }
+    },
+    {
+      "name": "Documentation",
+      "status": "PASS",
+      "severity": "medium",
+      "command": "check_core_documentation_files",
+      "duration_ms": 2,
+      "evidence": {
+        "required_docs": 5,
+        "pass": true
+      }
+    },
+    {
+      "name": "Release Artifacts",
+      "status": "PASS",
+      "severity": "critical",
+      "command": "validate_release_artifacts_and_checksums",
+      "duration_ms": 470,
+      "evidence": {
+        "checked_artifacts": 2,
+        "errors": [],
+        "pass": true
+      }
+    },
+    {
+      "name": "Deployment Pre-Flight",
+      "status": "PASS",
+      "severity": "critical",
+      "command": "runDeployCheck(project, host target, release profile)",
+      "duration_ms": 3,
+      "evidence": {
+        "target": "x86_64-windows",
+        "profile": "release",
+        "items": [
+          {
+            "name": "Project Manifest (hkd.toml)",
+            "status": "ok",
+            "message": "Valid manifest for hkd v1.1.0"
+          },
+          {
+            "name": "Lockfile (hkd.lock)",
+            "status": "ok",
+            "message": "Resolved dependencies locked for reproducible deployment"
+          },
+          {
+            "name": "Target Architecture & OS",
+            "status": "ok",
+            "message": "x86_64-windows (Tier 1 (Supported))"
+          },
+          {
+            "name": "Build Optimization Profile",
+            "status": "ok",
+            "message": "release (optLevel: 2, assertions: false)"
+          },
+          {
+            "name": "Application Entrypoint",
+            "status": "ok",
+            "message": "Found entrypoint at src/main.hkd"
+          },
+          {
+            "name": "Secret File Exposure Check",
+            "status": "ok",
+            "message": "No plain-text private keys or root secret files detected"
+          }
+        ],
+        "pass": true
+      }
+    },
+    {
+      "name": "Container Template",
+      "status": "PASS",
+      "severity": "medium",
+      "command": "generateDockerfile + invariant assertions",
+      "duration_ms": 0,
+      "evidence": {
+        "checks": {
+          "nonRootUser": true,
+          "healthcheck": true,
+          "executableEntryPoint": true,
+          "standaloneBinaryCopy": true
+        },
+        "docker_image_built": false,
+        "pass": true
+      }
+    },
+    {
+      "name": "Resource Lifecycle",
+      "status": "NOT TESTED",
+      "severity": "medium",
+      "command": "No process/socket lifecycle probe is run by verify-release",
+      "duration_ms": 0,
+      "evidence": {
+        "reason": "Lifecycle coverage is exercised by Jest integration tests, not this command."
+      }
+    },
+    {
+      "name": "Performance Benchmarks",
+      "status": "NOT TESTED",
+      "severity": "medium",
+      "command": "No benchmark comparison is run by verify-release",
+      "duration_ms": 0,
+      "evidence": {
+        "reason": "This command does not perform warmed repeated benchmark measurements."
+      }
+    }
+  ],
+  "experimentalFeatures": [
+    {
+      "name": "RFC-003 Traits",
+      "status": "EXPECTED",
+      "rfc": "003",
+      "targetEdition": "2027 (#feature(traits))",
+      "roadmap": "Scheduled for runtime backend in HKD 1.2"
+    },
+    {
+      "name": "RFC-004 Async/Await",
+      "status": "EXPECTED",
+      "rfc": "004",
+      "targetEdition": "2027 (#feature(async))",
+      "roadmap": "Event loop operational; async fn compiler desugaring in active design"
+    }
+  ],
+  "result": "NOT RELEASE READY"
+}

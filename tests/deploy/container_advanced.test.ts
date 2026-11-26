@@ -4,43 +4,44 @@ import { generateDockerfile, generateDockerignore } from "../../src/deploy/conta
 describe("Phase 14 Container Invariant & Security Specifications", () => {
   it("enforces explicit non-root user UID 10001", () => {
     const df = generateDockerfile();
-    expect(df).toMatch(/adduser\s+-S\s+-u\s+10001/);
-    expect(df).toMatch(/addgroup\s+-S\s+-g\s+10001/);
+    expect(df).toMatch(/useradd\s+--system\s+--uid\s+10001/);
+    expect(df).toMatch(/groupadd\s+--system\s+--gid\s+10001/);
     expect(df).toContain("USER hkd:hkd");
   });
 
-  it("ensures builder stage uses Node 20 alpine", () => {
+  it("uses a supported Node LTS builder and deterministic dependency installation", () => {
     const df = generateDockerfile();
-    expect(df).toContain("FROM node:20-alpine AS builder");
+    expect(df).toContain("FROM node:22-bookworm-slim AS builder");
+    expect(df).toContain("RUN npm ci");
+    expect(df).not.toContain("npm install");
+    expect(df).not.toContain("|| true");
   });
 
-  it("ensures runtime stage uses minimal Alpine", () => {
+  it("uses a slim Node runtime", () => {
     const df = generateDockerfile();
-    expect(df).toContain("FROM alpine:3.20 AS runtime");
+    expect(df).toContain("FROM node:22-bookworm-slim AS runtime");
   });
 
-  it("copies only release executable from builder into runtime", () => {
+  it("copies the CLI and selected HKD program and runs as non-root", () => {
     const df = generateDockerfile();
-    expect(df).toMatch(/COPY --from=builder --chown=hkd:hkd \/build\/target\/release\/server \/app\/server/);
+    expect(df).toContain("COPY --from=builder --chown=hkd:hkd /build/dist ./dist");
+    expect(df).toContain("COPY --chown=hkd:hkd src/main.hkd /app/main.hkd");
+    expect(df).toContain("USER hkd:hkd");
   });
 
   it("binds executable to ENTRYPOINT array format", () => {
     const df = generateDockerfile();
-    expect(df).toContain('ENTRYPOINT ["/app/server"]');
+    expect(df).toContain('ENTRYPOINT ["node", "/app/dist/cli/main.js", "run", "/app/main.hkd"]');
   });
 
-  it("configures healthcheck probe with wget", () => {
+  it("does not assume a network service or health endpoint", () => {
     const df = generateDockerfile({ port: 9000 });
-    expect(df).toContain("HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3");
-    expect(df).toContain("wget -qO- http://127.0.0.1:9000/health || exit 1");
+    expect(df).not.toContain("HEALTHCHECK");
+    expect(df).not.toContain("EXPOSE");
   });
 
-  it("exposes parameterized port", () => {
-    const df80 = generateDockerfile({ port: 80 });
-    expect(df80).toContain("EXPOSE 80");
-
-    const df3000 = generateDockerfile({ port: 3000 });
-    expect(df3000).toContain("EXPOSE 3000");
+  it("rejects container entry paths that escape the build context", () => {
+    expect(() => generateDockerfile({ entry: "../outside.hkd" })).toThrow(/project-relative path/);
   });
 
   it("excludes secret files in dockerignore", () => {

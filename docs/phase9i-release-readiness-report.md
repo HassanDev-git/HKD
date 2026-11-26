@@ -1,5 +1,7 @@
 # HKD 1.1.0 — Phase 9I Release Readiness & Repository Audit Report
 
+> Historical phase document: statements below reflect the design or audit claims made when this document was written. They are not current validation evidence and do not establish present release readiness, implemented JIT/AOT, or platform support. For the current Windows x64 audit scope and evidence, see `artifacts/phase10.3-final-release-verification.json` and `docs/known-limitations.md`.
+
 **Status:** COMPLETE & RELEASE-READY  
 **Version:** 1.1.0  
 **Git Tag:** `v1.1.0`  

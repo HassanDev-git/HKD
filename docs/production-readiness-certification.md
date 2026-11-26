@@ -1,5 +1,7 @@
 # HKD 1.0 Production Readiness Certification & Final Audit Sign-Off
 
+> Historical phase document: statements below reflect the design or audit claims made when this document was written. They are not current validation evidence and do not establish present release readiness, implemented JIT/AOT, or platform support. For the current Windows x64 audit scope and evidence, see `artifacts/phase10.3-final-release-verification.json` and `docs/known-limitations.md`.
+
 ## Executive Certification
 
 This document formally certifies that the **HKD Programming Language**, compiler toolchain, native runtime, package manager, developer tooling, and deployment systems have successfully completed all acceptance gates and are **Certified Production-Ready for HKD 1.0.0 General Availability**.

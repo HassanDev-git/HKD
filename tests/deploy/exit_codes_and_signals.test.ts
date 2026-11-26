@@ -51,16 +51,17 @@ describe("Phase 14 Production Exit Codes & System Signals Specifications", () =>
     expect(info.memory.heapTotalMb).toBeGreaterThanOrEqual(info.memory.heapUsedMb);
   });
 
-  it("ensures runtime-info lists all 4 execution tiers", () => {
+  it("ensures runtime-info lists only supported execution paths", () => {
     const info = getRuntimeInfo();
     expect(info.supportedTiers).toEqual(
       expect.arrayContaining([
-        "Stack VM (Tier 0)",
-        "Native Zig Baseline JIT (Tier 1)",
-        "Native Optimizing JIT with PGO (Tier 2)",
-        "Standalone Native AOT Executable",
+        "TypeScript reference Stack VM",
+        "Optional Zig bytecode interpreter (separate host build)",
+        "Standalone Zig-runtime executable with embedded HKDB bytecode",
       ])
     );
+    expect(info.supportedTiers.some((tier) => tier.includes("JIT"))).toBe(false);
+    expect(info.supportedTiers.some((tier) => tier.includes("AOT"))).toBe(false);
   });
 
   it("maps failed deploy checks to DeployError condition", () => {

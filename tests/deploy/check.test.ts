@@ -49,7 +49,7 @@ describe("Phase 14AD & 14AA — Pre-Flight Checklist & Observability Diagnostics
     expect(info.platform).toBeDefined();
     expect(info.arch).toBeDefined();
     expect(info.memory.rssMb).toBeGreaterThan(0);
-    expect(info.supportedTiers.length).toBeGreaterThanOrEqual(4);
+    expect(info.supportedTiers.length).toBe(3);
     expect(info.activeLimits.maxConnections).toBe(10000);
   });
 });

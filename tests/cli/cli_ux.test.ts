@@ -68,4 +68,15 @@ describe("HKD CLI 2.0 — UX, Error Codes & Diagnostics", () => {
     expect(res.status).toBe(0);
     expect(res.stdout).toContain("E101");
   });
+
+  test.each(["--jit", "--jit-stats"])("CLI-UX-06: %s is rejected even with the reference VM flag", (jitFlag) => {
+    const sourcePath = path.resolve("examples/structs/structs.hkd");
+    const res = spawnSync(process.execPath, [cliScript, "run", sourcePath, jitFlag, "--reference"], {
+      encoding: "utf-8",
+      env: execEnv,
+    });
+    expect(res.error).toBeUndefined();
+    expect(res.status).toBe(2);
+    expect(`${res.stdout ?? ""}${res.stderr ?? ""}`).toContain("JIT execution is not implemented");
+  });
 });

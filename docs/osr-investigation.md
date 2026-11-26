@@ -1,5 +1,7 @@
 # HKD Phase 11 — On-Stack Replacement (OSR) Investigation & State Transfer
 
+> Historical investigation: the JIT-tiering description below is conceptual design, not a statement that HKD 1.1.0 implements JIT execution. Current capability status is recorded in `docs/known-limitations.md`.
+
 ## 1. Motivation & Problem Statement
 
 In standard function-level JIT tiering (Tier 0 Stack VM $\to$ Tier 1 Baseline JIT $\to$ Tier 2 Optimizing JIT), hotness counters increment exclusively at function invocation boundaries.

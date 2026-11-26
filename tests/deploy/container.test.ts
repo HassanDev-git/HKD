@@ -14,11 +14,11 @@ describe("Phase 14O & 14P — Multi-Stage Containerization Engine", () => {
 
     // Stage 2: Runtime
     expect(dockerfile).toContain("AS runtime");
-    expect(dockerfile).toContain("addgroup -S -g 10001 hkd");
+    expect(dockerfile).toContain("groupadd --system --gid 10001 hkd");
     expect(dockerfile).toContain("USER hkd:hkd");
-    expect(dockerfile).toContain("EXPOSE 8080");
-    expect(dockerfile).toContain("HEALTHCHECK");
-    expect(dockerfile).toContain("http://127.0.0.1:8080/health");
+    expect(dockerfile).toContain("ENTRYPOINT");
+    expect(dockerfile).not.toContain("HEALTHCHECK");
+    expect(dockerfile).not.toContain("EXPOSE");
   });
 
   it("generates .dockerignore excluding sensitive files and build artifacts", () => {
@@ -40,7 +40,7 @@ describe("Phase 14O & 14P — Multi-Stage Containerization Engine", () => {
       expect(fs.existsSync(res.dockerignore)).toBe(true);
 
       const content = fs.readFileSync(res.dockerfile, "utf-8");
-      expect(content).toContain("EXPOSE 9090");
+      expect(content).toContain("COPY --chown=hkd:hkd src/main.hkd /app/main.hkd");
     } finally {
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });

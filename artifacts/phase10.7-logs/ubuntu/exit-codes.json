@@ -1,0 +1,90 @@
+[
+  {
+    "name": "environment",
+    "actualExitCode": 0,
+    "command": "/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/node -e console.log(JSON.stringify({node:process.version,platform:process.platform,arch:process.arch,execPath:process.execPath}))",
+    "log": "artifacts/phase10.7-linux-logs/environment.log"
+  },
+  {
+    "name": "npm_ci",
+    "actualExitCode": 0,
+    "command": "/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/npm ci",
+    "log": "artifacts/phase10.7-linux-logs/npm_ci.log"
+  },
+  {
+    "name": "typecheck",
+    "actualExitCode": 0,
+    "command": "/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/npm run typecheck",
+    "log": "artifacts/phase10.7-linux-logs/typecheck.log"
+  },
+  {
+    "name": "build",
+    "actualExitCode": 0,
+    "command": "/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/npm run build",
+    "log": "artifacts/phase10.7-linux-logs/build.log"
+  },
+  {
+    "name": "jest_full",
+    "actualExitCode": 1,
+    "command": "/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/npm test",
+    "log": "artifacts/phase10.7-linux-logs/jest_full.log"
+  },
+  {
+    "name": "eslint",
+    "actualExitCode": 0,
+    "command": "/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/npm run lint",
+    "log": "artifacts/phase10.7-linux-logs/eslint.log"
+  },
+  {
+    "name": "zig_ci",
+    "actualExitCode": 1,
+    "command": "env ZIG_PACKAGE=linux-x64 HKD_NATIVE_OUTPUT_DIR=native-runtime/zig-out/bin /home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/node scripts/ci-zig.cjs",
+    "log": "artifacts/phase10.7-linux-logs/zig_ci.log"
+  },
+  {
+    "name": "cli_version",
+    "actualExitCode": 0,
+    "expectedExitCode": 0,
+    "assertion": "PASS",
+    "command": "/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/node dist/cli/main.js --version",
+    "log": "artifacts/phase10.7-linux-logs/cli_version.log"
+  },
+  {
+    "name": "cli_help",
+    "actualExitCode": 0,
+    "expectedExitCode": 0,
+    "assertion": "PASS",
+    "command": "/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/node dist/cli/main.js --help",
+    "log": "artifacts/phase10.7-linux-logs/cli_help.log"
+  },
+  {
+    "name": "native_runtime_version",
+    "actualExitCode": 0,
+    "expectedExitCode": 0,
+    "assertion": "PASS",
+    "command": "native-runtime/zig-out/bin/hkd-runtime --version",
+    "log": "artifacts/phase10.7-linux-logs/native_runtime_version.log"
+  },
+  {
+    "name": "valid_program",
+    "actualExitCode": 0,
+    "expectedExitCode": 0,
+    "assertion": "PASS",
+    "command": "/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/node dist/cli/main.js run /home/redteam/HKD-phase10.7-linux/artifacts/phase10.7-linux-logs/programs/valid.hkd",
+    "log": "artifacts/phase10.7-linux-logs/valid_program.log"
+  },
+  {
+    "name": "invalid_program",
+    "actualExitCode": 1,
+    "expectedExitCode": 1,
+    "assertion": "PASS",
+    "command": "/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/node dist/cli/main.js run /home/redteam/HKD-phase10.7-linux/artifacts/phase10.7-linux-logs/programs/invalid.hkd",
+    "log": "artifacts/phase10.7-linux-logs/invalid_program.log"
+  },
+  {
+    "name": "package_security_and_benchmark_regressions",
+    "actualExitCode": 0,
+    "command": "/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/npm test -- --runTestsByPath tests/security/phase10_6_boundaries.test.ts tests/security/package_fuzzing.test.ts tests/performance/phase9_baseline.test.ts --runInBand",
+    "log": "artifacts/phase10.7-linux-logs/package_security_and_benchmark_regressions.log"
+  }
+]

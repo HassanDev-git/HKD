@@ -1,5 +1,7 @@
 # HKD Native Code Generation, JIT/AOT & Optimizing Compiler Architecture
 
+> Architecture/design document: components described here are proposals or implementation targets unless independently verified. In HKD 1.1.0 the JIT emitter is not wired into VM dispatch, and HKD source-to-machine-code AOT is not implemented. See `docs/known-limitations.md`.
+
 This document specifies the technical architecture for **HKD Phase 10: Native Code Generation, JIT/AOT & Optimizing Compiler 3.0**.
 
 ---

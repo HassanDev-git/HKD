@@ -136,7 +136,7 @@ function deserializeProgram(buffer) {
     if (formatVersion !== 1) {
         throw new Error(`Unsupported HKDB bytecode format version: ${formatVersion}`);
     }
-    let offset = 8;
+    const offset = 8;
     const readResult = deserializeChunk(buffer, offset);
     return readResult.chunk;
 }

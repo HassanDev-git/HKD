@@ -5,7 +5,7 @@
  * 1. 10,000 execution iterations with RSS memory leak profiling
  * 2. Concurrent HTTP load on ProductionHttpServer with 0 errors
  * 3. Graceful shutdown without socket/resource leaks
- * 4. Generates reports/soak-final.json empirical record
+ * 4. Generates artifacts/phase10.3-soak-final.json empirical record
  */
 
 import { describe, test, expect } from "@jest/globals";
@@ -16,6 +16,7 @@ import { VM } from "../../src/vm/vm.js";
 import { Chunk } from "../../src/bytecode/chunk.js";
 import { Op } from "../../src/bytecode/opcodes.js";
 import { ProductionHttpServer } from "../../src/deploy/http-server.js";
+import { HKD_VERSION } from "../../src/utils/index.js";
 
 describe("HKD Production Soak & Concurrency Stress Suite", () => {
   test("10,000 iteration soak test maintains RSS memory stability", () => {
@@ -60,7 +61,7 @@ describe("HKD Production Soak & Concurrency Stress Suite", () => {
 
     // Record empirical soak report
     const soakReport = {
-      report: "HKD 1.0.0 Production Soak & Memory Stability",
+      report: `HKD ${HKD_VERSION} Production Soak & Memory Stability`,
       timestamp: new Date().toISOString(),
       iterations,
       durationMs,
@@ -72,14 +73,13 @@ describe("HKD Production Soak & Concurrency Stress Suite", () => {
         rssGrowthRatio: Number(rssGrowthRatio.toFixed(3)),
         initialHeapUsedBytes: initialHeap,
         finalHeapUsedBytes: finalHeap,
-        leaksDetected: 0,
-        status: "STABLE",
+        status: "RSS_GROWTH_WITHIN_TEST_LIMIT",
       },
     };
 
-    fs.mkdirSync("reports", { recursive: true });
+    fs.mkdirSync("artifacts", { recursive: true });
     fs.writeFileSync(
-      path.resolve("reports/soak-final.json"),
+      path.resolve("artifacts/phase10.3-soak-final.json"),
       JSON.stringify(soakReport, null, 2),
       "utf-8"
     );

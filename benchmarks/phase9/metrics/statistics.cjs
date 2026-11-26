@@ -31,6 +31,7 @@ function calculateStatistics(samples) {
 
   const sum = sorted.reduce((acc, val) => acc + val, 0);
   const mean = Number((sum / n).toFixed(4));
+  const standardDeviation = Number(Math.sqrt(sorted.reduce((total, value) => total + ((value - sum / n) ** 2), 0) / Math.max(1, n - 1)).toFixed(4));
 
   const mid = Math.floor(n / 2);
   const median = n % 2 !== 0 ? sorted[mid] : Number(((sorted[mid - 1] + sorted[mid]) / 2).toFixed(4));
@@ -42,6 +43,7 @@ function calculateStatistics(samples) {
     min: Number(min.toFixed(4)),
     max: Number(max.toFixed(4)),
     mean,
+    standardDeviation,
     median: Number(median.toFixed(4)),
     p95: Number(p95.toFixed(4)),
     p99: Number(p99.toFixed(4)),

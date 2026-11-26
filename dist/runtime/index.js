@@ -49,6 +49,10 @@ const moduleCache = new Map();
 const activeImports = new Set();
 // ─── Pipeline ─────────────────────────────────────────────────────────────────
 function runSource(source, opts = {}) {
+    // Keep imports cached within one program execution, but release their object
+    // graphs before starting the next independent program in this process.
+    moduleCache.clear();
+    activeImports.clear();
     const fileName = opts.fileName ?? "<stdin>";
     const doAnalyse = opts.analyse !== false;
     const diagnostics = [];

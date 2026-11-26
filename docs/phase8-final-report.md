@@ -1,5 +1,7 @@
 # HKD Phase 8 — Public Developer Preview & Real-World Hardening: Final Report
 
+> Historical phase document: statements below reflect the design or audit claims made when this document was written. They are not current validation evidence and do not establish present release readiness, implemented JIT/AOT, or platform support. For the current Windows x64 audit scope and evidence, see `artifacts/phase10.3-final-release-verification.json` and `docs/known-limitations.md`.
+
 **Date:** September 28, 2026  
 **Language Version:** HKD 1.1.0 (Public Developer Preview)  
 **Target Architecture:** x86_64-pc-windows-msvc (Cross-Platform Ready: Linux x86_64, macOS ARM64)  

@@ -2,91 +2,183 @@ name: HKD CI Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  lint-and-audit:
-    name: Lint, Typecheck & Security Audit
-    runs-on: ubuntu-latest
+  test-matrix:
+    name: Node ${{ matrix.node }} / ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2025
+            platform: Windows x64
+            node: 24
+            zig: win32-x64
+            package: true
+          - runner: windows-11-arm
+            platform: Windows ARM64
+            node: 24
+            zig: win32-arm64
+          - runner: ubuntu-24.04
+            platform: Ubuntu x64
+            node: 24
+            zig: linux-x64
+          - runner: ubuntu-24.04-arm
+            platform: Ubuntu ARM64
+            node: 24
+            zig: linux-arm64
+          - runner: macos-15-intel
+            platform: macOS x64
+            node: 24
+            zig: darwin-x64
+          - runner: macos-15
+            platform: macOS ARM64
+            node: 24
+            zig: darwin-arm64
+          - runner: ubuntu-24.04
+            platform: Ubuntu x64 compatibility
+            node: 22
+            zig: linux-x64
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js 20
+      - name: Set up Node.js ${{ matrix.node }}
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
-      - name: Install dependencies
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - name: Install locked dependencies
         run: npm ci
-      - name: Compile TypeScript
+      - name: Lint TypeScript
+        id: lint
+        run: npm run lint
+      - name: Typecheck TypeScript
+        id: typecheck
+        run: npm run typecheck
+      - name: Build CLI
+        id: build
         run: npm run build
+      - name: Run Zig tests and build native runtime
+        id: zig
+        env:
+          HKD_NATIVE_OUTPUT_DIR: native-runtime/zig-out/bin
+          ZIG_PACKAGE: ${{ matrix.zig }}
+        run: node scripts/ci-zig.cjs
+      - name: Run Jest suite
+        id: jest
+        run: npm test
+      - name: Run HKD CLI correctness and exit-code smoke checks
+        id: cli
+        run: node scripts/ci-smoke.cjs
+      - name: Verify Windows x64 standalone package
+        if: matrix.package == true
+        id: package
+        run: npm run package
+      - name: Record runner and check outcomes
+        if: always()
+        env:
+          ZIG_PACKAGE: ${{ matrix.zig }}
+          HKD_MATRIX_PLATFORM: ${{ matrix.platform }}
+          HKD_MATRIX_NODE: ${{ matrix.node }}
+          HKD_ZIG_VERSION: ${{ steps.zig.outputs.version }}
+          HKD_CI_OUTCOMES: '{"lint":"${{ steps.lint.outcome }}","typecheck":"${{ steps.typecheck.outcome }}","build":"${{ steps.build.outcome }}","zig":"${{ steps.zig.outcome }}","jest":"${{ steps.jest.outcome }}","cli":"${{ steps.cli.outcome }}","package":"${{ steps.package.outcome }}"}'
+        run: node scripts/ci-evidence.cjs
+      - name: Preserve machine-readable runner evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hkd-ci-evidence-${{ matrix.platform }}-node-${{ matrix.node }}
+          path: artifacts/ci-evidence/
+          if-no-files-found: error
+
+  lint-and-audit:
+    name: Dependency and platform diagnostics
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
       - name: System Health Doctor
         run: node dist/cli/main.js doctor
       - name: Dependency Security Audit
         run: node dist/cli/main.js audit
 
-  test-matrix:
-    name: Test on ${{ matrix.os }}
-    needs: [lint-and-audit]
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+  container-build-and-run:
+    name: Build and execute container image
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
-      - name: Install dependencies
-        run: npm ci
-      - name: Compile TypeScript
-        run: npm run build
-      - name: Ensure Executable Permissions
-        if: runner.os != 'Windows'
-        run: |
-          chmod +x node_modules/@zigc/*/bin/* || true
-      - name: Build Native Runtime
-        run: |
-          node -e "
-            const { spawnSync } = require('child_process');
-            const path = require('path');
-            const fs = require('fs');
-            const isWin = process.platform === 'win32';
-            const isDarwin = process.platform === 'darwin';
-            const arch = process.arch === 'arm64' ? 'arm64' : 'x64';
-            const plat = isWin ? 'win32-x64' : (isDarwin ? 'darwin-' + arch : 'linux-' + arch);
-            const bin = isWin ? 'zig.exe' : 'zig';
-            const zigBin = path.resolve('node_modules', '@zigc', plat, 'bin', bin);
-            if (fs.existsSync(zigBin)) {
-              if (!isWin) try { fs.chmodSync(zigBin, 0o755); } catch {}
-              const res = spawnSync(zigBin, ['build', '-Doptimize=ReleaseFast'], { cwd: 'native-runtime', stdio: 'inherit' });
-              process.exit(res.status ?? 0);
-            }
-          " || true
-      - name: Run Test Suite
-        run: npm test
-
-  container-build:
-    name: Verify Multi-Stage Container Build
-    needs: [lint-and-audit]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
       - name: Generate Dockerfile
         run: node dist/cli/main.js container init
-      - name: Set up Docker Buildx
+      - id: buildx
         uses: docker/setup-buildx-action@v3
-      - name: Build Container Image
-        uses: docker/build-push-action@v5
+      - name: Build image for local execution
+        id: image
+        uses: docker/build-push-action@v6
         with:
           context: .
+          load: true
           push: false
-          tags: hkd-app:test
+          tags: hkd-app:ci
+      - name: Run HKD program inside image as non-root
+        id: valid_runtime
+        shell: bash
+        run: |
+          test "$(docker inspect --format '{{.Config.User}}' hkd-app:ci)" = "hkd:hkd"
+          output="$(docker run --rm hkd-app:ci 2>&1 | tee "$RUNNER_TEMP/hkd-container-valid.out")"
+          echo "$output"
+          [[ "$output" == *"HKD Production Runtime initialized: v1.1.0"* ]]
+          docker run --rm --entrypoint node hkd-app:ci -e 'process.exit(process.getuid() === 10001 ? 0 : 1)'
+          docker image inspect --format 'image_size_bytes={{.Size}}' hkd-app:ci
+      - name: Verify invalid HKD diagnostics and non-zero container exit
+        id: invalid_runtime
+        shell: bash
+        run: |
+          mkdir -p invalid-context/src
+          cp Dockerfile .dockerignore package.json package-lock.json tsconfig.json invalid-context/
+          cp -R src/. invalid-context/src/
+          printf 'let = ;\n' > invalid-context/src/main.hkd
+          docker build -t hkd-app:invalid invalid-context
+          set +e
+          docker run --rm hkd-app:invalid > "$RUNNER_TEMP/hkd-container-invalid.out" 2>&1
+          status=$?
+          set -e
+          cat "$RUNNER_TEMP/hkd-container-invalid.out"
+          test "$status" -ne 0
+          grep -Eiq 'error|expected|unexpected' "$RUNNER_TEMP/hkd-container-invalid.out"
+      - name: Record container runner outcomes
+        if: always()
+        env:
+          HKD_MATRIX_PLATFORM: Container Ubuntu x64
+          HKD_MATRIX_NODE: 24
+          HKD_CI_OUTCOMES: '{"buildx":"${{ steps.buildx.outcome }}","image":"${{ steps.image.outcome }}","validRuntime":"${{ steps.valid_runtime.outcome }}","invalidRuntime":"${{ steps.invalid_runtime.outcome }}"}'
+        run: node scripts/ci-evidence.cjs
+      - name: Preserve container logs and machine-readable evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hkd-container-runtime-evidence
+          path: |
+            artifacts/ci-evidence/
+            ${{ runner.temp }}/hkd-container-*.out
+          if-no-files-found: warn

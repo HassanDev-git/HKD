@@ -18,6 +18,12 @@ export interface EnvironmentMetadata {
   totalMemoryBytes: number;
   totalMemoryMb: number;
   nodeVersion: string;
+  zigVersion: string;
+  benchmarkCommand: string;
+  cpuLoadAverage1m: number | string;
+  cpuFrequencyMhz: string;
+  powerMode: string;
+  thermalInformation: string;
   typescriptVersion: string;
   hkdVersion: string;
   git: {
@@ -38,6 +44,12 @@ export function getSystemMetadata(rootDir: string = process.cwd()): EnvironmentM
   const cpuModel = cpus && cpus.length > 0 ? cpus[0].model.trim() : "Unknown CPU";
   const cpuCount = cpus ? cpus.length : 1;
   const totalMem = os.totalmem();
+  const zigExecutable = path.join(rootDir, "node_modules", "@zigc", `${os.platform()}-${process.arch}`, "bin", os.platform() === "win32" ? "zig.exe" : "zig");
+  let zigVersion = "unavailable (Zig executable not installed for this platform)";
+  if (fs.existsSync(zigExecutable)) {
+    const version = spawnSync(zigExecutable, ["version"], { encoding: "utf-8", timeout: 10000 });
+    if (version.status === 0 && version.stdout) zigVersion = version.stdout.trim();
+  }
 
   // Read HKD package.json version
   let hkdVer = "1.1.0";
@@ -87,6 +99,12 @@ export function getSystemMetadata(rootDir: string = process.cwd()): EnvironmentM
     totalMemoryBytes: totalMem,
     totalMemoryMb: Math.round(totalMem / (1024 * 1024)),
     nodeVersion: process.version,
+    zigVersion,
+    benchmarkCommand: process.env.HKD_BENCHMARK_COMMAND || "node benchmarks/phase9/runner/run_baseline.cjs",
+    cpuLoadAverage1m: os.platform() === "win32" ? "unavailable (os.loadavg is not supported on Windows)" : os.loadavg()[0],
+    cpuFrequencyMhz: "unavailable (no portable frequency API)",
+    powerMode: "unavailable (no portable power-mode API)",
+    thermalInformation: "unavailable (no portable thermal API)",
     typescriptVersion: tsVer,
     hkdVersion: hkdVer,
     git: {

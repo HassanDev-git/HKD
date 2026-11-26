@@ -1,7 +1,7 @@
 /**
  * HKD Tooling Doctor 2.0 (hkd doctor)
  *
- * Comprehensive diagnostics: compiler, native runtime, JIT/AOT readiness,
+ * Diagnostics: compiler, optional native bytecode runtime, JIT/AOT status,
  * target architectures, LSP/DAP servers, package cache, containerization, and environment.
  */
 
@@ -90,7 +90,7 @@ function findFirstCandidate(candidates: string[]): string | null {
     const testRun = spawnSync(nativeBinaryPath, ["--version"], { encoding: "utf-8" });
     if (testRun.status === 0) {
       checks.push({
-        name: "Native Zig Runtime & JIT Engine",
+        name: "Native Zig Bytecode Runtime",
         category: "runtime",
         status: "ok",
         message: `Native runtime executable verified (${testRun.stdout.trim()})`,
@@ -98,7 +98,7 @@ function findFirstCandidate(candidates: string[]): string | null {
       });
     } else {
       checks.push({
-        name: "Native Zig Runtime & JIT Engine",
+        name: "Native Zig Bytecode Runtime",
         category: "runtime",
         status: "warn",
         message: "Native binary found but exited with non-zero code",
@@ -106,7 +106,7 @@ function findFirstCandidate(candidates: string[]): string | null {
     }
   } else {
     checks.push({
-      name: "Native Zig Runtime & JIT Engine",
+      name: "Native Zig Bytecode Runtime",
       category: "runtime",
       status: "warn",
       message: "Native runtime binary not built. Run 'npx zig build -Doptimize=ReleaseFast'",

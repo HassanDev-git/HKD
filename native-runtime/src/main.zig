@@ -536,19 +536,24 @@ pub fn main(init: std.process.Init) !void {
             std.debug.print("USAGE: hkd-runtime [options] <file.hkdb>\n", .{});
             std.debug.print("OPTIONS:\n", .{});
             std.debug.print("  --vm               Force Stack VM execution (default)\n", .{});
-            std.debug.print("  --jit              Enable JIT native machine-code compilation\n", .{});
-            std.debug.print("  --jit-stats        Display JIT engine compilation and deopt statistics\n", .{});
+            std.debug.print("  --jit              Unsupported: JIT dispatch is not integrated in this release\n", .{});
+            std.debug.print("  --jit-stats        Unsupported: JIT dispatch is not integrated in this release\n", .{});
             std.debug.print("  --profile          Enable runtime execution profiling\n", .{});
             std.debug.print("  --profile=<path>   Write execution profile data to JSON file\n", .{});
             std.debug.print("  --mem-stats        Display memory allocations and peak RSS\n", .{});
             std.debug.print("  --skip-validation  Bypass bytecode pre-validation\n", .{});
             std.process.exit(0);
         } else if (std.mem.eql(u8, arg, "--version") or std.mem.eql(u8, arg, "-v")) {
-            std.debug.print("HKD 1.0.0\n", .{});
+            std.debug.print("HKD 1.1.0\n", .{});
             std.process.exit(0);
         } else {
             file_path_opt = arg;
         }
+    }
+
+    if (enable_jit) {
+        std.debug.print("JIT execution is not implemented in this release; use the default Stack VM.\n", .{});
+        std.process.exit(2);
     }
 
     var buffer: []u8 = undefined;

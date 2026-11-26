@@ -1,0 +1,26 @@
+[
+  {
+    "check": "workflow-yaml-parse",
+    "exitCode": 0
+  },
+  {
+    "check": "typecheck-final",
+    "exitCode": 0
+  },
+  {
+    "check": "ci-evidence-syntax",
+    "exitCode": 0
+  },
+  {
+    "check": "ci-zig-syntax",
+    "exitCode": 0
+  },
+  {
+    "check": "package-script-syntax",
+    "exitCode": 0
+  },
+  {
+    "check": "git-diff-check",
+    "exitCode": 0
+  }
+]

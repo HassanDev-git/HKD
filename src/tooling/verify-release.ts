@@ -1,7 +1,7 @@
 /**
  * HKD Automated Release Acceptance Verifier (hkd verify-release)
  *
- * Runs comprehensive 18-dimension evidence-based acceptance gates covering
+ * Runs evidence-based acceptance gates covering
  * compiler, native runtime, differential execution, memory instrumentation,
  * security, packaging, LSP, DAP, VS Code, reproducibility, and documentation.
  * Generates artifacts/release-verification.json.
@@ -10,7 +10,10 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
+import * as os from "os";
 import { performance } from "perf_hooks";
+import { spawnSync } from "child_process";
+import { Readable, Writable } from "stream";
 import { VM } from "../vm/vm.js";
 import { Chunk } from "../bytecode/chunk.js";
 import { Op } from "../bytecode/opcodes.js";
@@ -20,9 +23,20 @@ import { generateCycloneDxSbom } from "../deploy/sbom.js";
 import { generateDockerfile } from "../deploy/container.js";
 import { runSource } from "../runtime/index.js";
 import { HKD_VERSION } from "../utils/index.js";
+import { ErrorReporter } from "../errors/index.js";
+import { Lexer } from "../lexer/lexer.js";
+import { Parser } from "../parser/parser.js";
+import { SemanticAnalyser } from "../semantic/analyser.js";
+import { Compiler } from "../bytecode/compiler.js";
+import { HkdLanguageServer } from "../lsp/server.js";
+import { HkdDebugAdapterServer } from "../debug/server.js";
+import { parseLockfileV2, readLockfile, serializeLockfileV2 } from "../package-manager/lockfile.js";
+import { readManifest } from "../package-manager/index.js";
+import { runDeployCheck } from "../deploy/check.js";
 
 export type GateSeverity = "critical" | "high" | "medium" | "informational";
-export type GateStatus = "PASS" | "FAIL" | "WARN" | "EXPECTED";
+export type GateStatus = "PASS" | "FAIL" | "WARN" | "EXPECTED" | "BLOCKED" | "NOT TESTED" | "NOT SUPPORTED" | "NOT IMPLEMENTED";
+export type ReleaseContract = "required" | "optional" | "out-of-contract";
 
 export interface ReleaseDimensionStatus {
   dimension: string;
@@ -30,6 +44,12 @@ export interface ReleaseDimensionStatus {
   status: "PASS" | "WARN — non-blocking" | "BLOCKER";
   message: string;
   details?: string;
+  capabilityStatus?: GateStatus;
+  releaseContract?: ReleaseContract;
+  blocksRelease?: boolean;
+  evidence?: Record<string, unknown>;
+  command?: string;
+  limitations?: string[];
 }
 
 export interface ReleaseGateResult {
@@ -45,6 +65,11 @@ export interface ReleaseGateEvidence {
   command: string;
   duration_ms: number;
   evidence: Record<string, any>;
+  capabilityStatus?: GateStatus;
+  releaseContract?: ReleaseContract;
+  blocksRelease?: boolean;
+  actualResult?: string;
+  limitations?: string[];
 }
 
 export interface ExperimentalFeatureResult {
@@ -69,7 +94,246 @@ export interface VerifyReleaseReport {
   gates: ReleaseGateResult[];
   verificationGates: ReleaseGateEvidence[];
   experimentalFeatures: ExperimentalFeatureResult[];
-  result: "RELEASE READY" | "NOT RELEASE READY";
+  releaseScope: string;
+  result: "HOST TARGET READY" | "NOT RELEASE READY";
+}
+
+function compileProbeBytecode(source: string): Uint8Array {
+  const fileName = "<release-probe>";
+  const reporter = new ErrorReporter(source, fileName);
+  const tokens = new Lexer(source, fileName, reporter).tokenize();
+  const ast = new Parser(tokens, source, fileName, reporter, "2026").parse();
+  if (reporter.hasErrors()) throw new Error("Probe source did not parse");
+  new SemanticAnalyser(reporter, source).analyse(ast);
+  if (reporter.hasErrors()) throw new Error("Probe source did not typecheck");
+  return serializeProgram(new Compiler(reporter).compile(ast));
+}
+
+function runNativeProbe(projectDir: string, flags: string[] = []): { tested: boolean; passed: boolean; exitCode?: number | null; output?: string; reason?: string } {
+  const runtimeName = process.platform === "win32" ? "hkd-runtime.exe" : "hkd-runtime";
+  const runtimePath = path.join(projectDir, "native-runtime", "zig-out", "bin", runtimeName);
+  if (!fs.existsSync(runtimePath)) return { tested: false, passed: false, reason: `Missing ${runtimePath}` };
+
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "hkd-release-probe-"));
+  try {
+    const bytecodePath = path.join(tempDir, "probe.hkdb");
+    fs.writeFileSync(bytecodePath, compileProbeBytecode('print("HKD_NATIVE_PROBE_OK");'));
+    const result = spawnSync(runtimePath, [...flags, bytecodePath], { encoding: "utf-8", timeout: 30000 });
+    const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+    return {
+      tested: true,
+      passed: result.status === 0 && output.includes("HKD_NATIVE_PROBE_OK"),
+      exitCode: result.status,
+      output: output.slice(0, 500),
+      reason: result.error?.message,
+    };
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
+function runStandaloneBundleProbe(projectDir: string): { status: GateStatus; evidence: Record<string, unknown> } {
+  const cliPath = path.join(projectDir, "dist", "cli", "main.js");
+  const runtimeName = process.platform === "win32" ? "hkd-runtime.exe" : "hkd-runtime";
+  const runtimePath = path.join(projectDir, "native-runtime", "zig-out", "bin", runtimeName);
+  if (!fs.existsSync(cliPath) || !fs.existsSync(runtimePath)) {
+    return {
+      status: "BLOCKED",
+      evidence: { cli_available: fs.existsSync(cliPath), native_runtime_available: fs.existsSync(runtimePath), reason: "Build the TypeScript CLI and host Zig runtime before this probe." },
+    };
+  }
+
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "hkd-standalone-probe-"));
+  try {
+    const sourcePath = path.join(tempDir, "probe.hkd");
+    const outputPath = path.join(tempDir, process.platform === "win32" ? "probe.exe" : "probe");
+    fs.writeFileSync(sourcePath, 'print("HKD_STANDALONE_BUNDLE_OK");\n', "utf-8");
+    const build = spawnSync(process.execPath, [cliPath, "build", "--native", sourcePath, "-o", outputPath], {
+      cwd: tempDir,
+      encoding: "utf-8",
+      timeout: 60000,
+      env: { ...process.env, NODE_ENV: "production" },
+    });
+    const buildOutput = `${build.stdout ?? ""}${build.stderr ?? ""}`;
+    if (build.error || build.status !== 0 || !fs.existsSync(outputPath)) {
+      return { status: "FAIL", evidence: { build_exit_code: build.status, reason: build.error?.message, output: buildOutput.slice(0, 500) } };
+    }
+
+    const execute = spawnSync(outputPath, [], { cwd: tempDir, encoding: "utf-8", timeout: 30000 });
+    const output = `${execute.stdout ?? ""}${execute.stderr ?? ""}`;
+    const passed = !execute.error && execute.status === 0 && output.includes("HKD_STANDALONE_BUNDLE_OK");
+    return {
+      status: passed ? "PASS" : "FAIL",
+      evidence: {
+        build_exit_code: build.status,
+        execution_exit_code: execute.status,
+        execution_output: output.slice(0, 500),
+        executable_bytes: fs.statSync(outputPath).size,
+        standalone_executable_sha256: crypto.createHash("sha256").update(fs.readFileSync(outputPath)).digest("hex"),
+        program_compiled_to_bytecode_and_embedded_in_native_runtime: passed,
+        native_machine_code_generated_from_hkd_source: false,
+        reason: execute.error?.message,
+      },
+    };
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
+function runResourceLifecycleProbe(): { passed: boolean; evidence: Record<string, unknown> } {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "hkd-resource-probe-"));
+  const modulePath = path.join(tempDir, "value.hkd");
+  const entryPath = path.join(tempDir, "main.hkd");
+  const source = 'import value from "value.hkd"\nprint(value.current)';
+  const execute = () => {
+    const output: string[] = [];
+    const result = runSource(source, { fileName: entryPath, noExit: true, printDiagnostics: false, output: (line) => output.push(line) });
+    return { ok: result.ok, output };
+  };
+  const filePath = path.join(tempDir, "stdlib-fs.txt").replace(/\\/g, "/");
+
+  try {
+    fs.writeFileSync(modulePath, "export let current = 1\n", "utf-8");
+    const first = execute();
+    fs.writeFileSync(modulePath, "export let current = 2\n", "utf-8");
+    const second = execute();
+    const fsOutput: string[] = [];
+    const fsResult = runSource(`
+      import fs
+      fs.write(${JSON.stringify(filePath)}, "payload")
+      print(fs.read(${JSON.stringify(filePath)}))
+      fs.delete(${JSON.stringify(filePath)})
+      print(fs.exists(${JSON.stringify(filePath)}))
+    `, { noExit: true, printDiagnostics: false, output: (line) => fsOutput.push(line) });
+    const missingRead = runSource(`import fs\nfs.read(${JSON.stringify(filePath)})`, { noExit: true, printDiagnostics: false });
+    const postError = runSource('print("HKD_RESOURCE_RECOVERED")', { noExit: true, printDiagnostics: false });
+    const fileOpsPassed = fsResult.ok && fsOutput.join("|") === "payload|false" && !fs.existsSync(filePath);
+    const passed = first.ok && first.output[0] === "1" && second.ok && second.output[0] === "2" && fileOpsPassed && !missingRead.ok && postError.ok;
+    return {
+      passed,
+      evidence: {
+        repeated_execution_observed_updated_module: first.output[0] === "1" && second.output[0] === "2",
+        std_fs_write_read_delete_passed: fileOpsPassed,
+        missing_file_read_returns_error: !missingRead.ok,
+        runtime_usable_after_error: postError.ok,
+        temporary_file_removed: !fs.existsSync(filePath),
+        persistent_native_file_handles: false,
+        resource_scope: "Synchronous TypeScript std.fs operations and independent runSource executions; no asynchronous file handles are exposed by this API.",
+      },
+    };
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
+function runPerformanceBenchmark(projectDir: string): { status: GateStatus; evidence: Record<string, unknown> } {
+  const runnerPath = path.join(projectDir, "benchmarks", "phase9", "runner", "run_baseline.cjs");
+  if (!fs.existsSync(runnerPath)) return { status: "NOT TESTED", evidence: { reason: "Phase 9 benchmark runner is not present in this project tree." } };
+
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "hkd-benchmark-probe-"));
+  try {
+    const outputPath = path.join(tempDir, "benchmark.json");
+    const result = spawnSync(process.execPath, [runnerPath, "--out", outputPath], {
+      cwd: projectDir,
+      encoding: "utf-8",
+      timeout: 300000,
+      maxBuffer: 8 * 1024 * 1024,
+      env: { ...process.env, NODE_ENV: "production" },
+    });
+    const stdout = result.stdout ?? "";
+    const stderr = result.stderr ?? "";
+    if (result.error) return { status: "BLOCKED", evidence: { reason: result.error.message, exit_code: result.status } };
+    if (result.status !== 0 || !fs.existsSync(outputPath)) {
+      return { status: "FAIL", evidence: { exit_code: result.status, stdout_tail: stdout.slice(-1000), stderr_tail: stderr.slice(-1000) } };
+    }
+
+    const report = JSON.parse(fs.readFileSync(outputPath, "utf-8"));
+    const workloads = Array.isArray(report.workloads) ? report.workloads : [];
+    const passed = workloads.length === 18 && workloads.every((workload: any) => workload.correctness?.verified === true);
+    return {
+      status: passed ? "PASS" : "FAIL",
+      evidence: {
+        command: "node benchmarks/phase9/runner/run_baseline.cjs --out <temporary report>",
+        workload_count: workloads.length,
+        warmup_iterations: report.methodology?.warmup_iterations,
+        measured_iterations: report.methodology?.measured_iterations,
+        environment: report.environment,
+        execution_paths: { runtime_vm: "TypeScript runFile / Stack VM in the benchmark runner process", cli_process: "Node.js plus dist/cli/main.js child process" },
+        medians_ms: workloads.map((workload: any) => ({ id: workload.id, median: workload.statistics_ms?.median, min: workload.statistics_ms?.min, max: workload.statistics_ms?.max })),
+        memory_measurement: "Runner-process RSS snapshots; child-process peak RSS is not measured. No allocation counts are available.",
+        correctness_passed: passed,
+      },
+    };
+  } catch (error) {
+    return { status: "FAIL", evidence: { reason: error instanceof Error ? error.message : String(error) } };
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
+function scanForSecrets(projectDir: string): number {
+  const ignoredDirs = new Set(["node_modules", ".git", "dist", "dist-release", "scratch", "target", ".hkd"]);
+  const ignoredMatches = ["scripts/secret-scan", "task.md", "walkthrough", "user_prompt", "transcript", "fake", "dummy", "test_token"];
+  const patterns = [
+    /-----BEGIN\s+(?:RSA|DSA|EC|OPENSSH)?\s*PRIVATE KEY-----/,
+    /\bAKIA[0-9A-Z]{16}\b/,
+    /\bghp_[0-9a-zA-Z]{36}\b/,
+    /(?:api[_-]?key|secret[_-]?key|auth[_-]?token)\s*[:=]\s*["'][A-Za-z0-9_-]{20,}["']/i,
+    /[A-Za-z]:\\Users\\[A-Za-z0-9_]+\\/,
+  ];
+  const extensions = new Set([".ts", ".js", ".hkd", ".json", ".md", ".toml", ".zig"]);
+  let violations = 0;
+  const visit = (dir: string) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory() && ignoredDirs.has(entry.name)) continue;
+      const filePath = path.join(dir, entry.name);
+      if (entry.isDirectory()) visit(filePath);
+      else if (entry.isFile() && extensions.has(path.extname(entry.name))) {
+        const relative = path.relative(projectDir, filePath).replace(/\\/g, "/");
+        if (ignoredMatches.some((match) => relative.includes(match))) continue;
+        const contents = fs.readFileSync(filePath, "utf-8");
+        for (const line of contents.split(/\r?\n/)) {
+          if (line.includes("secret-scan:ignore")) continue;
+          if (patterns.some((pattern) => pattern.test(line))) violations++;
+        }
+      }
+    }
+  };
+  visit(projectDir);
+  return violations;
+}
+
+function verifyArtifactInventory(projectDir: string): { passed: boolean; checked: number; errors: string[] } {
+  const distDir = path.join(projectDir, "dist");
+  const manifestPath = path.join(distDir, "artifacts.json");
+  const errors: string[] = [];
+  if (!fs.existsSync(manifestPath)) return { passed: false, checked: 0, errors: ["dist/artifacts.json is missing"] };
+  try {
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+    if (!Array.isArray(manifest.artifacts) || manifest.artifacts.length === 0) {
+      return { passed: false, checked: 0, errors: ["Artifact manifest has no artifacts"] };
+    }
+    let checked = 0;
+    for (const artifact of manifest.artifacts) {
+      const targetPath = path.resolve(distDir, artifact.binaryName);
+      if (!targetPath.startsWith(path.resolve(distDir) + path.sep)) {
+        errors.push(`Artifact path escapes dist: ${artifact.binaryName}`);
+        continue;
+      }
+      if (!fs.existsSync(targetPath)) {
+        errors.push(`Artifact is missing: ${artifact.binaryName}`);
+        continue;
+      }
+      const bytes = fs.readFileSync(targetPath);
+      const checksum = crypto.createHash("sha256").update(bytes).digest("hex");
+      if (checksum !== artifact.checksum) errors.push(`Checksum mismatch: ${artifact.binaryName}`);
+      if (bytes.length !== artifact.sizeBytes) errors.push(`Size mismatch: ${artifact.binaryName}`);
+      checked++;
+    }
+    return { passed: checked > 0 && errors.length === 0, checked, errors };
+  } catch (error) {
+    return { passed: false, checked: 0, errors: [error instanceof Error ? error.message : String(error)] };
+  }
 }
 
 export function runVerifyRelease(projectDir: string): VerifyReleaseReport {
@@ -79,14 +343,16 @@ export function runVerifyRelease(projectDir: string): VerifyReleaseReport {
   const target = getHostTarget();
 
   let effectiveDir = projectDir;
-  if (!fs.existsSync(path.join(effectiveDir, "hkd.toml"))) {
-    const candidateApp = path.join(effectiveDir, "examples", "production-app");
-    const candidateServer = path.join(effectiveDir, "examples", "production-server");
-    if (fs.existsSync(path.join(candidateApp, "hkd.toml"))) {
-      effectiveDir = candidateApp;
-    } else if (fs.existsSync(path.join(candidateServer, "hkd.toml"))) {
-      effectiveDir = candidateServer;
-    }
+  const rootManifest = readManifest(effectiveDir);
+  const rootEntry = rootManifest?.main ?? "src/main.hkd";
+  if (!rootManifest || !fs.existsSync(path.join(effectiveDir, rootEntry))) {
+    const candidates = [
+      path.join(effectiveDir, "production-validation-app"),
+      path.join(effectiveDir, "examples", "production-app"),
+      path.join(effectiveDir, "examples", "production-server"),
+    ];
+    const candidate = candidates.find((dir) => fs.existsSync(path.join(dir, "hkd.toml")));
+    if (candidate) effectiveDir = candidate;
   }
 
   // ── 1. Language Conformance (critical) ──────────────────────────────────────
@@ -110,7 +376,7 @@ export function runVerifyRelease(projectDir: string): VerifyReleaseReport {
     severity: "critical",
     command: "runSource(<generics + pattern matching>, edition: 2027)",
     duration_ms: d0,
-    evidence: { generics_ok: true, pattern_matching_ok: true, pass: langConfPass },
+    evidence: { generics_and_pattern_matching_probe_passed: langConfPass, pass: langConfPass },
   });
 
   // ── 2. Edition Compatibility (critical) ────────────────────────────────────
@@ -129,7 +395,7 @@ export function runVerifyRelease(projectDir: string): VerifyReleaseReport {
     severity: "critical",
     command: "runSource(<edition 2026 program>, edition: 2026)",
     duration_ms: d1,
-    evidence: { edition_2026_frozen: true, pass: editionCompatPass },
+    evidence: { edition_2026_probe_passed: editionCompatPass, pass: editionCompatPass },
   });
 
   // ── 3. Compiler Engine (critical) ──────────────────────────────────────────
@@ -169,46 +435,66 @@ export function runVerifyRelease(projectDir: string): VerifyReleaseReport {
     severity: "critical",
     command: "VM.run(chunk)",
     duration_ms: d3,
-    evidence: { vm_returned_value: true, pass: stackVmPass },
+    evidence: { vm_returned_expected_value: stackVmPass, pass: stackVmPass },
   });
 
   // ── 5. Native VM (high) ────────────────────────────────────────────────────
   const t4 = performance.now();
-  const nativeVmPass = target.triple.length > 0;
+  const nativeProbe = runNativeProbe(projectDir);
+  const nativeVmPass = nativeProbe.tested && nativeProbe.passed;
   const d4 = Math.round(performance.now() - t4);
   verificationGates.push({
     name: "Native VM",
-    status: nativeVmPass ? "PASS" : "FAIL",
+    status: nativeVmPass ? "PASS" : nativeProbe.tested ? "FAIL" : "NOT TESTED",
     severity: "high",
-    command: "getHostTarget()",
+    command: "hkd-runtime <serialized probe.hkdb>",
     duration_ms: d4,
-    evidence: { target: target.triple, tier: target.tier, pass: nativeVmPass },
+    evidence: { target: target.triple, tier: target.tier, runtime_tested: nativeProbe.tested, output: nativeProbe.output, reason: nativeProbe.reason, pass: nativeVmPass },
   });
 
   // ── 6. JIT (high) ──────────────────────────────────────────────────────────
   const t5 = performance.now();
-  const jitPass = true;
+  const jitProbe = nativeProbe.tested ? runNativeProbe(projectDir, ["--jit"]) : nativeProbe;
   const d5 = Math.round(performance.now() - t5);
   verificationGates.push({
     name: "JIT",
-    status: jitPass ? "PASS" : "FAIL",
-    severity: "high",
-    command: "inline_cache_and_trace_specialization",
+    status: !jitProbe.tested ? "BLOCKED" : jitProbe.exitCode === 2 && jitProbe.output?.includes("JIT execution is not implemented") ? "NOT IMPLEMENTED" : "FAIL",
+    severity: "informational",
+    command: "hkd-runtime --jit <serialized probe.hkdb>",
     duration_ms: d5,
-    evidence: { baseline_jit: "operational", optimizing_jit: "operational", pass: jitPass },
+    evidence: { runtime_tested: jitProbe.tested, exit_code: jitProbe.exitCode, output: jitProbe.output, reason: jitProbe.reason, machine_code_emitter_exists: true, jit_manager_connected_to_vm_dispatch: false },
+    capabilityStatus: "NOT IMPLEMENTED",
+    releaseContract: "out-of-contract",
+    limitations: ["The Zig emitter and manager exist, but the VM never calls JITManager.recordCall; --jit now reports this explicitly."],
   });
 
-  // ── 7. AOT (high) ──────────────────────────────────────────────────────────
+  // ── 7. Native machine-code AOT is distinct from a bytecode bundle. ─────────
   const t6 = performance.now();
-  const aotPass = true;
   const d6 = Math.round(performance.now() - t6);
   verificationGates.push({
-    name: "AOT",
-    status: aotPass ? "PASS" : "FAIL",
-    severity: "high",
-    command: "target_native_codegen_check",
+    name: "Native Machine-Code AOT",
+    status: "NOT IMPLEMENTED",
+    severity: "informational",
+    command: "Source/build inspection: buildStandaloneNative embeds serialized HKDB bytecode in the Zig VM executable",
     duration_ms: d6,
-    evidence: { aot_target: target.triple, pass: aotPass },
+    evidence: { source_compiled_to_native_machine_code: false, source_compiled_to_bytecode: true, standalone_native_runtime_bundle_supported: true, reason: "HKD source is compiled to HKDB bytecode; the host Zig runtime executable is appended as a launcher. This is not per-program native machine-code generation." },
+    capabilityStatus: "NOT IMPLEMENTED",
+    releaseContract: "out-of-contract",
+    limitations: ["The x86-64 emitter is a JIT utility, not an AOT compiler, and it is not integrated with VM dispatch."],
+  });
+
+  const standaloneBundle = runStandaloneBundleProbe(projectDir);
+  verificationGates.push({
+    name: "Standalone Native Bundle",
+    status: standaloneBundle.status,
+    severity: "high",
+    command: "node dist/cli/main.js build --native <probe.hkd> -o <probe executable>; run generated executable",
+    duration_ms: 0,
+    evidence: standaloneBundle.evidence,
+    capabilityStatus: standaloneBundle.status === "PASS" ? "PASS" : standaloneBundle.status,
+    releaseContract: "required",
+    actualResult: standaloneBundle.status === "PASS" ? "Generated executable ran the embedded program and printed the expected output." : "Standalone executable build or execution did not complete successfully.",
+    limitations: ["Program execution uses embedded bytecode and the Zig interpreter; this does not compile HKD source to machine code."],
   });
 
   // ── 8. Differential Execution (critical) ───────────────────────────────────
@@ -229,36 +515,36 @@ export function runVerifyRelease(projectDir: string): VerifyReleaseReport {
     severity: "critical",
     command: "differential_execution_parity(ref, vm)",
     duration_ms: d7,
-    evidence: { outputs_matched: true, mismatches: 0, pass: diffPass },
+    evidence: { outputs_matched: diffPass, mismatches: diffPass ? 0 : 1, pass: diffPass },
   });
 
   // ── 9. Memory Safety (critical - Instrumented 10k Soak Cycles) ──────────────
   const t8 = performance.now();
   let memPass = false;
-  const initialMem = process.memoryUsage();
-  let peakRss = initialMem.rss;
-
-  // Run 10,000 soak cycles of bytecode execution
   const soakChunk = new Chunk("<soak>", 0);
   soakChunk.writeByte(Op.LoadTrue, 1);
   soakChunk.writeByte(Op.Return, 1);
   const soakVm = new VM();
-  for (let i = 0; i < 10000; i++) {
-    soakVm.run(soakChunk);
-    if (i % 1000 === 0) {
-      const currentRss = process.memoryUsage().rss;
-      if (currentRss > peakRss) {
-        peakRss = currentRss;
-      }
+  for (let i = 0; i < 2000; i++) soakVm.run(soakChunk); // warm the VM and allocator before measuring
+  const initialMem = process.memoryUsage();
+  let finalMem = initialMem;
+  let peakRss = initialMem.rss;
+  const trialRatios: number[] = [];
+  const cyclesPerTrial = 10000;
+  const repetitions = 3;
+  for (let trial = 0; trial < repetitions; trial++) {
+    const trialStart = process.memoryUsage();
+    for (let i = 0; i < cyclesPerTrial; i++) {
+      soakVm.run(soakChunk);
+      if (i % 1000 === 0) peakRss = Math.max(peakRss, process.memoryUsage().rss);
     }
+    finalMem = process.memoryUsage();
+    peakRss = Math.max(peakRss, finalMem.rss);
+    trialRatios.push(finalMem.rss / trialStart.rss);
   }
-  const finalMem = process.memoryUsage();
-  if (finalMem.rss > peakRss) {
-    peakRss = finalMem.rss;
-  }
-  const rssGrowthRatio = Number((finalMem.rss / initialMem.rss).toFixed(3));
+  const rssGrowthRatio = Number(Math.max(...trialRatios).toFixed(3));
   const heapDeltaBytes = finalMem.heapUsed - initialMem.heapUsed;
-  memPass = rssGrowthRatio < 1.10; // Documented policy threshold: < 1.10x growth ratio
+  memPass = rssGrowthRatio < 1.10; // retain the documented < 1.10x policy; use the worst of three warmed trials
   const d8 = Math.round(performance.now() - t8);
 
   verificationGates.push({
@@ -268,7 +554,10 @@ export function runVerifyRelease(projectDir: string): VerifyReleaseReport {
     command: "soak_stress(10000 cycles) + process.memoryUsage()",
     duration_ms: d8,
     evidence: {
-      cycles: 10000,
+      cycles: cyclesPerTrial * repetitions,
+      warmup_cycles: 2000,
+      repetitions,
+      per_trial_rss_growth_ratios: trialRatios.map((ratio) => Number(ratio.toFixed(3))),
       initial_rss_bytes: initialMem.rss,
       final_rss_bytes: finalMem.rss,
       peak_rss_bytes: peakRss,
@@ -290,10 +579,12 @@ export function runVerifyRelease(projectDir: string): VerifyReleaseReport {
   const t9 = performance.now();
   let secPass = false;
   let componentCount = 0;
+  let secretViolations = -1;
   try {
     const sbom = generateCycloneDxSbom(effectiveDir);
+    secretViolations = scanForSecrets(projectDir);
     if (sbom.bomFormat === "CycloneDX" && sbom.specVersion === "1.5") {
-      secPass = true;
+      secPass = secretViolations === 0;
       componentCount = sbom.components.length;
     }
   } catch {}
@@ -302,94 +593,119 @@ export function runVerifyRelease(projectDir: string): VerifyReleaseReport {
     name: "Security",
     status: secPass ? "PASS" : "FAIL",
     severity: "critical",
-    command: "generateCycloneDxSbom + secret_scan",
+    command: "generateCycloneDxSbom + repository sensitive-data scan",
     duration_ms: d9,
     evidence: {
       sbom_format: "CycloneDX 1.5",
       registered_components: componentCount,
-      secret_scan: "clean",
+      secret_scan_violations: secretViolations,
       pass: secPass,
     },
   });
 
   // ── 11. Packages (high) ────────────────────────────────────────────────────
   const t10 = performance.now();
-  const pkgPass = true;
+  let packageCount = 0;
+  let pkgPass = false;
+  try {
+    const lockfile = readLockfile(effectiveDir);
+    if (lockfile?.version === 2) {
+      packageCount = lockfile.packages.length;
+      const serialized = serializeLockfileV2(lockfile);
+      pkgPass = serializeLockfileV2(parseLockfileV2(serialized)) === serialized;
+    }
+  } catch {}
   const d10 = Math.round(performance.now() - t10);
   verificationGates.push({
     name: "Packages",
     status: pkgPass ? "PASS" : "FAIL",
     severity: "high",
-    command: "package_manager_lockfile_v2_determinism",
+    command: "readLockfile + serialize/parse deterministic round-trip",
     duration_ms: d10,
-    evidence: { lockfile_version: 2, diamond_solver: "verified", pass: pkgPass },
+    evidence: { lockfile_version: pkgPass ? 2 : null, locked_packages: packageCount, deterministic_round_trip: pkgPass, pass: pkgPass },
   });
 
   // ── 12. LSP (medium) ───────────────────────────────────────────────────────
   const t11 = performance.now();
-  const lspPass = true;
+  let lspResponse = "";
+  let lspPass = false;
+  try {
+    const writer = new Writable({ write(chunk, _encoding, callback) { lspResponse += chunk.toString(); callback(); } });
+    const server = new HkdLanguageServer(new Readable({ read() {} }), writer);
+    server.handleMessage({ jsonrpc: "2.0", id: 1, method: "initialize", params: { rootUri: "file:///" } } as any);
+    const body = lspResponse.split("\r\n\r\n")[1];
+    const response = body ? JSON.parse(body) : null;
+    const capabilities = response?.result?.capabilities;
+    lspPass = response?.id === 1 && capabilities?.hoverProvider === true && capabilities?.completionProvider !== undefined;
+  } catch {}
   const d11 = Math.round(performance.now() - t11);
   verificationGates.push({
     name: "LSP",
     status: lspPass ? "PASS" : "FAIL",
     severity: "medium",
-    command: "lsp_server_capabilities_check",
+    command: "HkdLanguageServer initialize request",
     duration_ms: d11,
-    evidence: { protocol: "LSP 2.0", semantic_tokens: true, hover: true, pass: lspPass },
+    evidence: { initialize_response: lspPass, hover: lspPass, completion: lspPass, pass: lspPass },
   });
 
   // ── 13. DAP (medium) ───────────────────────────────────────────────────────
   const t12 = performance.now();
-  const dapPass = true;
+  let dapOutput = "";
+  let dapPass = false;
+  try {
+    const writer = new Writable({ write(chunk, _encoding, callback) { dapOutput += chunk.toString(); callback(); } });
+    const server = new HkdDebugAdapterServer(new Readable({ read() {} }), writer);
+    server.session.handleRequest({ seq: 1, type: "request", command: "initialize", arguments: {} } as any);
+    dapPass = dapOutput.includes('"supportsConfigurationDoneRequest":true') && dapOutput.includes('"event":"initialized"');
+  } catch {}
   const d12 = Math.round(performance.now() - t12);
   verificationGates.push({
     name: "DAP",
     status: dapPass ? "PASS" : "FAIL",
     severity: "medium",
-    command: "dap_debugger_protocol_check",
+    command: "DebugSession initialize request",
     duration_ms: d12,
-    evidence: { protocol: "DAP 1.0", stepping: true, scopes: true, pass: dapPass },
+    evidence: { initialize_response: dapPass, initialized_event: dapPass, pass: dapPass },
   });
 
   // ── 14. VS Code (medium) ───────────────────────────────────────────────────
   const t13 = performance.now();
-  const vscodePass = fs.existsSync(path.join(process.cwd(), "vscode-extension", "package.json"));
+  let vscodePass = false;
+  let vscodeFeatures: string[] = [];
+  try {
+    const manifest = JSON.parse(fs.readFileSync(path.join(projectDir, "vscode-extension", "package.json"), "utf-8"));
+    vscodeFeatures = ["languages", "grammars", "debuggers"].filter((feature) => Array.isArray(manifest.contributes?.[feature]) && manifest.contributes[feature].length > 0);
+    vscodePass = Boolean(manifest.name && manifest.engines?.vscode && vscodeFeatures.length === 3);
+  } catch {}
   const d13 = Math.round(performance.now() - t13);
   verificationGates.push({
     name: "VS Code",
     status: vscodePass ? "PASS" : "FAIL",
     severity: "medium",
-    command: "vscode_extension_manifest_check",
+    command: "parse extension package.json and check language/grammar/debugger contributions",
     duration_ms: d13,
-    evidence: { extension_manifest: vscodePass, pass: vscodePass },
+    evidence: { extension_manifest: vscodePass, contributions: vscodeFeatures, pass: vscodePass },
   });
 
   // ── 15. Cross-Platform Artifacts (medium) ──────────────────────────────────
   const t14 = performance.now();
-  const crossPass = true;
   const d14 = Math.round(performance.now() - t14);
   verificationGates.push({
     name: "Cross-Platform Artifacts",
-    status: crossPass ? "PASS" : "FAIL",
+    status: "WARN",
     severity: "medium",
     command: "target_matrix_validation",
     duration_ms: d14,
-    evidence: { supported_triples: 4, tier1: ["win32-x64", "linux-x64"], tier2: ["linux-arm64", "darwin-arm64"], pass: crossPass },
+    evidence: { verified_host: target.triple, cross_platform_builds_tested: [], reason: "This command verifies only the current host; it does not perform cross-target builds." },
   });
 
   // ── 16. Reproducibility (critical) ─────────────────────────────────────────
   const t15 = performance.now();
   let reproPass = false;
   try {
-    const c1 = new Chunk("repro", 0);
-    c1.writeByte(Op.LoadTrue, 1);
-    c1.writeByte(Op.Return, 1);
-    const b1 = serializeProgram(c1);
-
-    const c2 = new Chunk("repro", 0);
-    c2.writeByte(Op.LoadTrue, 1);
-    c2.writeByte(Op.Return, 1);
-    const b2 = serializeProgram(c2);
+    const probe = 'let value = 42; print(to_string(value));';
+    const b1 = compileProbeBytecode(probe);
+    const b2 = compileProbeBytecode(probe);
 
     const h1 = crypto.createHash("sha256").update(b1).digest("hex");
     const h2 = crypto.createHash("sha256").update(b2).digest("hex");
@@ -421,7 +737,8 @@ export function runVerifyRelease(projectDir: string): VerifyReleaseReport {
 
   // ── 18. Release Artifacts (critical) ───────────────────────────────────────
   const t17 = performance.now();
-  const artifactsPass = true;
+  const artifactInventory = verifyArtifactInventory(projectDir);
+  const artifactsPass = artifactInventory.passed;
   const d17 = Math.round(performance.now() - t17);
   verificationGates.push({
     name: "Release Artifacts",
@@ -429,8 +746,76 @@ export function runVerifyRelease(projectDir: string): VerifyReleaseReport {
     severity: "critical",
     command: "validate_release_artifacts_and_checksums",
     duration_ms: d17,
-    evidence: { dist_directory: true, pass: artifactsPass },
+    evidence: { checked_artifacts: artifactInventory.checked, errors: artifactInventory.errors, pass: artifactsPass },
   });
+
+  // Additional checks used by the legacy readiness dimensions.
+  const t18 = performance.now();
+  const deployReport = runDeployCheck(effectiveDir, target.triple, "release");
+  const deploymentPass = deployReport.allOk;
+  verificationGates.push({
+    name: "Deployment Pre-Flight",
+    status: deploymentPass ? "PASS" : "FAIL",
+    severity: "critical",
+    command: "runDeployCheck(project, host target, release profile)",
+    duration_ms: Math.round(performance.now() - t18),
+    evidence: { target: deployReport.target, profile: deployReport.profile, items: deployReport.items, pass: deploymentPass },
+  });
+
+  const t19 = performance.now();
+  let containerPass = false;
+  let containerChecks: Record<string, boolean> = {};
+  try {
+    const dockerfile = generateDockerfile({ target: target.triple });
+    containerChecks = {
+      nonRootUser: dockerfile.includes("USER hkd:hkd"),
+      doesNotAssumeNetworkHealthEndpoint: !dockerfile.includes("HEALTHCHECK"),
+      hkdCliEntryPoint: dockerfile.includes('ENTRYPOINT ["node", "/app/dist/cli/main.js", "run", "/app/main.hkd"]'),
+      lockedRuntimeDependencies: dockerfile.includes("RUN npm ci --omit=dev"),
+      compiledCliCopied: dockerfile.includes("COPY --from=builder --chown=hkd:hkd /build/dist ./dist"),
+    };
+    containerPass = Object.values(containerChecks).every(Boolean);
+  } catch {}
+  verificationGates.push({
+    name: "Container Template",
+    status: containerPass ? "PASS" : "FAIL",
+    severity: "medium",
+    command: "generateDockerfile + invariant assertions",
+    duration_ms: Math.round(performance.now() - t19),
+    evidence: { checks: containerChecks, docker_image_built: false, pass: containerPass },
+  });
+
+  const resourceProbe = runResourceLifecycleProbe();
+  verificationGates.push({
+    name: "Resource Lifecycle",
+    status: resourceProbe.passed ? "PASS" : "FAIL",
+    severity: "high",
+    command: "runSource repeated-module and std.fs success/error/cleanup probes",
+    duration_ms: 0,
+    evidence: resourceProbe.evidence,
+    capabilityStatus: resourceProbe.passed ? "PASS" : "FAIL",
+    releaseContract: "required",
+    actualResult: resourceProbe.passed ? "Independent runs refreshed modules, std.fs removed its file, and execution recovered after a missing-file error." : "One or more resource lifecycle probes failed.",
+    limitations: ["The TypeScript runtime exposes synchronous file operations; async streams, cancellation and persistent child processes are not public stdlib resources."],
+  });
+
+  const benchmarkProbe = runPerformanceBenchmark(projectDir);
+  verificationGates.push({
+    name: "Performance Benchmarks",
+    status: benchmarkProbe.status,
+    severity: "medium",
+    command: "benchmarks/phase9/runner/run_baseline.cjs --out <temporary report>",
+    duration_ms: 0,
+    evidence: benchmarkProbe.evidence,
+    capabilityStatus: benchmarkProbe.status,
+    releaseContract: "optional",
+    actualResult: benchmarkProbe.status === "PASS" ? "All 18 workloads completed with expected outputs after 3 warmups and 5 measured iterations." : "The benchmark suite was unavailable or did not pass all workload checks.",
+    limitations: ["Benchmarks exercise the TypeScript Stack VM and Node CLI startup, not the Zig VM or JIT; RSS snapshots are runner-process measurements and allocations are not instrumented."],
+  });
+
+  // No cross-architecture builds are performed here. Keep the status explicit.
+  const crossGate = verificationGates.find((gate) => gate.name === "Cross-Platform Artifacts");
+  if (crossGate) crossGate.evidence.local_artifact_count = artifactInventory.checked;
 
   // ── Experimental Features (Expected, Non-blocking) ─────────────────────────
   const experimentalFeatures: ExperimentalFeatureResult[] = [
@@ -450,37 +835,74 @@ export function runVerifyRelease(projectDir: string): VerifyReleaseReport {
     },
   ];
 
-  // ── Legacy 14-dimension compatibility model for existing tests ──────────────
-  dimensions.push({ dimension: "Correctness", category: "Compiler / VM / Runtime", status: langConfPass && compilerPass && stackVmPass ? "PASS" : "BLOCKER", message: "Bytecode emission, Stack VM, JIT, and native execution operational" });
-  dimensions.push({ dimension: "Security", category: "Supply Chain & Hardening", status: secPass ? "PASS" : "BLOCKER", message: `CycloneDX 1.5 SBOM verified, secret masking active, non-root boundaries enforced` });
-  dimensions.push({ dimension: "Memory", category: "Memory Model & GC", status: memPass ? "PASS" : "BLOCKER", message: `Nursery & mature GC boundaries valid, zero memory leaks across 10,000 soak cycles (growth ratio: ${rssGrowthRatio}x)` });
-  dimensions.push({ dimension: "Resources", category: "System Interfaces", status: "PASS", message: "Socket and file descriptor lifecycle managed; clean shutdown on SIGINT/SIGTERM" });
-  dimensions.push({ dimension: "Compatibility", category: "ABI & Language Editions", status: editionCompatPass ? "PASS" : "BLOCKER", message: "Language Edition 2026 frozen, Bytecode V2 format invariant, ABI backwards compatible" });
-  dimensions.push({ dimension: "Packages", category: "Package Ecosystem", status: pkgPass ? "PASS" : "BLOCKER", message: "Lockfile V2 determinism verified, diamond resolution tested, offline cache certified" });
-  dimensions.push({ dimension: "LSP", category: "Developer Experience", status: lspPass ? "PASS" : "BLOCKER", message: "LSP 2.0 diagnostics, completion, semantic tokens, hover, and document symbols ready" });
-  dimensions.push({ dimension: "DAP", category: "Debugging Architecture", status: dapPass ? "PASS" : "BLOCKER", message: "DAP server operational: breakpoints, step, inspect, call stacks, and expression evaluation" });
-  dimensions.push({ dimension: "VS Code", category: "IDE Integration", status: vscodePass ? "PASS" : "BLOCKER", message: "VS Code extension package, syntax grammar, task providers, and debugger registered" });
-  dimensions.push({ dimension: "Deployment", category: "Operations & Cloud", status: "PASS", message: "Platform adapters, pre-flight deployment check, and production runbooks verified" });
-  dimensions.push({ dimension: "Containers", category: "Cloud & Virtualization", status: "PASS", message: "Multi-stage non-root container templates, UID 10001, minimal runtime base verified" });
-  dimensions.push({ dimension: "Reproducibility", category: "Build System", status: reproPass ? "PASS" : "BLOCKER", message: "Deterministic compiler output, content-addressed caching, bitwise artifact hash parity" });
-  dimensions.push({ dimension: "Performance", category: "Optimization Tiers", status: "PASS", message: "Benchmark thresholds met, JIT speedup verified, PGO profile active, zero regression" });
-  dimensions.push({ dimension: "Documentation", category: "Governance & Operations", status: docsPass ? "PASS" : "BLOCKER", message: "Language spec, grammar, semantics, incident response, and rollback policies certified" });
+  // Keep the legacy dimension summary tied to checks that ran above.
+  const passOrBlock = (passed: boolean): ReleaseDimensionStatus["status"] => passed ? "PASS" : "BLOCKER";
+  dimensions.push({ dimension: "Correctness", category: "Compiler / VM / Runtime", status: passOrBlock(langConfPass && compilerPass && stackVmPass && nativeVmPass), message: "Language, compiler, Stack VM, and native runtime smoke probes." });
+  dimensions.push({ dimension: "Security", category: "Supply Chain & Hardening", status: passOrBlock(secPass), message: `CycloneDX 1.5 SBOM generation and sensitive-data scan; violations: ${secretViolations}.` });
+  dimensions.push({ dimension: "Memory", category: "Memory Model & GC", status: passOrBlock(memPass), message: `Worst warmed 10,000-cycle RSS growth across ${repetitions} trials: ${rssGrowthRatio}x (policy < 1.10x).` });
+  dimensions.push({ dimension: "Resources", category: "System Interfaces", status: passOrBlock(resourceProbe.passed), message: "Repeated program execution, module refresh, std.fs operations and error recovery were probed." });
+  dimensions.push({ dimension: "Compatibility", category: "ABI & Language Editions", status: passOrBlock(editionCompatPass), message: "A representative Edition 2026 program executed; full compatibility is covered by the compatibility test suite." });
+  dimensions.push({ dimension: "Packages", category: "Package Ecosystem", status: passOrBlock(pkgPass), message: `Lockfile V2 parse/serialize round-trip; ${packageCount} locked packages.` });
+  dimensions.push({ dimension: "LSP", category: "Developer Experience", status: passOrBlock(lspPass), message: "Language server initialize response checked for hover and completion capabilities." });
+  dimensions.push({ dimension: "DAP", category: "Debugging Architecture", status: passOrBlock(dapPass), message: "Debug adapter initialize response and initialized event checked." });
+  dimensions.push({ dimension: "VS Code", category: "IDE Integration", status: passOrBlock(vscodePass), message: `Extension manifest contributions checked: ${vscodeFeatures.join(", ")}.` });
+  dimensions.push({ dimension: "Deployment", category: "Operations & Cloud", status: passOrBlock(deploymentPass), message: `Deployment pre-flight checks for ${effectiveDir}; see gate evidence for each item.` });
+  dimensions.push({ dimension: "Containers", category: "Cloud & Virtualization", status: containerPass ? "PASS" : "BLOCKER", message: "Generated Dockerfile template invariants checked; no container image was built." });
+  dimensions.push({ dimension: "Reproducibility", category: "Build System", status: passOrBlock(reproPass), message: "Two compilations of the same source produced identical serialized bytecode." });
+  dimensions.push({ dimension: "Performance", category: "Optimization Tiers", status: benchmarkProbe.status === "PASS" ? "PASS" : "WARN — non-blocking", message: benchmarkProbe.status === "PASS" ? "All 18 benchmark workloads passed output validation; measurements are recorded in the gate evidence." : "The benchmark suite did not produce a complete passing report." });
+  dimensions.push({ dimension: "Documentation", category: "Governance & Operations", status: passOrBlock(docsPass), message: `${requiredDocs.filter((doc) => fs.existsSync(path.join(projectDir, doc))).length}/${requiredDocs.length} required documentation files exist.` });
 
-  gates.push({ name: "Compiler & VM Execution", status: compilerPass && stackVmPass ? "PASS" : "FAIL", message: "Bytecode emission and Stack VM execution operational" });
-  gates.push({ name: "Target Architecture Matrix", status: nativeVmPass ? "PASS" : "FAIL", message: `Host target validated: ${target.triple} (${target.tier})` });
-  gates.push({ name: "Supply-Chain Security (SBOM)", status: secPass ? "PASS" : "FAIL", message: `CycloneDX 1.5 JSON generated with ${componentCount} components` });
-  gates.push({ name: "Container Security Invariants", status: "PASS", message: "Non-root container execution verified" });
-  gates.push({ name: "Deployment Pre-Flight Checks", status: "PASS", message: "Deployment checklist validated" });
-  gates.push({ name: "Exit Code Standard Contract", status: "PASS", message: "Exit codes adhere to standard contract" });
+  const legacyStatus = (status: GateStatus): ReleaseGateResult["status"] => status === "PASS" ? "PASS" : status === "FAIL" ? "FAIL" : "WARN";
+  const getVerificationStatus = (name: string) => verificationGates.find((gate) => gate.name === name)?.status ?? "NOT TESTED";
+  gates.push({ name: "Compiler & VM Execution", status: compilerPass && stackVmPass ? "PASS" : "FAIL", message: "Bytecode emission and Stack VM smoke probe." });
+  gates.push({ name: "Target Architecture Matrix", status: legacyStatus(getVerificationStatus("Native VM")), message: `Only host runtime execution was probed: ${target.triple} (${target.tier}).` });
+  gates.push({ name: "Supply-Chain Security (SBOM)", status: secPass ? "PASS" : "FAIL", message: `SBOM generation and sensitive-data scan; components: ${componentCount}, violations: ${secretViolations}.` });
+  gates.push({ name: "Container Template Invariants", status: containerPass ? "PASS" : "FAIL", message: "Dockerfile text assertions; container image build not performed." });
+  gates.push({ name: "Deployment Pre-Flight Checks", status: deploymentPass ? "PASS" : "FAIL", message: "Project deployment checklist executed." });
+  gates.push({ name: "Exit Code Standard Contract", status: "WARN", message: "Exit-code behavior is covered by Jest; verify-release does not probe every CLI command." });
 
-  const blockersCount = verificationGates.filter(g => (g.severity === "critical" || g.severity === "high") && g.status === "FAIL").length;
-  const warningsCount = verificationGates.filter(g => g.severity === "medium" && g.status === "FAIL").length;
-  const passedDimensions = verificationGates.filter(g => g.status === "PASS").length;
+  for (const gate of verificationGates) {
+    gate.releaseContract ??= gate.severity === "critical" || gate.severity === "high" ? "required" : gate.severity === "medium" ? "optional" : "out-of-contract";
+    gate.capabilityStatus ??= gate.status;
+    gate.blocksRelease = gate.releaseContract === "required" && ["FAIL", "BLOCKED", "NOT TESTED", "NOT SUPPORTED", "NOT IMPLEMENTED"].includes(gate.status);
+    gate.actualResult ??= gate.status === "PASS" ? "Executed check passed." : `Check status: ${gate.status}`;
+  }
+
+  const dimensionEvidence: Record<string, string[]> = {
+    Correctness: ["Language Conformance", "Compiler", "Stack VM", "Native VM", "Standalone Native Bundle"],
+    Security: ["Security"],
+    Memory: ["Memory Safety"],
+    Resources: ["Resource Lifecycle"],
+    Compatibility: ["Edition Compatibility"],
+    Packages: ["Packages"],
+    LSP: ["LSP"],
+    DAP: ["DAP"],
+    "VS Code": ["VS Code"],
+    Deployment: ["Deployment Pre-Flight"],
+    Containers: ["Container Template"],
+    Reproducibility: ["Reproducibility"],
+    Performance: ["Performance Benchmarks"],
+    Documentation: ["Documentation"],
+  };
+  for (const dimension of dimensions) {
+    const relevant = verificationGates.filter((gate) => dimensionEvidence[dimension.dimension]?.includes(gate.name));
+    dimension.command = relevant.map((gate) => gate.command).join("; ");
+    dimension.evidence = Object.fromEntries(relevant.map((gate) => [gate.name, gate.evidence]));
+    dimension.capabilityStatus = relevant.every((gate) => gate.status === "PASS") ? "PASS" : relevant.some((gate) => gate.status === "FAIL") ? "FAIL" : relevant.some((gate) => gate.status === "BLOCKED") ? "BLOCKED" : "NOT TESTED";
+    dimension.releaseContract = relevant.some((gate) => gate.releaseContract === "required") ? "required" : "optional";
+    dimension.blocksRelease = relevant.some((gate) => gate.blocksRelease);
+    dimension.limitations = relevant.flatMap((gate) => gate.limitations ?? []);
+  }
+
+  const blockersCount = verificationGates.filter((gate) => gate.blocksRelease).length;
+  const warningsCount = verificationGates.filter((gate) => gate.severity === "medium" && ["FAIL", "BLOCKED", "NOT TESTED", "WARN"].includes(gate.status)).length;
+  const passedDimensions = dimensions.filter((dimension) => dimension.status === "PASS").length;
   const allPassed = blockersCount === 0;
-  const result: "RELEASE READY" | "NOT RELEASE READY" = allPassed ? "RELEASE READY" : "NOT RELEASE READY";
+  const result: VerifyReleaseReport["result"] = allPassed ? "HOST TARGET READY" : "NOT RELEASE READY";
 
   const report: VerifyReleaseReport = {
     allPassed,
+    releaseScope: `Current host target only (${target.triple}); no cross-platform readiness claim.`,
     version: HKD_VERSION,
     edition: "2026",
     target: target.triple,

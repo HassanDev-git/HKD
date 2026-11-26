@@ -1,5 +1,7 @@
 # HKD 1.0 Final Performance & Scalability Baseline Report
 
+> Historical performance report: its cross-engine/JIT figures are not evidence for HKD 1.1.0. See `docs/benchmarking.md` and `artifacts/phase10.3-benchmark-final.json` for the current Windows x64 measurements and their runtime path/limitations.
+
 ## Executive Summary
 
 The HKD 1.0.0 release establishes a permanent, locked performance baseline across all 17 canonical workloads. Evaluated across three execution tiers—**Tier 0 (TypeScript Reference Stack VM)**, **Tier 1 (Native Zig Baseline Runtime)**, and **Tier 2 (Native Optimizing JIT with PGO)**—HKD 1.0 achieves:

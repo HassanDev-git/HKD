@@ -12,6 +12,66 @@ import * as os from "os";
 import { runSource } from "../../src/runtime/index.js";
 
 describe("HKD Resource & Memory Leak Protections", () => {
+  test("independent executions release cached modules and observe updated source", () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "hkd-module-lifecycle-"));
+    const modulePath = path.join(tmpDir, "value.hkd");
+    const entryPath = path.join(tmpDir, "main.hkd");
+    const source = 'import value from "value.hkd"\nprint(value.current)';
+    const execute = () => {
+      const output: string[] = [];
+      const result = runSource(source, {
+        fileName: entryPath,
+        printDiagnostics: false,
+        output: (line) => output.push(line),
+      });
+      return { result, output };
+    };
+
+    try {
+      fs.writeFileSync(modulePath, "export let current = 1\n", "utf-8");
+      const first = execute();
+      expect(first.result.ok).toBe(true);
+      expect(first.output).toEqual(["1"]);
+
+      fs.writeFileSync(modulePath, "export let current = 2\n", "utf-8");
+      const second = execute();
+      expect(second.result.ok).toBe(true);
+      expect(second.output).toEqual(["2"]);
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  test("HKD std.fs closes handles on success and remains usable after errors", () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "hkd-fs-lifecycle-"));
+    const filePath = path.join(tmpDir, "payload.txt").replace(/\\/g, "/");
+    const output: string[] = [];
+    try {
+      const result = runSource(`
+        import fs
+        fs.write(${JSON.stringify(filePath)}, "payload")
+        print(fs.read(${JSON.stringify(filePath)}))
+        fs.delete(${JSON.stringify(filePath)})
+        print(fs.exists(${JSON.stringify(filePath)}))
+      `, { noExit: true, printDiagnostics: false, output: (line) => output.push(line) });
+      expect(result.ok).toBe(true);
+      expect(output).toEqual(["payload", "false"]);
+      expect(fs.existsSync(filePath)).toBe(false);
+
+      const failedRead = runSource(`import fs\nfs.read(${JSON.stringify(filePath)})`, { noExit: true, printDiagnostics: false });
+      expect(failedRead.ok).toBe(false);
+      const subsequentRun = runSource('print("still-running")', {
+        noExit: true,
+        printDiagnostics: false,
+        output: (line) => output.push(line),
+      });
+      expect(subsequentRun.ok).toBe(true);
+      expect(output.at(-1)).toBe("still-running");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   test("repeated execution cycles maintain bounded heap growth", () => {
     // Run warm-up
     for (let i = 0; i < 20; i++) {

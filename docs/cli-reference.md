@@ -29,15 +29,15 @@ Executes an HKD project or standalone `.hkd` script.
 - Flags:
   - `--release`: Compiles with release optimizations.
   - `--reference` / `--ts`: Runs using the reference TypeScript interpreter.
-  - `--native`: Compiles to a standalone native binary and executes.
-  - `--jit`: Enables JIT execution on supported architectures.
+  - `--native`: Builds/runs a standalone launcher containing HKDB bytecode and the Zig interpreter; it is not machine-code AOT.
+  - `--jit`: Reserved, but unavailable in HKD 1.1.0; exits with an unsupported-feature diagnostic.
   - `--vm`: Forces register bytecode virtual machine execution.
 
 #### `hkd build [options]`
 Compiles project modules incrementally to `.hkdb` bytecode or native binaries.
 - Flags:
   - `--release`: Generates release artifacts under `target/release`.
-  - `--native <file.hkd>`: Emits a standalone executable containing embedded runtime.
+  - `--native <file.hkd>`: Emits a standalone launcher containing embedded HKDB bytecode and runtime interpreter.
   - `-o <path>`: Specifies output binary destination.
 
 #### `hkd test [file/dir] [options]`

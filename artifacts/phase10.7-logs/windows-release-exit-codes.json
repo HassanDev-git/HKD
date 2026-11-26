@@ -1,0 +1,19 @@
+[
+  {
+    "check": "windows-x64-zip-extraction",
+    "exitCode": 0
+  },
+  {
+    "check": "windows-x64-version",
+    "exitCode": 0
+  },
+  {
+    "check": "windows-x64-valid-program",
+    "exitCode": 0
+  },
+  {
+    "check": "windows-x64-invalid-program-expected-one",
+    "exitCode": 0,
+    "observedExitCode": 1
+  }
+]

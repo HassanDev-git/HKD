@@ -1,5 +1,7 @@
 # HKD 1.0 Clean-Room Validation & Environment Independence Guide
 
+> Historical phase document: statements below reflect the design or audit claims made when this document was written. They are not current validation evidence and do not establish present release readiness, implemented JIT/AOT, or platform support. For the current Windows x64 audit scope and evidence, see `artifacts/phase10.3-final-release-verification.json` and `docs/known-limitations.md`.
+
 ## Overview
 
 This specification certifies that the **HKD 1.0.0** programming language, toolchain, and runtime execute deterministically in clean-room environments without ambient dependencies, unpinned global modules, or external network reliance.

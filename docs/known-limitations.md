@@ -23,15 +23,17 @@ This document outlines the current boundaries, experimental features, and platfo
 
 ## 2. Platform Support Tiers
 
-### 2.1 Tier 1: Primary Host & Runtime Targets
-- **Windows x86_64** (Native Stack VM, Native Runtime, JIT, AOT, Tooling, LSP/DAP).
-- **Linux x86_64** (Native Stack VM, Native Runtime, JIT, AOT, Tooling, Containerized Deployment).
-- **Guarantee**: Full CI test coverage, automated differential parity, and zero memory leaks.
+### 2.1 Host Validation in This Checkout
+- **Windows x86_64**: the current recovery audit passed the full Jest suite, TypeScript typecheck, Zig runtime unit tests, and standalone CLI packaging smoke checks. JIT is explicitly rejected by the native runtime; it was not executed as a working engine.
+- **Linux and macOS**: no build or runtime verification was performed in this checkout.
+- **AOT**: native machine-code generation is not implemented or verified in this release.
+- **JIT**: the Zig machine-code emitter and manager are experimental components, but the native VM does not dispatch HKD functions through them. `--jit` returns an explicit unsupported-feature error.
+- **Standalone native executable**: `hkd build --native` compiles HKD source to HKDB bytecode and appends it to the host Zig interpreter executable. It produces a native launcher, not native machine code for the HKD program.
+- These checks do not establish a zero-leak guarantee or certify support on untested targets.
 
-### 2.2 Tier 2: Cross-Compilation Targets
-- **Linux ARM64 / aarch64** (Build-validated cross-target compilation via `--target linux-arm64`).
-- **macOS ARM64 / Apple Silicon** (Build-validated cross-target compilation via `--target darwin-arm64`).
-- **Limitation**: Native runtime execution is validated on x86_64 host environments; ARM64 execution relies on target platform compatibility and is build-verified.
+### 2.2 Cross-Compilation Targets
+- **Linux ARM64 / aarch64** and **macOS ARM64 / Apple Silicon** are unverified by this release audit.
+- Do not infer build or runtime support from target names appearing in source configuration.
 
 ### 2.3 WebAssembly (WASM / WASI)
 - **Status**: `DEFERRED TO 1.2`.
@@ -51,5 +53,5 @@ This document outlines the current boundaries, experimental features, and platfo
 - **Limitation**: Complex C struct packing and variadic C calls require manual marshalling. Platform-specific dynamic loader conventions apply (`.dll` on Windows, `.so` on Linux).
 
 ### 3.3 Serverless & Cloud Deployments
-- **Docker / Linux Containers**: Fully supported and certified with multi-stage non-root images.
+- **Docker / Linux Containers**: Dockerfile generation has automated tests; this audit did not build or run a container image.
 - **Vercel Adapter**: Marked as `EXPERIMENTAL`. Serverless wrapper generation functions for single-file API routes, but complex multi-file modules require container deployment.

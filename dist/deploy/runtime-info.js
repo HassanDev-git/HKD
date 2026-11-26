@@ -31,10 +31,9 @@ function getRuntimeInfo() {
             heapTotalMb: parseFloat((mem.heapTotal / 1024 / 1024).toFixed(2)),
         },
         supportedTiers: [
-            "Stack VM (Tier 0)",
-            "Native Zig Baseline JIT (Tier 1)",
-            "Native Optimizing JIT with PGO (Tier 2)",
-            "Standalone Native AOT Executable",
+            "TypeScript reference Stack VM",
+            "Optional Zig bytecode interpreter (separate host build)",
+            "Standalone Zig-runtime executable with embedded HKDB bytecode",
         ],
         activeLimits: {
             maxConnections: 10000,

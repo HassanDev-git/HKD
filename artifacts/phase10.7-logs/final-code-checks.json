@@ -1,0 +1,18 @@
+[
+  {
+    "check": "targeted-jest",
+    "exitCode": 0
+  },
+  {
+    "check": "typecheck-final",
+    "exitCode": 0
+  },
+  {
+    "check": "package-platform-syntax",
+    "exitCode": 0
+  },
+  {
+    "check": "package-script-syntax",
+    "exitCode": 0
+  }
+]

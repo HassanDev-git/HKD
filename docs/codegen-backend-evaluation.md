@@ -1,5 +1,7 @@
 # HKD Native Code Backend Evaluation & Selection
 
+> Historical phase document: statements below reflect the design or audit claims made when this document was written. They are not current validation evidence and do not establish present release readiness, implemented JIT/AOT, or platform support. For the current Windows x64 audit scope and evidence, see `artifacts/phase10.3-final-release-verification.json` and `docs/known-limitations.md`.
+
 This document presents the architectural investigation, evaluation, and selection of the native machine code generation backend for HKD Phase 10.
 
 ---

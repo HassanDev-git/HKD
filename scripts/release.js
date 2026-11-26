@@ -5,9 +5,9 @@
  * and packages all release artifacts into `dist-release/`.
  */
 
-import * as fs from "fs";
-import * as path from "path";
-import { execSync } from "child_process";
+const fs = require("fs");
+const path = require("path");
+const { execSync } = require("child_process");
 
 const rootDir = process.cwd();
 const releaseDir = path.join(rootDir, "dist-release");
@@ -28,9 +28,10 @@ if (fs.existsSync(releaseDir)) {
 }
 fs.mkdirSync(releaseDir);
 
-// 2. Build TypeScript compiler/CLI
-log("Building TypeScript compiler...");
-runCmd("npm run build");
+// 2. Build and smoke-test the current standalone TypeScript CLI before copying dist.
+// This refreshes any existing SEA executable so stale binaries cannot leak into a bundle.
+log("Building and smoke-testing the standalone TypeScript CLI...");
+runCmd("npm run package");
 
 // 3. Build native runtime in ReleaseFast mode
 log("Building native Zig runtime...");

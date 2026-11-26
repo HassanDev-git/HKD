@@ -1,0 +1,13 @@
+environment	0	/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/node -e console.log(JSON.stringify({node:process.version,platform:process.platform,arch:process.arch,execPath:process.execPath}))
+npm_ci	0	/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/npm ci
+typecheck	0	/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/npm run typecheck
+build	0	/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/npm run build
+jest_full	1	/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/npm test
+eslint	0	/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/npm run lint
+zig_ci	1	env ZIG_PACKAGE=linux-x64 HKD_NATIVE_OUTPUT_DIR=native-runtime/zig-out/bin /home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/node scripts/ci-zig.cjs
+cli_version	0	0	PASS	/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/node dist/cli/main.js --version
+cli_help	0	0	PASS	/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/node dist/cli/main.js --help
+native_runtime_version	0	0	PASS	native-runtime/zig-out/bin/hkd-runtime --version
+valid_program	0	0	PASS	/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/node dist/cli/main.js run /home/redteam/HKD-phase10.7-linux/artifacts/phase10.7-linux-logs/programs/valid.hkd
+invalid_program	1	1	PASS	/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/node dist/cli/main.js run /home/redteam/HKD-phase10.7-linux/artifacts/phase10.7-linux-logs/programs/invalid.hkd
+package_security_and_benchmark_regressions	0	/home/redteam/.local/phase10.7-toolchain/lib/node-v22.23.5-linux-x64/bin/npm test -- --runTestsByPath tests/security/phase10_6_boundaries.test.ts tests/security/package_fuzzing.test.ts tests/performance/phase9_baseline.test.ts --runInBand

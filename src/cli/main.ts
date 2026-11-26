@@ -736,6 +736,11 @@ function buildStandaloneNative(args: string[]): string {
 }
 
 function cmdRun(args: string[]): void {
+  if (args.includes("--jit") || args.includes("--jit-stats")) {
+    console.error(RED("Error: JIT execution is not implemented in this release."));
+    process.exit(2);
+  }
+
   const isRelease = args.includes("--release");
   const useReference = args.includes("--reference") || args.includes("--ts");
   const useNative = args.includes("--native");
@@ -748,7 +753,8 @@ function cmdRun(args: string[]): void {
   if (useNative) {
     const exe = buildStandaloneNative([...args, "--quiet"]);
     const child = spawnSync(path.resolve(exe), cleanArgs.slice(1), { stdio: "inherit" });
-    process.exit(child.status ?? 0);
+    if (child.error) console.error(RED(`Failed to start native runtime: ${child.error.message}`));
+    process.exit(child.status ?? 1);
   }
 
   let compiledPath = "";
@@ -767,12 +773,12 @@ function cmdRun(args: string[]): void {
     compiledPath = cmdBuild(isRelease ? ["--release"] : []);
   }
 
+  const sourceFile = (firstArg && firstArg.endsWith(".hkd")) ? firstArg : (getProjectDir() ? path.resolve(getProjectDir()!, readManifest(getProjectDir()!)?.main ?? "src/main.hkd") : firstArg);
+
   if (useReference) {
-    const sourceFile = (firstArg && firstArg.endsWith(".hkd")) ? firstArg : (getProjectDir() ? path.resolve(getProjectDir()!, readManifest(getProjectDir()!)?.main ?? "src/main.hkd") : firstArg);
     const result = runFile(sourceFile);
     process.exit(result.ok ? 0 : 1);
   } else {
-    const runtimePath = getRuntimePath();
     const runtimeFlags: string[] = [];
     for (const a of args) {
       if (a === "--jit" || a === "--vm" || a === "--jit-stats" || a === "--mem-stats" || a === "--skip-validation" || a.startsWith("--profile")) {
@@ -780,12 +786,26 @@ function cmdRun(args: string[]): void {
       }
     }
 
+    const runtimePath = findRuntimePath();
+    if (!runtimePath) {
+      if (runtimeFlags.length > 0) {
+        console.error(RED("Error: This run option requires the native runtime, but hkd-runtime was not found."));
+        console.error("Install hkd-runtime beside hkd or build it from native-runtime with Zig.");
+        process.exit(1);
+      }
+
+      console.warn(DIM("Native runtime not found; running with the bundled TypeScript VM."));
+      const result = runFile(sourceFile);
+      process.exit(result.ok ? 0 : 1);
+    }
+
     const child = spawnSync(runtimePath, [...runtimeFlags, compiledPath, ...cleanArgs.slice(1)], { stdio: "inherit" });
-    process.exit(child.status ?? 0);
+    if (child.error) console.error(RED(`Failed to start native runtime: ${child.error.message}`));
+    process.exit(child.status ?? 1);
   }
 }
 
-function getRuntimePath(): string {
+function findRuntimePath(): string | null {
   const binName = process.platform === "win32" ? "hkd-runtime.exe" : "hkd-runtime";
   const possiblePaths = [
     path.resolve(__dirname, "../../native-runtime/zig-out/bin", binName),
@@ -797,6 +817,12 @@ function getRuntimePath(): string {
   for (const p of possiblePaths) {
     if (fs.existsSync(p)) return p;
   }
+  return null;
+}
+
+function getRuntimePath(): string {
+  const runtimePath = findRuntimePath();
+  if (runtimePath) return runtimePath;
   console.error(RED("Error: Native runtime executable not found."));
   console.error("Please compile the native runtime first with: cd native-runtime && npx zig build");
   process.exit(1);
@@ -805,7 +831,7 @@ function getRuntimePath(): string {
 function cmdProfile(args: string[]): void {
   const oIdx = args.indexOf("-o");
   let outFile = "profile.json";
-  let targetArgs = [...args];
+  const targetArgs = [...args];
   if (oIdx !== -1 && args[oIdx + 1]) {
     outFile = args[oIdx + 1];
     targetArgs.splice(oIdx, 2);
@@ -822,7 +848,8 @@ function cmdProfile(args: string[]): void {
   if (child.status === 0) {
     console.log(GREEN(`✓ Execution profile recorded: ${outFile}`));
   }
-  process.exit(child.status ?? 0);
+  if (child.error) console.error(RED(`Failed to start native runtime: ${child.error.message}`));
+    process.exit(child.status ?? 1);
 }
 
 function cmdJitStats(args: string[]): void {
@@ -2031,8 +2058,8 @@ const COMMAND_HELPS: Record<string, CommandHelpInfo> = {
       { flag: "--release", desc: "Run optimized release build (target/release)" },
       { flag: "--reference, --ts", desc: "Run using reference TypeScript VM rather than native runtime" },
       { flag: "--native", desc: "Build and run as standalone self-contained native executable" },
-      { flag: "--jit", desc: "Enable tier-1 JIT compilation (native runtime)" },
-      { flag: "--jit-stats", desc: "Print JIT compilation statistics upon process exit" },
+      { flag: "--jit", desc: "Unavailable: JIT dispatch is not implemented in this release" },
+      { flag: "--jit-stats", desc: "Unavailable: JIT dispatch is not implemented in this release" },
       { flag: "--mem-stats", desc: "Print memory allocation and heap statistics upon process exit" },
       { flag: "--profile <file>", desc: "Profile execution and record trace to JSON file" },
       { flag: "--help, -h", desc: "Show this help message" },

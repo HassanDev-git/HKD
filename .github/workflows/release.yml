@@ -11,35 +11,48 @@ permissions:
 jobs:
   build-release:
     name: Build & Package Release Bundle
-    runs-on: \${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            target: x86_64-linux
-          - os: windows-latest
+          - os: windows-2025
+            platform: Windows x64
             target: x86_64-windows
-          - os: macos-latest
+          - os: windows-11-arm
+            platform: Windows ARM64
+            target: aarch64-windows
+          - os: ubuntu-24.04
+            platform: Linux x64
+            target: x86_64-linux
+          - os: ubuntu-24.04-arm
+            platform: Linux ARM64
+            target: aarch64-linux
+          - os: macos-15-intel
+            platform: macOS x64
+            target: x86_64-macos
+          - os: macos-15
+            platform: macOS ARM64
             target: aarch64-macos
 
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js 20
+      - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       - name: Install dependencies
         run: npm ci
       - name: Compile Compiler
         run: npm run build
       - name: Run Pre-Flight Deployment Check
-        run: node dist/cli/main.js deploy check --target \${{ matrix.target }} --profile release
+        run: node dist/cli/main.js deploy check --target ${{ matrix.target }} --profile release
       - name: Build & Package Release
-        run: node dist/cli/main.js release --target \${{ matrix.target }} --profile release
+        run: node dist/cli/main.js release --target ${{ matrix.target }} --profile release
       - name: Generate CycloneDX SBOM
         run: node dist/cli/main.js sbom
       - name: Upload Release Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: hkd-release-\${{ matrix.target }}
-          path: target/releases/
+          name: hkd-release-${{ matrix.platform }}
+          path: target/releases/*-${{ matrix.target }}-release/
+          if-no-files-found: error

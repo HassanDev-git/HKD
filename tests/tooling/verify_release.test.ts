@@ -39,7 +39,7 @@ describe("HKD Automated Release Acceptance Verifier (hkd verify-release)", () =>
     expect(gateNames).toContain("Target Architecture Matrix");
     expect(gateNames).toContain("Deployment Pre-Flight Checks");
     expect(gateNames).toContain("Supply-Chain Security (SBOM)");
-    expect(gateNames).toContain("Container Security Invariants");
+    expect(gateNames).toContain("Container Template Invariants");
     expect(gateNames).toContain("Exit Code Standard Contract");
   });
 
@@ -50,18 +50,18 @@ describe("HKD Automated Release Acceptance Verifier (hkd verify-release)", () =>
     expect(vmGate?.status).toBe("PASS");
   });
 
-  test("target architecture matrix gate passes on host system", () => {
+  test("target architecture matrix reports an untested runtime accurately", () => {
     const report = runVerifyRelease(tmpDir);
     const targetGate = report.gates.find((g) => g.name === "Target Architecture Matrix");
     expect(targetGate).toBeDefined();
-    expect(targetGate?.status).toBe("PASS");
+    expect(targetGate?.status).toBe("WARN");
   });
 
-  test("canonical exit codes gate passes", () => {
+  test("canonical exit codes gate reports its limited coverage", () => {
     const report = runVerifyRelease(tmpDir);
     const exitGate = report.gates.find((g) => g.name === "Exit Code Standard Contract");
     expect(exitGate).toBeDefined();
-    expect(exitGate?.status).toBe("PASS");
+    expect(exitGate?.status).toBe("WARN");
   });
 
   test("printVerifyReleaseReport outputs text and json formats", () => {
@@ -85,13 +85,22 @@ describe("HKD Automated Release Acceptance Verifier (hkd verify-release)", () =>
     }
   });
 
-  test("evaluates full 14-dimension production readiness status model", () => {
+  test("reports production readiness from executed evidence", () => {
     const report = runVerifyRelease(process.cwd());
     expect(report.totalDimensions).toBe(14);
-    expect(report.passedDimensions).toBe(14);
-    expect(report.warningsCount).toBe(0);
-    expect(report.blockersCount).toBe(0);
+    expect(report.passedDimensions).toBe(report.dimensions.filter((d) => d.status === "PASS").length);
+    expect(report.warningsCount).toBeGreaterThan(0);
+    if (report.blockersCount !== 0) {
+      throw new Error(`Expected no release blockers, found: ${JSON.stringify(report.verificationGates.filter((g) => g.blocksRelease))}`);
+    }
     expect(report.allPassed).toBe(true);
+    expect(report.result).toBe("HOST TARGET READY");
+    expect(report.releaseScope).toContain("Current host target only");
+    expect(report.verificationGates.find((g) => g.name === "Native Machine-Code AOT")?.status).toBe("NOT IMPLEMENTED");
+    expect(report.verificationGates.find((g) => g.name === "Native Machine-Code AOT")?.blocksRelease).toBe(false);
+    expect(report.verificationGates.find((g) => g.name === "Standalone Native Bundle")?.status).toBe("PASS");
+    expect(report.verificationGates.find((g) => g.name === "Resource Lifecycle")?.status).toBe("PASS");
+    expect(report.verificationGates.find((g) => g.name === "Performance Benchmarks")?.status).toBe("PASS");
 
     const expectedDimensions = [
       "Correctness",
@@ -113,17 +122,15 @@ describe("HKD Automated Release Acceptance Verifier (hkd verify-release)", () =>
     for (const expected of expectedDimensions) {
       const dim = report.dimensions.find((d) => d.dimension === expected);
       expect(dim).toBeDefined();
-      expect(dim?.status).toBe("PASS");
       expect(dim?.category).toBeTruthy();
       expect(dim?.message).toBeTruthy();
     }
+    expect(report.dimensions.find((d) => d.dimension === "Performance")?.status).toBe("PASS");
   });
 
   test("falls back to reference production project when root lacks hkd.toml", () => {
-    // When run on current repo root, it succeeds with 0 blocking issues and 0 warnings
+    // Root-source deployment configuration is located in a production example.
     const report = runVerifyRelease(process.cwd());
-    expect(report.allPassed).toBe(true);
-    expect(report.blockersCount).toBe(0);
     const deployDim = report.dimensions.find((d) => d.dimension === "Deployment");
     expect(deployDim?.status).toBe("PASS");
   });

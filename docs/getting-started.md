@@ -7,9 +7,9 @@ Welcome to HKD (v1.1.0), a high-performance, statically typed, systems programmi
 ## 1. System Requirements & Installation
 
 ### Requirements
-- **Node.js**: v18.0.0 or later (for TypeScript tooling & CLI orchestrator)
+- **Node.js**: v18.0.0 or later for the TypeScript tooling and CLI; Node.js 20 or later for Node SEA packaging.
 - **Host OS**: Windows (x64), Linux (x86_64, aarch64), or macOS (arm64, x86_64)
-- **Optional**: Zig 0.13+ (only if compiling the standalone native C/Zig runtime from source)
+- **Zig**: The repository pins the `@zigc/cli` 0.16.x toolchain for native-runtime builds (`npx zig build`).
 
 ### Installation
 Clone the repository and build the TypeScript distribution:

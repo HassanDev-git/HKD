@@ -1,19 +1,26 @@
 /**
  * HKD Automated Release Acceptance Verifier (hkd verify-release)
  *
- * Runs comprehensive 18-dimension evidence-based acceptance gates covering
+ * Runs evidence-based acceptance gates covering
  * compiler, native runtime, differential execution, memory instrumentation,
  * security, packaging, LSP, DAP, VS Code, reproducibility, and documentation.
  * Generates artifacts/release-verification.json.
  */
 export type GateSeverity = "critical" | "high" | "medium" | "informational";
-export type GateStatus = "PASS" | "FAIL" | "WARN" | "EXPECTED";
+export type GateStatus = "PASS" | "FAIL" | "WARN" | "EXPECTED" | "BLOCKED" | "NOT TESTED" | "NOT SUPPORTED" | "NOT IMPLEMENTED";
+export type ReleaseContract = "required" | "optional" | "out-of-contract";
 export interface ReleaseDimensionStatus {
     dimension: string;
     category: string;
     status: "PASS" | "WARN — non-blocking" | "BLOCKER";
     message: string;
     details?: string;
+    capabilityStatus?: GateStatus;
+    releaseContract?: ReleaseContract;
+    blocksRelease?: boolean;
+    evidence?: Record<string, unknown>;
+    command?: string;
+    limitations?: string[];
 }
 export interface ReleaseGateResult {
     name: string;
@@ -27,6 +34,11 @@ export interface ReleaseGateEvidence {
     command: string;
     duration_ms: number;
     evidence: Record<string, any>;
+    capabilityStatus?: GateStatus;
+    releaseContract?: ReleaseContract;
+    blocksRelease?: boolean;
+    actualResult?: string;
+    limitations?: string[];
 }
 export interface ExperimentalFeatureResult {
     name: string;
@@ -49,7 +61,8 @@ export interface VerifyReleaseReport {
     gates: ReleaseGateResult[];
     verificationGates: ReleaseGateEvidence[];
     experimentalFeatures: ExperimentalFeatureResult[];
-    result: "RELEASE READY" | "NOT RELEASE READY";
+    releaseScope: string;
+    result: "HOST TARGET READY" | "NOT RELEASE READY";
 }
 export declare function runVerifyRelease(projectDir: string): VerifyReleaseReport;
 export declare function printVerifyReleaseReport(report: VerifyReleaseReport, asJson?: boolean): void;

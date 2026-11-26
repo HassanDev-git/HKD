@@ -1,33 +1,12 @@
-# HKD Platform Integration Matrix
+# Platform Integration Validation Status
 
-## 1. Verified Support Status
+This document records what Phase 10.3 exercised locally, rather than inferring operational support from an adapter interface or template.
 
-HKD provides an explicit platform support matrix without claiming unverified capabilities:
+| Integration | Current status | Evidence |
+|---|---|---|
+| Windows x64 command-line use | Host-validated | Standalone executable and ZIP smoke tests passed on the audit host. |
+| Linux / macOS / ARM64 | Unverified | No target build and runtime test in this audit. |
+| Docker / OCI | Unverified | Container templates are checked; no container image was built and run. |
+| Vercel, AWS Lambda, Cloudflare Workers | Unverified / experimental | No deployed application or production invocation was tested. |
 
-| Target Platform | Tier | Status | Deployment Method |
-| :--- | :--- | :--- | :--- |
-| **Linux Bare Metal / VM** | Tier 1 | **SUPPORTED** | Standalone native binary + Systemd unit |
-| **Docker / Containerd / K8s** | Tier 1 | **SUPPORTED** | Non-root multi-stage OCI image |
-| **GitHub Actions** | Tier 1 | **SUPPORTED** | Automated matrix testing & release workflows |
-| **Windows Server** | Tier 1 | **SUPPORTED** | Standalone PE executable (`.exe`) + Windows Service wrapper |
-| **macOS Server** | Tier 1 | **SUPPORTED** | Universal Mach-O binary (`aarch64` / `x86_64`) |
-| **Vercel / Next.js Serverless** | Tier 2 | **EXPERIMENTAL** | Serverless Node.js bridge adapter (`/api` handler) |
-| **AWS Lambda** | Tier 2 | **EXPERIMENTAL** | Custom runtime bootstrap (`provided.al2023`) |
-| **Cloudflare Workers (V8 Edge)** | Tier 3 | **NOT SUPPORTED** | Requires Wasm/JS compilation tier |
-
----
-
-## 2. Platform Adapter Architecture
-
-All platform deployments utilize the `PlatformAdapter` contract:
-```typescript
-export interface PlatformAdapter {
-  readonly id: string;
-  readonly name: string;
-  detect(): Promise<boolean>;
-  validate(projectDir: string): Promise<ValidationResult>;
-  build(projectDir: string, options: BuildOptions): Promise<Artifact>;
-  package(projectDir: string, artifact: Artifact): Promise<PackageResult>;
-}
-```
-This isolates platform specifics from the core compiler and runtime.
+The `PlatformAdapter` interface is an extension contract. It does not by itself prove that an integration's packaging, runtime, or deployment flow is production-ready. Do not treat this table as a general support SLA.

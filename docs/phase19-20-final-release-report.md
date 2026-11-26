@@ -1,5 +1,7 @@
 # HKD 1.1.0 Phase 19 & Phase 20 Final Release Report
 
+> Historical phase document: statements below reflect the design or audit claims made when this document was written. They are not current validation evidence and do not establish present release readiness, implemented JIT/AOT, or platform support. For the current Windows x64 audit scope and evidence, see `artifacts/phase10.3-final-release-verification.json` and `docs/known-limitations.md`.
+
 **Release**: HKD 1.1.0  
 **Date**: 2026-09-04  
 **Certification Standard**: Project-Scope Production Readiness Validation  

@@ -1,50 +1,12 @@
-# HKD Platform Adapters & Deployment Tier Matrix
+# Platform Adapters: Implementation and Validation Status
 
-This document defines official platform classifications, adapter support levels, and operational guarantees for HKD 1.0.x.
+Adapter code and deployment templates describe possible integrations; their presence does not certify a deployment target.
 
----
+| Target / adapter | Current evidence in Phase 10.3 | Status |
+|---|---|---|
+| Windows x64 standalone CLI | Packaged and smoke tested locally, including extracted ZIP | Host-validated |
+| Linux / macOS / ARM64 runtime artifacts | Not built and run in this audit | Unverified |
+| OCI / Docker image | Template checks only; no image build or execution | Unverified |
+| Vercel, AWS Lambda, other serverless adapters | Adapter/template code may exist; production deployment was not exercised | Experimental / unverified |
 
-## 1. Platform Support Tiers
-
-| Platform / Target | Classification | Runtime Strategy | Container / Binary Support |
-|:---|:---|:---|:---|
-| **Linux x86_64** | **Tier 1 (Supported)** | Native Zig + JIT | Standalone ELF, Distroless Docker |
-| **Linux aarch64** | **Tier 1 (Supported)** | Native Zig + JIT | Standalone ELF, ARM64 Docker |
-| **Windows x64** | **Tier 1 (Supported)** | Native Zig + JIT | Standalone Portable `.exe` |
-| **macOS Apple Silicon** | **Tier 1 (Supported)** | Native Zig + JIT | Universal Mach-O Binary |
-| **Docker / OCI** | **Tier 1 (Supported)** | Minimal Scratch Container | Non-root UID 10001, Multi-stage |
-| **Serverless / Vercel** | **EXPERIMENTAL** | Node / Native Shim | Stateless invocation handler |
-| **AWS Lambda** | **EXPERIMENTAL** | Custom bootstrap layer | Zip archive deployment |
-
----
-
-## 2. Production Tier 1 Deployment
-
-### Standalone Binary
-HKD compiles down to zero-dependency standalone native binaries:
-```bash
-hkd build --release --target native
-```
-The output executable encapsulates the bytecode payload, VM runtime, and standard library, requiring no external Node.js or dynamic dependencies.
-
-### Container Packaging
-Production containers generated via `hkd deploy --target docker` utilize:
-* Multi-stage compilation isolating source from artifact.
-* Minimal runtime footprint (< 15 MB image).
-* Non-root user execution (`USER 10001:10001`).
-* Read-only root filesystem compatibility.
-
----
-
-## 3. Serverless & Cloud Adapters (Experimental)
-
-> [!WARNING]
-> **Experimental Classification**: Serverless adapters (Vercel, AWS Lambda, Cloudflare) are provided for exploratory serverless workloads. They are not covered by the zero-breaking-change strict SLA of Tier 1 targets.
-
-### Vercel Function Adapter
-The Vercel adapter translates HKD request handlers into Vercel Serverless Function format (`api/index.js` or `.vercel/output`).
-* Cold-start initialization invokes the reference runtime or native binary shim.
-* Handlers process HTTP requests statelessly.
-
-### AWS Lambda Adapter
-Custom runtime bootstrap (`bootstrap`) that polls the Lambda Runtime API and routes events into HKD entry points.
+The Windows `hkd build --native` output is a native executable launcher embedding HKDB bytecode and the Zig bytecode interpreter. The HKD program itself is not compiled into native machine code. JIT execution is not integrated in version 1.1.0. See [`platform-support.md`](platform-support.md) for the host-validation boundary.

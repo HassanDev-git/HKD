@@ -2,10 +2,10 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Release: 1.1.0](https://img.shields.io/badge/Release-1.1.0-brightgreen.svg)](docs/release-notes-1.1.0.md)
-[![Status: Project--Scope Production Ready](https://img.shields.io/badge/Readiness-Project--Scope%20Production%20Ready-success.svg)](docs/phase19-20-final-release-report.md)
+[![Status: Local release audit not ready](https://img.shields.io/badge/Readiness-Local%20audit%20not%20ready-orange.svg)](artifacts/release-verification.json)
 [![Tests: 1043 Passing](https://img.shields.io/badge/Tests-1043%20passing-success.svg)](tests/)
 
-**HKD** is a modern, statically-typed systems programming language and developer platform combining high developer velocity with predictable runtime performance, deterministic compilation, and a unified zero-dependency toolchain.
+**HKD** is a statically typed programming language and developer toolchain with a compiler, reference virtual machine, optional native runtime, package manager, and editor integrations.
 
 Built with an optimizing SSA-based compiler pipeline, an event-loop concurrency scheduler, a stack virtual machine, and a native Zig runtime, HKD empowers developers to build reliable, high-throughput microservices and CLI tools without hidden runtime overhead.
 
@@ -39,27 +39,30 @@ Built with an optimizing SSA-based compiler pipeline, an event-loop concurrency 
 
 Modern backend and systems programming often forces a compromise between language ergonomics and predictable low-level operational characteristics. HKD was designed to eliminate that friction:
 
-1. **Instant Cold Startup**: Execution begins in under 15 ms, making HKD ideal for serverless environments, CLI automation, and containers.
-2. **Deterministic & Reproducible**: Dual independent compilations yield 100% bit-for-bit identical bytecode outputs (`--verify-reproducible`).
-3. **Multi-Tier Execution**: Seamlessly transition from reference interpretation to bytecode VM, baseline JIT, optimizing trace JIT, or AOT native machine code.
-4. **Leak-Free Memory Model**: Bounded memory footprint verified across 10,000 continuous soak execution cycles with real process telemetry.
-5. **Unified Toolchain**: Compiler, package manager, formatter, linter, test runner, documentation generator, language server (LSP 2.0), and debugger adapter (DAP 1.0) ship as a single integrated experience.
+1. **Static typing**: Type checking, functions, structs, and generics are part of the compiler; some language features remain edition-gated or experimental.
+2. **Two execution paths**: The TypeScript reference VM is included in the CLI. A native Zig bytecode runtime is available for supported builds.
+3. **Integrated tooling**: The repository includes package management, formatting, linting, testing, documentation, LSP, DAP, and a VS Code extension.
+4. **Reproducibility checks**: The compiler has a byte-for-byte build verification command and regression tests.
 
 ---
 
 ## Installation
 
 ### Pre-Built Standalone Binaries
-Download official standalone binaries for Windows x64 and Linux x64 from the [GitHub Releases](https://github.com/HassanDev-git/HKD/releases) page. Checksums are recorded in `dist/SHA256SUMS`.
+This checkout includes a locally rebuilt Windows x64 standalone executable and ZIP. The Phase 10.3 audit verified those files on its Windows x64 host; it did not publish a release or verify Linux, macOS, or ARM64 artifacts. See `dist/artifacts.json` and `dist/SHA256SUMS` for this checkout's artifact inventory.
 
-Direct Download:
-- **[HKD v1.1.0 (Windows x64)](https://github.com/HassanDev-git/HKD/releases/download/v1.1.0/hkd-v1.1.0-windows-x64.zip)**
+Local ZIP: `dist/releases/hkd-v1.1.0-windows-x64.zip`
 
 On Windows:
 ```powershell
 # Verify SHA-256 integrity
-Get-FileHash -Algorithm SHA256 dist\releases\windows-x64\hkd.exe
+Get-FileHash -Algorithm SHA256 .\hkd.exe
+
+# Use the CLI from a terminal
+.\hkd.exe --help
 ```
+
+HKD is a command-line program. Double-clicking it prints help and exits with the process; use PowerShell or Windows Terminal to keep command output visible. The standalone CLI runs regular HKD programs with its bundled TypeScript VM when the separate native runtime is unavailable. `--jit` is unavailable in this release; other native VM options require the companion `hkd-runtime`.
 
 ### Via npm
 ```bash
@@ -158,7 +161,7 @@ let message = match status_code {
 ```
 
 ### Functional Iterators & Collections
-Standard Library 2.0 provides zero-leak, high-performance functional transformations:
+The standard library provides functional collection transformations:
 ```hkd
 let numbers = [1, 2, 3, 4, 5, 6, 7, 8];
 
@@ -216,7 +219,7 @@ HKD features a comprehensive single-binary CLI toolchain:
 | `hkd lsp` | Launch Language Server Protocol (LSP 2.0) daemon | `hkd lsp` |
 | `hkd dap` | Launch Debug Adapter Protocol (DAP 1.0) daemon | `hkd dap` |
 | `hkd repl` | Launch interactive read-eval-print loop | `hkd repl` |
-| `hkd verify-release` | Execute 18-dimension release verification gate suite | `hkd verify-release` |
+| `hkd verify-release` | Execute the release verification gate suite | `hkd verify-release` |
 
 ---
 
@@ -254,12 +257,10 @@ Source Code (.hkd)
        │
        ├─────────────────────────┬─────────────────────────┐
        ▼                         ▼                         ▼
-   [Stack VM]               [Native VM]             [AOT Native]
-  (Portable VM)             (Zig Engine)         (Target Codegen)
+   [Stack VM]               [Native VM]
+  (TypeScript)              (Zig Engine)
        │                         │
-       ▼                         ▼
-  [Baseline JIT]         [Optimizing JIT]
- (Method Inlining)        (Trace Caches)
+       └──── Standalone bytecode bundle ────┘
 ```
 
 1. **Front-End**: Lexical analysis and AST parsing with precise source span tracking.
@@ -268,22 +269,23 @@ Source Code (.hkd)
 4. **Bytecode Emission**: Compact binary encoding with constant pooling, line number mapping, and debug tables.
 5. **Back-End Execution**: Multi-engine dispatch:
    - **Stack VM**: Fast, portable execution engine for all supported host platforms.
-   - **Native VM**: Zero-overhead Zig-based VM with fused instruction dispatch.
-   - **JIT**: Tiered runtime acceleration featuring inline caching and specialized trace optimization.
-   - **AOT**: Native machine code emission for target architectures.
+   - **Native VM**: Zig-based VM with fused instruction dispatch.
+   - **JIT**: Machine-code emitter experiments exist, but JIT dispatch is not integrated into VM execution in this release.
+   - **Standalone bundle**: `hkd build --native` embeds compiled HKDB bytecode in the host Zig runtime executable; it does not generate machine code from the HKD program.
+   - **Native machine-code AOT**: Not implemented in this release.
 
 ---
 
 ## Platform Support Matrix
 
-HKD enforces explicit tier classifications:
+This table records the scope of the current local release audit:
 
 | Target Triple | Tier | Architecture | Support Level |
 |---|---|---|---|
-| `x86_64-pc-windows-msvc` | **Tier 1** | Windows x64 | Full CI suite, native VM, AOT, JIT, LSP, DAP, tooling |
-| `x86_64-unknown-linux-gnu` | **Tier 1** | Linux x64 | Full CI suite, native VM, AOT, JIT, containers, tooling |
-| `aarch64-unknown-linux-gnu` | **Tier 2** | Linux ARM64 | Build-validated cross-target compilation |
-| `aarch64-apple-darwin` | **Tier 2** | macOS Apple Silicon | Build-validated cross-target compilation |
+| `x86_64-pc-windows-msvc` | Host-validated | Windows x64 | Local tests and standalone CLI packaging |
+| `x86_64-unknown-linux-gnu` | Not verified here | Linux x64 | No Linux build was run in this audit |
+| `aarch64-unknown-linux-gnu` | Not verified here | Linux ARM64 | No cross-target build was run in this audit |
+| `aarch64-apple-darwin` | Not verified here | macOS Apple Silicon | No cross-target build was run in this audit |
 | `wasm32-unknown-wasi` | **Deferred** | WebAssembly | Scheduled for HKD 1.2 (`docs/platform-wasm.md`) |
 
 ---
@@ -309,28 +311,25 @@ For complete operational boundaries, see [docs/known-limitations.md](docs/known-
 
 ## Testing & Quality Assurance
 
-HKD maintains an exhaustive, regression-tested test suite:
-- **99 Test Suites / 765 Tests**: 100% passing in CI and local host environments.
-- **Differential Parity**: Bytecode VM output is continuously cross-verified against the reference interpreter.
-- **Soak Testing**: 10,000 continuous execution cycles monitored with `process.memoryUsage()`, guaranteeing zero unbounded growth (`< 1.10x` ratio).
-- **Adversarial Safety**: Malformed bytecode headers, out-of-bounds opcodes, and corrupt constant pools trigger safe trapped errors (`tests/bytecode/bytecode_safety.test.ts`).
+HKD maintains Jest unit, integration, conformance, compatibility, fuzz-regression, deployment, and packaging checks. The latest full local Windows run on 2026-10-24 passed **120 suites and 1,043 tests**. The packaging workflow separately exercises the standalone executable from a clean temporary directory.
 
 Run the full test suite locally:
 ```bash
 npm test
 ```
 
-Execute the 18-dimension release verification gate suite:
+Run the evidence-based release verification probes. Untested high-severity areas block readiness:
 ```bash
 node dist/cli/main.js verify-release
 ```
+The current local audit reports a host-scoped result. It distinguishes the supported standalone bytecode bundle from unavailable JIT dispatch and native machine-code AOT; see the generated report for remaining gates.
 
 ---
 
 ## Security & Provenance
 
 HKD implements rigorous supply-chain and application security policies:
-- **SLSA Build Level 3 Architecture**: Detailed build attestation and provenance specifications in [docs/signing-provenance.md](docs/signing-provenance.md).
+- **Build provenance design**: See [docs/signing-provenance.md](docs/signing-provenance.md); no SLSA level is claimed for this build.
 - **CycloneDX 1.5 SBOM**: Automated Software Bill of Materials generation (`hkd verify-release`).
 - **Secret Sanitization**: Automated pre-commit and CI scanner (`scripts/secret-scan.ts`) preventing leaked tokens or local filesystem paths.
 - **Reporting Vulnerabilities**: See [SECURITY.md](SECURITY.md) for private vulnerability disclosure channels.

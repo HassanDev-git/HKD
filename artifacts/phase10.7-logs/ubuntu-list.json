@@ -1,0 +1,9 @@
+{
+  "command": "wsl.exe --list --verbose",
+  "exitCode": 0,
+  "signal": null,
+  "error": null,
+  "stdout": "  NAME      STATE           VERSION\r\n* Ubuntu    Stopped         2\r\n",
+  "stderr": "",
+  "combined": "  NAME      STATE           VERSION\r\n* Ubuntu    Stopped         2\r\n"
+}

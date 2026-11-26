@@ -1,5 +1,7 @@
 # HKD 1.1.0 Release Notes — Language Evolution & Production Hardening
 
+> Historical release document: the certification language below is not current validation evidence. The Phase 10.3 audit is local to Windows x64 and is recorded in `artifacts/phase10.3-final-release-verification.json`; no release was published during that audit.
+
 We are thrilled to announce the official release of **HKD 1.1.0**, the next major milestone in the HKD programming language and developer platform.
 
 HKD 1.1.0 brings expressive functional standard library capabilities, generics and pattern matching production hardening, hardened microservice reference architectures, robust package workflows, and an evidence-based release verification pipeline certified under **Project-Scope Production Readiness Validation**.

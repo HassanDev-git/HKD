@@ -689,7 +689,7 @@ class Compiler {
                 this.emitU16(128 /* Op.MakeObject */, expr.fields.length + 1, l);
                 break;
             }
-            case "RangeExpr":
+            case "RangeExpr": {
                 this.compileExpr(expr.start);
                 this.compileExpr(expr.end);
                 if (expr.inclusive) {
@@ -703,6 +703,7 @@ class Compiler {
                 this.emit(96 /* Op.Call */, l);
                 this.chunk.writeByte(2, l);
                 break;
+            }
             case "CastExpr":
                 // Runtime cast — emit a type conversion call
                 this.compileExpr(expr.expr);

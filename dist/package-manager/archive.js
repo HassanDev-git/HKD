@@ -61,7 +61,9 @@ function packArchive(dir, manifest) {
             }
             const fullPath = path.join(currentDir, item);
             const relPath = path.relative(dir, fullPath).replace(/\\/g, "/");
-            const stat = fs.statSync(fullPath);
+            const stat = fs.lstatSync(fullPath);
+            if (stat.isSymbolicLink())
+                throw new Error("error[SEC005]: Package source contains a symbolic link");
             if (stat.isDirectory()) {
                 collect(fullPath);
             }
@@ -166,6 +168,9 @@ function unpackArchive(archiveBuf, targetDir, expectedChecksum) {
     }
     let totalUncompressedBytes = 0;
     const targetDirResolved = path.resolve(targetDir);
+    if (fs.existsSync(targetDirResolved) && fs.lstatSync(targetDirResolved).isSymbolicLink()) {
+        throw new Error("error[SEC005]: Extraction destination is a symbolic link");
+    }
     fs.mkdirSync(targetDirResolved, { recursive: true });
     const extractedFiles = [];
     for (let i = 0; i < fileCount; i++) {
@@ -183,7 +188,7 @@ function unpackArchive(archiveBuf, targetDir, expectedChecksum) {
         const relPath = archiveBuf.subarray(offset, offset + pathLen).toString("utf-8");
         offset += pathLen;
         // Security check: Path Traversal
-        if (relPath.includes("..") || path.isAbsolute(relPath) || relPath.startsWith("/") || relPath.startsWith("\\")) {
+        if (relPath.includes("..") || relPath.includes(":") || relPath.includes("\\") || path.isAbsolute(relPath) || relPath.startsWith("/") || relPath.startsWith("\\")) {
             throw new Error(`error[SEC005]: Security violation: Path traversal attempt detected: '${relPath}'`);
         }
         // Security check: Nesting depth
@@ -209,6 +214,19 @@ function unpackArchive(archiveBuf, targetDir, expectedChecksum) {
         }
         const content = archiveBuf.subarray(offset, offset + contentLen);
         offset += contentLen;
+        let checkedPath = targetDirResolved;
+        for (const part of path.relative(targetDirResolved, resolvedFilePath).split(path.sep)) {
+            checkedPath = path.join(checkedPath, part);
+            try {
+                if (fs.lstatSync(checkedPath).isSymbolicLink()) {
+                    throw new Error("error[SEC005]: Extraction path contains a symbolic link");
+                }
+            }
+            catch (error) {
+                if (error.code !== "ENOENT")
+                    throw error;
+            }
+        }
         fs.mkdirSync(path.dirname(resolvedFilePath), { recursive: true });
         fs.writeFileSync(resolvedFilePath, content);
         extractedFiles.push(relPath);

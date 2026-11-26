@@ -65,6 +65,7 @@ describe("HKD Phase 9A Benchmark Infrastructure Verification", () => {
     expect(stats.min).toBe(10.0);
     expect(stats.max).toBe(50.0);
     expect(stats.mean).toBe(30.0);
+    expect(stats.standardDeviation).toBe(15.8114);
     expect(stats.median).toBe(30.0);
     expect(stats.p95).toBe(48.0);
     expect(stats.p99).toBe(49.6);

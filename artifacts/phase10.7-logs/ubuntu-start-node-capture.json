@@ -1,0 +1,9 @@
+{
+  "command": "wsl.exe -d Ubuntu -- uname -a",
+  "exitCode": 4294967295,
+  "signal": null,
+  "error": null,
+  "stdout": "The operation could not be started because a required feature is not installed. \r\nError code: Wsl/Service/CreateInstance/CreateVm/HCS/HCS_E_SERVICE_NOT_AVAILABLE\r\nIf this error was unexpected, please consider searching for existing issues or filing a new issue at https://github.com/microsoft/WSL/issues.\r\n",
+  "stderr": "wsl: Failed to detect nested virtualization support, error: HCS_E_SERVICE_NOT_AVAILABLE\r\n",
+  "combined": "The operation could not be started because a required feature is not installed. \r\nError code: Wsl/Service/CreateInstance/CreateVm/HCS/HCS_E_SERVICE_NOT_AVAILABLE\r\nIf this error was unexpected, please consider searching for existing issues or filing a new issue at https://github.com/microsoft/WSL/issues.\r\nwsl: Failed to detect nested virtualization support, error: HCS_E_SERVICE_NOT_AVAILABLE\r\n"
+}
