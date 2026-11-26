@@ -40,6 +40,10 @@ function run(file, args) {
   }
 }
 
+function removeTemporaryDirectory(directory) {
+  fs.rmSync(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 250 });
+}
+
 function clean() {
   console.log("Preparing an isolated staging directory; existing release artifacts are preserved until smoke checks pass...");
   fs.mkdirSync(distDir, { recursive: true });
@@ -374,7 +378,7 @@ function runTarPackageSmokeTests(archivePath) {
     fs.writeFileSync(invalid, "let = ;\n", "utf-8");
     runExtracted("invalid program diagnostic", ["run", invalid], 1, "HKD Error");
   } finally {
-    fs.rmSync(isolatedRoot, { recursive: true, force: true });
+    removeTemporaryDirectory(isolatedRoot);
   }
 }
 
@@ -412,7 +416,7 @@ function runArchiveSmokeTests(stagedArchive) {
 
     run("native-only option without companion runtime", ["run", validSource, "--vm"], 1, "native runtime");
   } finally {
-    fs.rmSync(isolatedRoot, { recursive: true, force: true });
+    removeTemporaryDirectory(isolatedRoot);
   }
 }
 
@@ -569,8 +573,8 @@ function runSmokeTests() {
     fs.writeFileSync(invalidSource, "let = ;\n", "utf-8");
     runTest("Invalid program diagnostic", ["run", invalidSource], 1, "HKD Error");
   } finally {
-    fs.rmSync(sourceDir, { recursive: true, force: true });
-    fs.rmSync(callerDir, { recursive: true, force: true });
+    removeTemporaryDirectory(sourceDir);
+    removeTemporaryDirectory(callerDir);
   }
 
   console.log("=== All Standalone Smoke Tests Passed! ===\n");
@@ -597,7 +601,7 @@ function main() {
     console.error("Packaging failed:", error);
     process.exitCode = 1;
   } finally {
-    if (fs.existsSync(stagingDir)) fs.rmSync(stagingDir, { recursive: true, force: true });
+    if (fs.existsSync(stagingDir)) removeTemporaryDirectory(stagingDir);
   }
 }
 
