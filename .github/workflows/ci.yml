@@ -120,6 +120,14 @@ jobs:
         env:
           HKD_DIST_DIR: ${{ runner.temp }}/hkd-standalone-package
         run: npm run package
+      - name: Preserve verified package as a short-lived CI artifact
+        if: steps.package.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: hkd-validation-package-${{ matrix.platform }}-node-${{ matrix.node }}
+          path: ${{ runner.temp }}/hkd-standalone-package/releases/*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
       - name: Record runner and check outcomes
         if: always()
         env:
