@@ -1,4 +1,5 @@
 const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -26,10 +27,20 @@ const outputDir = process.env.HKD_NATIVE_OUTPUT_DIR
   : fs.mkdtempSync(path.join(os.tmpdir(), "hkd-ci-zig-release-"));
 fs.mkdirSync(outputDir, { recursive: true });
 const runtimePath = path.join(outputDir, process.platform === "win32" ? "hkd-runtime.exe" : "hkd-runtime");
-zig(["build-exe", "src/main.zig", "-O", "ReleaseFast", `-femit-bin=${runtimePath}`]);
+if (process.env.HKD_PREBUILT_RUNTIME === "true") {
+  assert.ok(fs.existsSync(runtimePath), `Prebuilt native runtime is missing: ${runtimePath}`);
+  console.log(`Using target runtime cross-built by CI: ${runtimePath}`);
+} else {
+  zig(["build-exe", "src/main.zig", "-O", "ReleaseFast", `-femit-bin=${runtimePath}`]);
+}
 assert.ok(fs.existsSync(runtimePath), `Native runtime build output missing: ${runtimePath}`);
 const runtimeSmoke = spawnSync(runtimePath, ["--version"], { encoding: "utf8", timeout: 10000 });
 if (runtimeSmoke.error) throw runtimeSmoke.error;
 assert.equal(runtimeSmoke.status, 0, `Native runtime execution failed: ${runtimeSmoke.stderr}`);
 assert.match(`${runtimeSmoke.stdout}\n${runtimeSmoke.stderr}`, /HKD 1\.1\.0/);
-console.log(`Zig tests and native ReleaseFast build passed for ${packageName}: ${runtimePath}`);
+const runtimeSha256 = crypto.createHash("sha256").update(fs.readFileSync(runtimePath)).digest("hex");
+if (process.env.HKD_EXPECTED_RUNTIME_SHA256) {
+  assert.equal(runtimeSha256, process.env.HKD_EXPECTED_RUNTIME_SHA256, "Downloaded runtime SHA-256 does not match the cross-build job output");
+}
+if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `runtime_sha256=${runtimeSha256}\n`);
+console.log(`Zig tests and target runtime startup passed for ${packageName}: ${runtimePath} (SHA-256 ${runtimeSha256})`);

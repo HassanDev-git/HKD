@@ -14,8 +14,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  windows-arm64-runtime-crossbuild:
+    name: Cross-build Windows ARM64 native runtime
+    runs-on: ubuntu-24.04
+    outputs:
+      runtime-sha256: ${{ steps.build.outputs.runtime_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Build Windows ARM64 runtime with Zig 0.16.0
+        id: build
+        run: node scripts/ci-zig-crossbuild-windows-arm64.cjs
+      - name: Preserve Windows ARM64 runtime for native execution
+        uses: actions/upload-artifact@v4
+        with:
+          name: hkd-native-runtime-windows-arm64
+          path: native-runtime/zig-out/bin/hkd-runtime.exe
+          if-no-files-found: error
+
   test-matrix:
     name: Node ${{ matrix.node }} / ${{ matrix.platform }}
+    needs: windows-arm64-runtime-crossbuild
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -68,10 +92,18 @@ jobs:
       - name: Build CLI
         id: build
         run: npm run build
+      - name: Download Windows ARM64 native runtime
+        if: matrix.platform == 'Windows ARM64'
+        uses: actions/download-artifact@v4
+        with:
+          name: hkd-native-runtime-windows-arm64
+          path: native-runtime/zig-out/bin
       - name: Run Zig tests and build native runtime
         id: zig
         env:
           HKD_NATIVE_OUTPUT_DIR: native-runtime/zig-out/bin
+          HKD_PREBUILT_RUNTIME: ${{ matrix.platform == 'Windows ARM64' && 'true' || 'false' }}
+          HKD_EXPECTED_RUNTIME_SHA256: ${{ matrix.platform == 'Windows ARM64' && needs.windows-arm64-runtime-crossbuild.outputs.runtime-sha256 || '' }}
           ZIG_PACKAGE: ${{ matrix.zig }}
         run: node scripts/ci-zig.cjs
       - name: Run Jest suite
@@ -91,6 +123,8 @@ jobs:
           HKD_MATRIX_PLATFORM: ${{ matrix.platform }}
           HKD_MATRIX_NODE: ${{ matrix.node }}
           HKD_ZIG_VERSION: ${{ steps.zig.outputs.version }}
+          HKD_PREBUILT_RUNTIME: ${{ matrix.platform == 'Windows ARM64' && 'true' || 'false' }}
+          HKD_NATIVE_RUNTIME_SHA256: ${{ steps.zig.outputs.runtime_sha256 }}
           HKD_CI_OUTCOMES: '{"lint":"${{ steps.lint.outcome }}","typecheck":"${{ steps.typecheck.outcome }}","build":"${{ steps.build.outcome }}","zig":"${{ steps.zig.outcome }}","jest":"${{ steps.jest.outcome }}","cli":"${{ steps.cli.outcome }}","package":"${{ steps.package.outcome }}"}'
         run: node scripts/ci-evidence.cjs
       - name: Preserve machine-readable runner evidence

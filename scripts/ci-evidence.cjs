@@ -15,6 +15,11 @@ const evidence = {
     node: process.version,
     zigPackage: process.env.ZIG_PACKAGE || null,
     zigVersion: process.env.HKD_ZIG_VERSION || null,
+    nativeRuntimeBuildMode:
+      process.env.HKD_PREBUILT_RUNTIME === "true"
+        ? "ReleaseFast cross-built on Ubuntu x64 and executed on Windows ARM64"
+        : "ReleaseFast built and executed on native runner",
+    nativeRuntimeSha256: process.env.HKD_NATIVE_RUNTIME_SHA256 || null,
   },
   workflow: {
     name: process.env.GITHUB_WORKFLOW || null,
