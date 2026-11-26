@@ -251,14 +251,14 @@ Source Code (.hkd)
 
 CI exercises the following host operating systems and architectures. A passing runner check is evidence for that workflow revision, not a claim about every distribution or deployment environment.
 
-| Target Triple | Tier | Architecture | Support Level |
+| Target Triple | Tier | Node.js | Support Level |
 |---|---|---|---|
-| Windows x64 | CI runner | Node 24 | Native runtime build and execution, CLI checks |
-| Windows ARM64 | CI runner | Node 24 | Zig tests run natively; ReleaseFast runtime is cross-built on Ubuntu x64 and executed on Windows ARM64 |
-| Linux x64 | CI runner | Node 22 and 24 | Native runtime build and execution, CLI checks |
-| Linux ARM64 | CI runner | Node 24 | Native runtime build and execution, CLI checks |
-| macOS x64 | CI runner | Node 24 | Native runtime build and execution, CLI checks |
-| macOS ARM64 | CI runner | Node 24 | Native runtime build and execution, CLI checks |
+| Windows x64 | CI runner | 24 | Native runtime build and execution, CLI checks, standalone package build and smoke test |
+| Windows ARM64 | CI runner | 24 | Zig tests run natively; ReleaseFast runtime is cross-built on Ubuntu x64 and executed on Windows ARM64; standalone package build and smoke test |
+| Linux x64 | CI runner | 22 and 24 | Native runtime build and execution, CLI checks; standalone package build and smoke test on Node 24 |
+| Linux ARM64 | CI runner | 24 | Native runtime build and execution, CLI checks, standalone package build and smoke test |
+| macOS x64 | CI runner | 24 | Native runtime build and execution, CLI checks, standalone package build and smoke test |
+| macOS ARM64 | CI runner | 24 | Native runtime build and execution, CLI checks, standalone package build and smoke test |
 | WebAssembly / WASI | Deferred | — | No WASM runtime or release target is provided |
 
 ---

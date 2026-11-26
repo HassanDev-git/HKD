@@ -4,15 +4,15 @@ HKD 1.1.0 is a Node.js application with an optional Zig bytecode interpreter. Th
 
 | Runner | Node.js | Zig/runtime evidence |
 |---|---:|---|
-| Ubuntu x64 | 22 and 24 | Native Zig tests, ReleaseFast runtime, CLI smoke checks |
-| Ubuntu ARM64 | 24 | Native Zig tests, ReleaseFast runtime, CLI smoke checks |
-| Windows x64 | 24 | Native Zig tests, ReleaseFast runtime, CLI checks and standalone packaging smoke test |
-| Windows ARM64 | 24 | Native Zig tests; ReleaseFast runtime cross-built on Ubuntu x64 and executed on Windows ARM64 |
-| macOS x64 | 24 | Native Zig tests, ReleaseFast runtime, CLI smoke checks |
-| macOS ARM64 | 24 | Native Zig tests, ReleaseFast runtime, CLI smoke checks |
+| Ubuntu x64 | 22 and 24 | Native Zig tests, ReleaseFast runtime, CLI smoke checks; standalone package build and execution on Node 24 |
+| Ubuntu ARM64 | 24 | Native Zig tests, ReleaseFast runtime, CLI smoke checks, standalone package build and execution |
+| Windows x64 | 24 | Native Zig tests, ReleaseFast runtime, CLI checks, standalone package build and execution |
+| Windows ARM64 | 24 | Native Zig tests; ReleaseFast runtime cross-built on Ubuntu x64 and executed on Windows ARM64; standalone package build and execution |
+| macOS x64 | 24 | Native Zig tests, ReleaseFast runtime, CLI smoke checks, standalone package build and execution |
+| macOS ARM64 | 24 | Native Zig tests, ReleaseFast runtime, CLI smoke checks, standalone package build and execution |
 
-The workflow also builds and runs a Linux x64 container image, checks non-root execution, and verifies diagnostics for an invalid HKD program. These results apply to the exact workflow revision and hosted runner images; they do not certify every supported Node.js version, Linux distribution, deployment environment, or release package.
+The workflow packages HKD as a TAR.GZ with the executable, user documentation, installation instructions, a source-commit manifest, and SHA-256 sums. Each native runner extracts the package in a clean directory and checks version, help, valid program execution, and invalid-program diagnostics. Successful packages are retained as seven-day workflow artifacts for that run; these are validation artifacts, not official releases. The workflow also builds and runs a Linux x64 container image, checks non-root execution, and verifies diagnostics for an invalid HKD program. These results apply to the exact workflow revision and hosted runner images; they do not certify every supported Node.js version, Linux distribution, or deployment environment.
 
-The standalone package smoke check currently runs on Windows x64 only. No official release packages are published by this repository. Cross-builds are not described as runtime certification unless the target executable is run on an architecture-matched runner.
+No official release packages are published by this repository. Cross-builds are not described as runtime certification unless the target executable is run on an architecture-matched runner.
 
 WebAssembly/WASI is deferred. The TypeScript reference VM and Zig runtime interpret HKD bytecode; neither compiles HKD source to native machine code. JIT dispatch and native-code AOT are unavailable.

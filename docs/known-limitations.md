@@ -12,7 +12,7 @@ HKD 1.1.0 is under active development. Check the [feature matrix](feature-matrix
 ## Platforms and distribution
 
 - CI exercises the host targets listed in [platform support](platform-support.md). That evidence does not certify arbitrary distributions, Node versions, or deployment environments.
-- The standalone package smoke check currently covers Windows x64. Official release packages are not published from this repository.
+- CI builds and executes standalone package smoke checks on all six listed native platform targets. Successful packages are temporary seven-day workflow artifacts; official release packages are not published from this repository.
 - WebAssembly/WASI is deferred and is not a supported compilation target.
 
 ## Packages and services
