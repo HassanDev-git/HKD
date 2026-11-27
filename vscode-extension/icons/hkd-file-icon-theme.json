@@ -1,0 +1,10 @@
+{
+  "iconDefinitions": {
+    "_hkd": {
+      "iconPath": "./hkd-file-icon.png"
+    }
+  },
+  "fileExtensions": {
+    "hkd": "_hkd"
+  }
+}

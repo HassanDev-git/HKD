@@ -29,4 +29,6 @@ Set `hkd.lsp.path` to the full path of `hkd.exe` on Windows or `hkd` on Linux/ma
 
 Open a `.hkd` file to activate language support. The extension provides LSP diagnostics, completion, hover, definition, references, symbols, rename, semantic tokens and formatting where supported by the server. Use **HKD: Debug Active File** or the provided `hkd-debug` launch configuration for breakpoints, stepping and variable inspection supported by the DAP server. **HKD: Format File** writes formatted output to the source file. Other commands run through VS Code process tasks so paths are passed as arguments without shell interpolation.
 
+To show the official HKD document icon for `.hkd` files, open **Preferences: File Icon Theme** and select **HKD File Icons**. VS Code lets users choose their own file icon theme, so installing this extension does not change the active theme automatically.
+
 Available commands include Run File, Build Project, Check File, Format File, Restart Language Server, Install Project Dependencies, and Show HKD Environment. If the configured CLI cannot start, inspect the **HKD Language Server** output channel and verify `hkd.lsp.path`.

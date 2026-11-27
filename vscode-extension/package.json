@@ -5,6 +5,7 @@
   "version": "1.1.2",
   "publisher": "hkd-lang",
   "license": "MIT",
+  "icon": "./icons/hkd-logo.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/HassanDev-git/HKD.git",
@@ -30,6 +31,13 @@
     "package": "npm run compile && vsce package --no-dependencies"
   },
   "contributes": {
+    "iconThemes": [
+      {
+        "id": "hkd-file-icons",
+        "label": "HKD File Icons",
+        "path": "./icons/hkd-file-icon-theme.json"
+      }
+    ],
     "snippets": [
       {
         "language": "hkd",
