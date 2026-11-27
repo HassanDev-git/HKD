@@ -58,6 +58,12 @@ node dist/cli/main.js --help
 
 When a release provides an archive matching your operating system and architecture, extract it, then run `hkd.exe --help` on Windows or `./hkd --help` on Linux/macOS. Add the extracted directory to `PATH` to use `hkd` from any terminal. Verify the downloaded archive against `SHA256SUMS` from the release page.
 
+**Known v1.1.1 limitation:** the published standalone executable currently does not start its LSP/DAP servers, and its Doctor checks incorrectly require development-tree paths. Both defects are fixed on the current source branch and covered by standalone-package tests, but the immutable v1.1.1 release assets do not contain those fixes. No follow-up release has been published.
+
+## Website and VS Code extension
+
+The static website source is in [`website/`](website/README.md). Validate it with `npm run website:test` and build deployable files with `npm run website:build`; no production deployment is configured. The VS Code extension is a separate VSIX in [`vscode-extension/`](vscode-extension/README.md), not part of the CLI release assets. No Marketplace listing or release attachment is currently published.
+
 The TypeScript reference VM is available after the build. CI builds and tests the optional Zig runtime for its configured target runners.
 
 ---

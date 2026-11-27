@@ -30,7 +30,7 @@ Executes an HKD project or standalone `.hkd` script.
   - `--release`: Compiles with release optimizations.
   - `--reference` / `--ts`: Runs using the reference TypeScript interpreter.
   - `--native`: Builds/runs a standalone launcher containing HKDB bytecode and the Zig interpreter; it is not machine-code AOT.
-  - `--jit`: Reserved, but unavailable in HKD 1.1.0; exits with an unsupported-feature diagnostic.
+  - `--jit`: Reserved, but unavailable in HKD 1.1.1; exits with an unsupported-feature diagnostic.
   - `--vm`: Forces register bytecode virtual machine execution.
 
 #### `hkd build [options]`

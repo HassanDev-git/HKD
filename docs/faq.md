@@ -1,75 +1,51 @@
-# HKD Frequently Asked Questions (FAQ)
+# HKD Frequently Asked Questions
 
 ## General
 
 ### What is HKD?
-HKD is a modern, statically typed, memory-safe, embeddable programming language engineered for high performance, deterministic concurrency, and developer joy. It combines clean ergonomics with a dual-runtime model (an ultra-fast native Zig bytecode engine and an extensible reference VM).
+
+HKD is a statically typed programming language under active development. The repository includes a TypeScript compiler and reference VM, an optional Zig bytecode interpreter, a CLI, package tools, and LSP/DAP protocol servers. The reference VM and Zig runtime interpret bytecode; HKD does not currently provide JIT or native-code AOT compilation.
 
 ### What is the current version?
-The source tree package version is 1.1.1. Check [GitHub Releases](https://github.com/HassanDev-git/HKD/releases) for the latest published version.
 
----
+The current published release is [HKD 1.1.1](https://github.com/HassanDev-git/HKD/releases/tag/v1.1.1). Check [GitHub Releases](https://github.com/HassanDev-git/HKD/releases) for later stable versions.
 
-## Language & Editions
+## Language and runtime
 
-### What are Editions and how do they work?
-HKD employs an edition-based evolution system inspired by Rust to guarantee backwards compatibility:
-- **Edition 2026 (Default / Stable)**: The frozen, production-grade foundation of HKD 1.0. All syntax, semantics, and standard library behaviors are guaranteed stable.
-- **Edition 2027 (Opt-in Preview)**: Enables advanced features including generic structs/functions, pattern matching with destructuring, async/await (RFC-004), and enhanced type inference.
+### Are all language features production-ready?
 
-To opt into Edition 2027 in your project, declare it in `hkd.toml`:
-```toml
-[package]
-name = "my-service"
-version = "0.1.0"
-edition = "2027"
-```
+No. Traits and language-level async/await remain experimental. JIT, native-code AOT, and WebAssembly/WASI compilation are unavailable. Read the [feature matrix](feature-matrix.md) and the relevant RFC status before relying on a feature.
 
-### Can Edition 2026 projects use dependencies written in Edition 2027?
-Yes. HKD compiles all source modules according to their declared edition and links them deterministically at bytecode boundaries.
+### Is the Zig runtime required?
 
----
+No. The standalone CLI runs programs with its bundled TypeScript compiler and reference VM. The Zig runtime is an optional bytecode interpreter that can be built separately.
 
-## Installation & Setup
+## Installation and tooling
 
 ### How do I install HKD?
-- **Standalone**: Download the archive for your OS and architecture from [GitHub Releases](https://github.com/HassanDev-git/HKD/releases), verify its SHA-256 checksum, and extract it. The executable bundles Node.js.
-- **From source**: Install Node.js 18 or newer, clone the repository, run `npm ci && npm run build`, then use `node dist/cli/main.js` or `npm link`.
-- **Self-Diagnostic**: Verify your installation at any time by running:
-  ```bash
-  hkd doctor
-  ```
 
----
+Download the archive for your operating system and architecture from [GitHub Releases](https://github.com/HassanDev-git/HKD/releases), verify its SHA-256 checksum, and extract it. The standalone executable bundles Node.js. For a source build, use Node.js 18 or newer, clone the repository, run `npm ci` and `npm run build`, then invoke `node dist/cli/main.js`.
 
-## Development & Tooling
+### How do I create a project?
 
-### How do I create a new project?
-```bash
+```sh
 hkd init my-app
 cd my-app
 hkd run src/main.hkd
 ```
 
 ### How does package management work?
-HKD features a zero-configuration package manager:
-- Manifest file: `hkd.toml`
-- Lockfile: `hkd.lock` (Lockfile V2 TOML format with cryptographic SHA-256 hashes)
-- Content-addressed package cache: stored in `~/.hkd/cache/packages/`
-- Add a dependency: `hkd add <pkg_name> --version <semver>`
-- Audit dependencies: `hkd audit`
-- Verify integrity: `hkd verify`
 
-### What is the difference between the Native Runtime and the Reference VM?
-- **Native Runtime (`hkd-runtime.exe`)**: Written in Zig, high-throughput bytecode interpreter with low memory footprint and sub-millisecond execution times. Default for `hkd run <file>`.
-- **Reference VM**: Written in TypeScript, provides complete reflection, debugging inspection, DAP integration, and browser/WASM embedding. Accessible via `hkd run --reference <file>`.
+HKD reads project dependencies from `hkd.toml`, records resolved state in `hkd.lock`, and stores package data in a local cache. Use `hkd add <package> [version]`, `hkd install`, `hkd audit`, and `hkd cache list`. See the [package guide](package-guide.md) for details.
 
-### Does HKD have an LSP server and VS Code support?
-Yes. HKD includes a built-in Language Server Protocol 2.0 implementation (`hkd lsp`) and Debug Adapter Protocol implementation (`hkd dap`). The official VS Code extension is located in `vscode-extension/` and supports syntax highlighting, diagnostics, hover docs, and breakpoint debugging.
+### Does HKD have LSP and DAP servers?
 
----
+The current source branch includes LSP and DAP protocol servers. Start them with `hkd lsp` and `hkd dap`; both communicate over stdio, and source-built package smoke tests initialize each protocol. The published v1.1.1 executable has a startup defect for those commands; the fix has not yet been released.
 
-## Contributing & Support
+### Is the VS Code extension on the Marketplace?
 
-### Where can I report bugs or suggest RFCs?
-Please open an issue on the official GitHub repository at `https://github.com/HassanDev-git/HKD/issues`.
+The extension source is in `vscode-extension/` and can be built into a VSIX with its documented package process. The repository does not currently publish a Marketplace listing or attach the VSIX to GitHub Releases. See the [VS Code guide](vscode.md).
+
+## Support
+
+Open issues and feature requests in the [HKD GitHub repository](https://github.com/HassanDev-git/HKD/issues). For vulnerabilities, follow [SECURITY.md](../SECURITY.md) and do not post secrets in a public issue.

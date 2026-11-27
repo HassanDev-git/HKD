@@ -1,0 +1,53 @@
+name: HKD Website and Extension Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  website:
+    name: Build and validate static website
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Test release asset selection and API failure handling
+        run: node --test website/src/downloads.test.mjs
+      - name: Build and smoke-test website routes and examples
+        run: npm run website:test
+      - uses: actions/upload-artifact@v6
+        with:
+          name: hkd-website-${{ github.sha }}
+          path: website/dist/
+          if-no-files-found: error
+          retention-days: 14
+
+  vscode-extension:
+    name: Package and validate VS Code extension
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: vscode-extension/package-lock.json
+      - run: npm ci --prefix vscode-extension
+      - run: npm run typecheck --prefix vscode-extension
+      - run: npm test --prefix vscode-extension
+      - run: npm run package --prefix vscode-extension
+      - uses: actions/upload-artifact@v6
+        with:
+          name: hkd-vscode-extension-${{ github.sha }}
+          path: vscode-extension/hkd-1.1.1.vsix
+          if-no-files-found: error
+          retention-days: 14

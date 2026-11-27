@@ -293,8 +293,14 @@ function main() {
     case "stats":     cmdStats(args.slice(1)); break;
     case "jit-stats": cmdJitStats(args.slice(1)); break;
     case "mem-stats": cmdMemStats(args.slice(1)); break;
-    case "lsp":       import("../lsp/server.js"); break;
-    case "dap":       import("../debug/server.js"); break;
+    case "lsp":       void import("../lsp/server.js").then(({ HkdLanguageServer }) => new HkdLanguageServer()).catch((err: unknown) => {
+      console.error(`Failed to start HKD language server: ${err instanceof Error ? err.message : String(err)}`);
+      process.exitCode = ExitCode.RuntimeError;
+    }); break;
+    case "dap":       void import("../debug/server.js").then(({ HkdDebugAdapterServer }) => new HkdDebugAdapterServer()).catch((err: unknown) => {
+      console.error(`Failed to start HKD debug adapter: ${err instanceof Error ? err.message : String(err)}`);
+      process.exitCode = ExitCode.RuntimeError;
+    }); break;
     case "doctor":    cmdDoctor(args.slice(1)); break;
     case "repl":      cmdRepl(args.slice(1)); break;
     case "fmt":       cmdFmt(args.slice(1)); break;

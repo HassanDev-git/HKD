@@ -1,9 +1,15 @@
 {
   "name": "hkd",
   "displayName": "HKD",
-  "description": "Professional Language Support, LSP 2.0, Debugging & Tooling for the HKD Programming Language",
-  "version": "1.0.0",
+  "description": "Syntax highlighting, language features, and debugging for the HKD programming language",
+  "version": "1.1.1",
   "publisher": "hkd-lang",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HassanDev-git/HKD.git",
+    "directory": "vscode-extension"
+  },
   "engines": {
     "vscode": "^1.75.0"
   },
@@ -18,12 +24,24 @@
     "onDebugResolve:hkd-debug"
   ],
   "main": "./dist/extension.js",
+  "scripts": {
+    "compile": "esbuild src/extension.ts --bundle --platform=node --format=cjs --external:vscode --outfile=dist/extension.js",
+    "typecheck": "tsc --noEmit",
+    "test": "node ../scripts/vscode-extension-smoke.cjs",
+    "package": "npm run compile && vsce package --no-dependencies"
+  },
   "contributes": {
     "languages": [
       {
         "id": "hkd",
-        "aliases": ["HKD", "hkd"],
-        "extensions": [".hkd", ".test.hkd"],
+        "aliases": [
+          "HKD",
+          "hkd"
+        ],
+        "extensions": [
+          ".hkd",
+          ".test.hkd"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],
@@ -38,7 +56,9 @@
       {
         "type": "hkd-debug",
         "label": "HKD Debugger",
-        "languages": ["hkd"],
+        "languages": [
+          "hkd"
+        ],
         "configurationSnippets": [
           {
             "label": "HKD: Launch Current File",
@@ -93,28 +113,25 @@
         "hkd.lsp.path": {
           "type": "string",
           "default": "",
-          "description": "Custom path to HKD LSP server executable"
-        },
-        "hkd.format.enable": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable authoritative document formatting on save"
-        },
-        "hkd.lint.enable": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable background linting diagnostics"
-        },
-        "hkd.debug.mode": {
-          "type": "string",
-          "enum": ["auto", "vm", "native"],
-          "default": "auto",
-          "description": "Execution tier for debugging sessions"
+          "description": "Path to the HKD CLI executable; leave empty to use hkd from PATH"
         }
       }
     }
   },
   "dependencies": {
     "vscode-languageclient": "^8.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.75.0",
+    "@vscode/vsce": "^4.1.1",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.5.2"
+  },
+  "overrides": {
+    "@vscode/vsce": {
+      "glob": "^14.0.2",
+      "minimatch": "^11.0.1"
+    }
   }
 }

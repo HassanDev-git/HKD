@@ -168,6 +168,8 @@ jobs:
       - run: npm run build
       - name: System Health Doctor
         run: node dist/cli/main.js doctor
+      - name: Verify development Doctor paths
+        run: node scripts/doctor-smoke.cjs
       - name: Dependency Security Audit
         run: node dist/cli/main.js audit
 

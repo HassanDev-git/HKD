@@ -30,6 +30,35 @@ export interface DoctorReport {
   checks: DoctorCheck[];
 }
 
+function isStandaloneExecutable(): boolean {
+  try {
+    const sea = require("node:sea") as { isSea?: () => boolean };
+    return sea.isSea?.() === true;
+  } catch {
+    return false;
+  }
+}
+
+function findFirstCandidate(candidates: string[]): string | null {
+  for (const candidate of candidates) {
+    const relativeToModule = path.resolve(__dirname, candidate);
+    if (fs.existsSync(relativeToModule)) return relativeToModule;
+    const relativeToWorkingDirectory = path.resolve(process.cwd(), candidate);
+    if (fs.existsSync(relativeToWorkingDirectory)) return relativeToWorkingDirectory;
+  }
+  return null;
+}
+
+function checkServerModule(load: () => unknown, candidates: string[]): boolean {
+  try {
+    load();
+    return true;
+  } catch {
+    // The standalone SEA embeds these modules instead of shipping their source files.
+    return !isStandaloneExecutable() && findFirstCandidate(candidates) !== null;
+  }
+}
+
 export function runDoctor(): DoctorReport {
   const checks: DoctorCheck[] = [];
 
@@ -64,16 +93,6 @@ export function runDoctor(): DoctorReport {
     });
   }
 
-function findFirstCandidate(candidates: string[]): string | null {
-  for (const c of candidates) {
-    const p1 = path.resolve(__dirname, c);
-    if (fs.existsSync(p1)) return p1;
-    const p2 = path.resolve(process.cwd(), c);
-    if (fs.existsSync(p2)) return p2;
-  }
-  return null;
-}
-
   // 2. Native Runtime Binary Check
   const isWindows = process.platform === "win32";
   const binName = isWindows ? "hkd-runtime.exe" : "hkd-runtime";
@@ -88,12 +107,13 @@ function findFirstCandidate(candidates: string[]): string | null {
 
   if (nativeBinaryPath && fs.existsSync(nativeBinaryPath)) {
     const testRun = spawnSync(nativeBinaryPath, ["--version"], { encoding: "utf-8" });
-    if (testRun.status === 0) {
+    const runtimeOutput = `${testRun.stdout ?? ""}${testRun.stderr ?? ""}`.trim();
+    if (testRun.status === 0 && runtimeOutput) {
       checks.push({
         name: "Native Zig Bytecode Runtime",
         category: "runtime",
         status: "ok",
-        message: `Native runtime executable verified (${testRun.stdout.trim()})`,
+        message: `Optional native runtime executable verified (${runtimeOutput})`,
         details: nativeBinaryPath,
       });
     } else {
@@ -101,7 +121,8 @@ function findFirstCandidate(candidates: string[]): string | null {
         name: "Native Zig Bytecode Runtime",
         category: "runtime",
         status: "warn",
-        message: "Native binary found but exited with non-zero code",
+        message: "Optional native runtime was found but did not pass its startup check; the reference VM remains available.",
+        details: testRun.error?.message || runtimeOutput || `exit status ${testRun.status}`,
       });
     }
   } else {
@@ -109,7 +130,8 @@ function findFirstCandidate(candidates: string[]): string | null {
       name: "Native Zig Bytecode Runtime",
       category: "runtime",
       status: "warn",
-      message: "Native runtime binary not built. Run 'npx zig build -Doptimize=ReleaseFast'",
+        message: "Optional native runtime is not installed; HKD remains usable with the bundled TypeScript reference VM.",
+        details: "Build the native runtime only if you want to use it: npx zig build -Doptimize=ReleaseFast",
     });
   }
 
@@ -123,20 +145,19 @@ function findFirstCandidate(candidates: string[]): string | null {
   });
 
   // 4. Language Server Check (LSP 2.0)
-  const lspPath = findFirstCandidate([
-    "../lsp/server.js",
-    "../lsp/server.ts",
-    "../../dist/lsp/server.js",
-    "../../src/lsp/server.ts",
-    "dist/lsp/server.js",
-    "src/lsp/server.ts",
-  ]);
-  if (lspPath) {
+  const lspCandidates = [
+    "../lsp/server.js", "../../dist/lsp/server.js", "dist/lsp/server.js",
+  ];
+  const lspAvailable = checkServerModule(
+    () => require("../lsp/server.js"),
+    lspCandidates,
+  );
+  if (lspAvailable) {
     checks.push({
       name: "HKD Language Server Protocol 2.0 (LSP)",
       category: "lsp",
       status: "ok",
-      message: "LSP 2.0 server module verified and available",
+      message: "LSP server module is available to the CLI",
     });
   } else {
     checks.push({
@@ -148,20 +169,19 @@ function findFirstCandidate(candidates: string[]): string | null {
   }
 
   // 5. Debug Adapter Protocol Check (DAP)
-  const dapPath = findFirstCandidate([
-    "../debug/server.js",
-    "../debug/server.ts",
-    "../../dist/debug/server.js",
-    "../../src/debug/server.ts",
-    "dist/debug/server.js",
-    "src/debug/server.ts",
-  ]);
-  if (dapPath) {
+  const dapCandidates = [
+    "../debug/server.js", "../../dist/debug/server.js", "dist/debug/server.js",
+  ];
+  const dapAvailable = checkServerModule(
+    () => require("../debug/server.js"),
+    dapCandidates,
+  );
+  if (dapAvailable) {
     checks.push({
       name: "HKD Debug Adapter Protocol (DAP)",
       category: "debugger",
       status: "ok",
-      message: "DAP server module verified with breakpoint and stepping support",
+      message: "DAP server module is available to the CLI",
     });
   } else {
     checks.push({
@@ -196,19 +216,34 @@ function findFirstCandidate(candidates: string[]): string | null {
     "../../../vscode-extension/package.json",
     "vscode-extension/package.json",
   ]);
+  let vsCodeManifest: { main?: string } | null = null;
   if (vsCodePkg) {
+    try {
+      vsCodeManifest = JSON.parse(fs.readFileSync(vsCodePkg, "utf-8")) as { main?: string };
+    } catch {
+      vsCodeManifest = null;
+    }
+  }
+  const vsCodeEntry = vsCodePkg && vsCodeManifest?.main
+    ? path.resolve(path.dirname(vsCodePkg), vsCodeManifest.main)
+    : null;
+  if (vsCodeEntry && fs.existsSync(vsCodeEntry)) {
     checks.push({
       name: "VS Code Extension Manifest",
       category: "vscode",
       status: "ok",
-      message: "VS Code extension contributes language, grammar, and DAP configuration",
+      message: "VS Code extension manifest and compiled entry point are available",
+      details: vsCodeEntry,
     });
   } else {
     checks.push({
       name: "VS Code Extension Manifest",
       category: "vscode",
       status: "warn",
-      message: "vscode-extension/package.json not found",
+      message: vsCodePkg
+        ? "VS Code extension source is present but its compiled entry point is missing."
+        : "VS Code extension is distributed separately and is not installed with this HKD package.",
+      details: vsCodePkg ?? "Install the HKD extension separately from the VS Code Marketplace or a verified VSIX.",
     });
   }
 
@@ -277,7 +312,12 @@ export function printDoctorReport(report: DoctorReport, asJson = false): void {
 
   console.log("");
   if (report.allOk) {
-    console.log("All systems operational. Environment is ready for HKD development and deployment.\n");
+    const warnings = report.checks.filter((check) => check.status === "warn").length;
+    if (warnings > 0) {
+      console.log(`Core HKD checks passed. Review the ${warnings} optional warning(s) above.\n`);
+    } else {
+      console.log("All checked systems are operational.\n");
+    }
   } else {
     console.log("Some checks failed. Please address the errors above.\n");
   }

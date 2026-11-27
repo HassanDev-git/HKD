@@ -377,6 +377,11 @@ function runTarPackageSmokeTests(archivePath) {
     const invalid = path.join(sourceDir, "invalid.hkd");
     fs.writeFileSync(invalid, "let = ;\n", "utf-8");
     runExtracted("invalid program diagnostic", ["run", invalid], 1, "HKD Error");
+
+    run(process.execPath, [
+      path.join(rootDir, "scripts", "release-package-smoke.cjs"),
+      path.join(extractDir, exeName),
+    ]);
   } finally {
     removeTemporaryDirectory(isolatedRoot);
   }

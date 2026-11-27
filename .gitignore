@@ -21,6 +21,10 @@ native-runtime/.zig-cache/
 dist-release/
 target/
 hkd-landing-page/
+/website/dist/
+/vscode-extension/node_modules/
+/vscode-extension/dist/
+/vscode-extension/*.vsix
 
 # Maintainer-private verification inputs and evidence
 /tests/
