@@ -6,6 +6,7 @@ const { spawnSync } = require("node:child_process");
 
 const executable = path.resolve(process.argv[2] || "");
 if (!process.argv[2] || !fs.existsSync(executable)) throw new Error("Pass an existing HKD executable path");
+const version = require("../package.json").version;
 const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "hkd-release-smoke-"));
 
 function run(args, expectedCode = 0) {
@@ -60,7 +61,7 @@ function verifyProtocol(command, request) {
 }
 
 try {
-  assert.match(run(["--version"]).output, /HKD 1\.1\.1/);
+  assert.match(run(["--version"]).output, new RegExp(`HKD ${version.replaceAll(".", "\\.")}`));
   assert.match(run(["--help"]).output, /USAGE:/);
 
   const doctor = JSON.parse(run(["doctor", "--json"]).stdout);
@@ -68,6 +69,7 @@ try {
   assert.equal(byName.get("HKD Bytecode Compiler & Stack VM")?.status, "ok");
   assert.equal(byName.get("HKD Language Server Protocol 2.0 (LSP)")?.status, "ok");
   assert.equal(byName.get("HKD Debug Adapter Protocol (DAP)")?.status, "ok");
+  assert.equal(byName.get("Native Zig Bytecode Runtime")?.status, "warn", "standalone package does not include the optional Zig runtime");
   assert.equal(byName.get("VS Code Extension Manifest")?.status, "warn", "extension is separate from the standalone CLI");
   assert.equal(doctor.allOk, true, "optional runtime/editor integration warnings must not fail core readiness");
 

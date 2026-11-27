@@ -2,7 +2,7 @@
   "name": "hkd",
   "displayName": "HKD",
   "description": "Syntax highlighting, language features, and debugging for the HKD programming language",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "publisher": "hkd-lang",
   "license": "MIT",
   "repository": {
@@ -15,9 +15,7 @@
   },
   "categories": [
     "Programming Languages",
-    "Debuggers",
-    "Formatters",
-    "Linters"
+    "Debuggers"
   ],
   "activationEvents": [
     "onLanguage:hkd",
@@ -32,6 +30,12 @@
     "package": "npm run compile && vsce package --no-dependencies"
   },
   "contributes": {
+    "snippets": [
+      {
+        "language": "hkd",
+        "path": "./snippets/hkd.json"
+      }
+    ],
     "languages": [
       {
         "id": "hkd",
@@ -97,8 +101,28 @@
         "category": "HKD"
       },
       {
+        "command": "hkd.showEnvironment",
+        "title": "HKD: Show HKD Environment",
+        "category": "HKD"
+      },
+      {
         "command": "hkd.installDeps",
         "title": "HKD: Install Project Dependencies",
+        "category": "HKD"
+      },
+      {
+        "command": "hkd.buildProject",
+        "title": "HKD: Build Project",
+        "category": "HKD"
+      },
+      {
+        "command": "hkd.checkFile",
+        "title": "HKD: Check File",
+        "category": "HKD"
+      },
+      {
+        "command": "hkd.formatFile",
+        "title": "HKD: Format File",
         "category": "HKD"
       }
     ],

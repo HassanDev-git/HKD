@@ -43,11 +43,11 @@ jobs:
           cache-dependency-path: vscode-extension/package-lock.json
       - run: npm ci --prefix vscode-extension
       - run: npm run typecheck --prefix vscode-extension
-      - run: npm test --prefix vscode-extension
       - run: npm run package --prefix vscode-extension
+      - run: npm test --prefix vscode-extension
       - uses: actions/upload-artifact@v6
         with:
           name: hkd-vscode-extension-${{ github.sha }}
-          path: vscode-extension/hkd-1.1.1.vsix
+          path: vscode-extension/hkd-1.1.2.vsix
           if-no-files-found: error
           retention-days: 14

@@ -1,0 +1,17 @@
+{
+  "Print a value": {
+    "prefix": "print",
+    "body": ["print(${1:value});"],
+    "description": "Print a value to standard output"
+  },
+  "Function": {
+    "prefix": "fn",
+    "body": ["fn ${1:name}(${2:args}) {", "\t$0", "}"],
+    "description": "Declare an HKD function"
+  },
+  "Let binding": {
+    "prefix": "let",
+    "body": ["let ${1:name} = ${2:value};"],
+    "description": "Declare an immutable local binding"
+  }
+}

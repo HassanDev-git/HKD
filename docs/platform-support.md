@@ -1,6 +1,6 @@
 # Platform Support
 
-HKD 1.1.1 is a Node.js application with an optional Zig bytecode interpreter. The CI workflow exercises native builds and runtime smoke checks on these hosted runners:
+HKD 1.1.2 candidate is a Node.js application with an optional Zig bytecode interpreter. The CI workflow exercises native builds and runtime smoke checks on these hosted runners; candidate evidence must be reviewed from its actual run before release:
 
 | Runner | Node.js | Zig/runtime evidence |
 |---|---:|---|

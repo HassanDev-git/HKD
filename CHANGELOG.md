@@ -2,6 +2,13 @@
 
 User-visible notes for HKD versions. Verification outcomes are limited to the evidence stated in each entry and the associated release manifest.
 
+## 1.1.2 — release candidate (not published)
+
+- Regenerates host artifact manifests from the current package version and rejects stale compiler/runtime version metadata during release verification.
+- Makes Doctor describe container execution, package cache state, security scans, and fuzz corpus evidence accurately.
+- Improves the VS Code extension with discoverable CLI process tasks, real build/check/format commands, snippets, configurable language-server activation, and visible startup errors.
+- Release candidate only. See [release notes](docs/release-notes-1.1.2.md); cross-platform and packaging claims require successful CI evidence.
+
 ## 1.1.1 — 2026-11-26 (tagged publication requires successful release verification)
 
 - Modernized release packaging and gated publication on six native-host package build and smoke-verification jobs.

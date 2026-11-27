@@ -168,6 +168,8 @@ jobs:
       - run: npm run build
       - name: System Health Doctor
         run: node dist/cli/main.js doctor
+      - name: Reject stale release artifact manifests
+        run: node scripts/release-manifest-smoke.cjs
       - name: Verify development Doctor paths
         run: node scripts/doctor-smoke.cjs
       - name: Dependency Security Audit
@@ -203,7 +205,7 @@ jobs:
           test "$(docker inspect --format '{{.Config.User}}' hkd-app:ci)" = "hkd:hkd"
           output="$(docker run --rm hkd-app:ci 2>&1 | tee "$RUNNER_TEMP/hkd-container-valid.out")"
           echo "$output"
-          [[ "$output" == *"HKD Production Runtime initialized: v1.1.1"* ]]
+          [[ "$output" == *"HKD Production Runtime initialized: v1.1.2"* ]]
           docker run --rm --entrypoint node hkd-app:ci -e 'process.exit(process.getuid() === 10001 ? 0 : 1)'
           docker image inspect --format 'image_size_bytes={{.Size}}' hkd-app:ci
       - name: Verify invalid HKD diagnostics and non-zero container exit

@@ -303,15 +303,20 @@ function scanForSecrets(projectDir: string): number {
   return violations;
 }
 
-function verifyArtifactInventory(projectDir: string): { passed: boolean; checked: number; errors: string[] } {
+export function verifyArtifactInventory(projectDir: string): { passed: boolean; checked: number; errors: string[] } {
   const distDir = path.join(projectDir, "dist");
   const manifestPath = path.join(distDir, "artifacts.json");
   const errors: string[] = [];
   if (!fs.existsSync(manifestPath)) return { passed: false, checked: 0, errors: ["dist/artifacts.json is missing"] };
   try {
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+    for (const field of ["version", "compilerVersion", "runtimeVersion"] as const) {
+      if (manifest[field] !== HKD_VERSION) {
+        errors.push(`Artifact manifest ${field} ${String(manifest[field])} does not match compiler version ${HKD_VERSION}`);
+      }
+    }
     if (!Array.isArray(manifest.artifacts) || manifest.artifacts.length === 0) {
-      return { passed: false, checked: 0, errors: ["Artifact manifest has no artifacts"] };
+      return { passed: false, checked: 0, errors: [...errors, "Artifact manifest has no artifacts"] };
     }
     let checked = 0;
     for (const artifact of manifest.artifacts) {

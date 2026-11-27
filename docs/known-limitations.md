@@ -1,6 +1,6 @@
 # Known Limitations
 
-HKD 1.1.1 is under active development. Check the [feature matrix](feature-matrix.md) and [platform support](platform-support.md) for the current implementation and verification scope. The published release was assembled only after native builds and package checks succeeded for all six supported targets.
+HKD 1.1.2 is a release candidate and has not been tagged or published. The latest public release remains v1.1.1. Check the [feature matrix](feature-matrix.md) and [platform support](platform-support.md) for the implementation and verification scope.
 
 ## Language and runtime
 
@@ -8,7 +8,7 @@ HKD 1.1.1 is under active development. Check the [feature matrix](feature-matrix
 - JIT dispatch and native-code ahead-of-time compilation are unavailable. Experimental emitters do not change this boundary.
 - Traits and language-level async/await are experimental and may have incomplete compiler or runtime support. Consult the corresponding RFC status before relying on them.
 - The standalone CLI archive bundles Node.js and the TypeScript reference VM. `hkd build --native` is a separate operation that uses the optional native bytecode interpreter; neither path compiles HKD source to machine code.
-- The published v1.1.1 standalone executable has a CLI startup defect for `hkd lsp` and `hkd dap`, and its Doctor checks treat development-tree paths as required. These defects are fixed on the current source branch and covered by isolated-package smoke checks, but the immutable v1.1.1 assets do not contain those fixes.
+- The published v1.1.1 standalone executable has a CLI startup defect for `hkd lsp` and `hkd dap`, and its Doctor checks treat development-tree paths as required. The v1.1.2 candidate contains fixes; its six release packages have not yet been certified.
 
 ## Platforms and distribution
 
@@ -20,7 +20,7 @@ HKD 1.1.1 is under active development. Check the [feature matrix](feature-matrix
 
 The package client supports local archives, offline cache workflows, and configured registries. HKD does not operate a public package registry service.
 
-The VS Code extension is separate from the CLI release archives. Its VSIX can be built locally from the repository; no Marketplace listing or release attachment is currently published. The current source branch starts LSP and DAP through the CLI, but the published v1.1.1 executable cannot yet launch those servers. Doctor reports an uninstalled extension and Zig runtime as optional. The Zig runtime is not included in standalone CLI archives.
+The VS Code extension is separate from the CLI release archives. The 1.1.2 candidate VSIX has been packaged locally, but Marketplace publication and editor installation have not been verified. The published v1.1.1 executable cannot launch LSP and DAP; do not use it with the extension. Doctor reports an uninstalled extension and Zig runtime as optional. The Zig runtime is not included in standalone CLI archives.
 
 ## Test availability
 

@@ -1,7 +1,7 @@
 # HKD Programming Language
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Release: 1.1.1](https://img.shields.io/badge/Release-1.1.1-brightgreen.svg)](docs/release-notes-1.1.1.md)
+[![Release candidate: 1.1.2](https://img.shields.io/badge/Release%20candidate-1.1.2-yellow.svg)](docs/release-notes-1.1.2.md)
 
 **HKD** is a statically typed programming language under active development. This repository contains its TypeScript compiler and reference VM, a Zig bytecode interpreter, package manager, command-line tools, language server, debugger protocol support, and VS Code extension.
 
@@ -58,7 +58,7 @@ node dist/cli/main.js --help
 
 When a release provides an archive matching your operating system and architecture, extract it, then run `hkd.exe --help` on Windows or `./hkd --help` on Linux/macOS. Add the extracted directory to `PATH` to use `hkd` from any terminal. Verify the downloaded archive against `SHA256SUMS` from the release page.
 
-**Known v1.1.1 limitation:** the published standalone executable currently does not start its LSP/DAP servers, and its Doctor checks incorrectly require development-tree paths. Both defects are fixed on the current source branch and covered by standalone-package tests, but the immutable v1.1.1 release assets do not contain those fixes. No follow-up release has been published.
+**Published v1.1.1 limitation:** the immutable v1.1.1 standalone executable does not start its LSP/DAP servers, and its Doctor checks incorrectly require development-tree paths. Fixes are being prepared in the v1.1.2 release candidate; the candidate has not been published.
 
 ## Website and VS Code extension
 

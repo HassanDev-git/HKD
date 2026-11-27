@@ -104,7 +104,7 @@ export function unreachable(x: never): never {
 
 // ─── Version ─────────────────────────────────────────────────────────────────
 
-export const HKD_VERSION = "1.1.1";
+export const HKD_VERSION = "1.1.2";
 
 export * from "./edition.js";
 

@@ -1,6 +1,6 @@
 # Getting Started with HKD
 
-Welcome to HKD 1.1.1, a statically typed programming language with a TypeScript compiler and reference VM, an optional Zig bytecode interpreter, and command-line tooling. Some language and runtime capabilities remain experimental or unavailable; see [known limitations](known-limitations.md).
+Welcome to HKD 1.1.2 release candidate, a statically typed programming language with a TypeScript compiler and reference VM, an optional Zig bytecode interpreter, and command-line tooling. The candidate is not published; some language and runtime capabilities remain experimental or unavailable. See [known limitations](known-limitations.md).
 
 ---
 

@@ -1,4 +1,4 @@
-# HKD 1.1.1 Feature and Capability Matrix
+# HKD 1.1.2 Candidate Feature and Capability Matrix
 
 This table describes the current implementation boundary. CI results are tied to the tested workflow revision; documentation, target names, and build configuration alone do not establish runtime support.
 
@@ -8,8 +8,8 @@ This table describes the current implementation boundary. CI results are tied to
 | Zig bytecode interpreter | Implemented | Optional native runtime; CI runs Zig tests and a runtime startup check on configured runners. |
 | Standalone CLI release package | Implemented | Published for six native platform targets; contains the CLI and TypeScript reference VM. See release manifest for runner provenance. |
 | Optional Zig bytecode interpreter | Implemented, optional | Built and startup-tested on the configured native runners; not included in standalone CLI archives. |
-| LSP and DAP servers | Implemented on current source | Current source starts both servers over stdio and package smoke tests initialize both. The immutable v1.1.1 standalone assets contain a CLI startup defect; see [known limitations](known-limitations.md). |
-| VS Code extension | Separately packaged | Source can be built into a VSIX; no Marketplace publication or release attachment is currently provided. |
+| LSP and DAP servers | Implemented on current source | Current source starts both servers over stdio and package smoke tests initialize both. The immutable v1.1.1 standalone assets contain a CLI startup defect; v1.1.2 candidate packages still require release CI verification. |
+| VS Code extension | Candidate VSIX | v1.1.2 VSIX packaging and archive-content smoke checks pass locally. Marketplace publication and installation into VS Code remain unverified. |
 | JIT execution | Unavailable | Experimental code generation is not dispatched by HKD program execution. |
 | Native-code AOT | Unavailable | HKD source is not compiled to machine code. |
 | Traits / RFC-003 | Experimental | See [RFC-003 status](rfc-003-status.md). |

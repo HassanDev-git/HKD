@@ -427,24 +427,19 @@ function runArchiveSmokeTests(stagedArchive) {
 
 function publishArtifacts(stagedArchive, packageArchive) {
   const manifestPath = path.join(distDir, "artifacts.json");
-  const manifest = fs.existsSync(manifestPath)
-    ? JSON.parse(fs.readFileSync(manifestPath, "utf-8"))
-    : (() => {
-        const pkg = JSON.parse(fs.readFileSync(path.join(rootDir, "package.json"), "utf-8"));
-        return {
-          name: pkg.name,
-          version: pkg.version,
-          releaseName: `HKD ${pkg.version} host package`,
-          compilerVersion: pkg.version,
-          runtimeVersion: pkg.version,
-          edition: "2026",
-          buildProfile: "release",
-          buildTimestamp: new Date().toISOString(),
-          artifacts: [],
-          inventoryNote: "Generated from the current source for this host; this is not an official published release.",
-        };
-      })();
-  if (!Array.isArray(manifest.artifacts)) throw new Error("Artifact manifest has no artifacts array");
+  const pkg = JSON.parse(fs.readFileSync(path.join(rootDir, "package.json"), "utf-8"));
+  const manifest = {
+    name: pkg.name,
+    version: pkg.version,
+    releaseName: `HKD ${pkg.version} host package`,
+    compilerVersion: pkg.version,
+    runtimeVersion: pkg.version,
+    edition: "2026",
+    buildProfile: "release",
+    buildTimestamp: new Date().toISOString(),
+    artifacts: [],
+    inventoryNote: "Generated from the current source for this host; this is not an official published release.",
+  };
 
   fs.mkdirSync(releaseDir, { recursive: true });
   fs.copyFileSync(stagedBundlePath, bundlePath);
@@ -499,6 +494,9 @@ function publishArtifacts(stagedArchive, packageArchive) {
     if (IS_WIN) artifact.tier = `Host-validated (Windows ${HOST_ARCH})`;
   }
   manifest.buildTimestamp = new Date().toISOString();
+  if (manifest.artifacts.length !== entries.length || manifest.artifacts.some((artifact) => !artifact.name.includes(pkg.version))) {
+    throw new Error("Generated artifact inventory contains stale or unexpected package entries");
+  }
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf-8");
 
   const checksums = manifest.artifacts

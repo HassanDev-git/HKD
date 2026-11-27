@@ -96,14 +96,16 @@ export function runDoctor(): DoctorReport {
   // 2. Native Runtime Binary Check
   const isWindows = process.platform === "win32";
   const binName = isWindows ? "hkd-runtime.exe" : "hkd-runtime";
-  const nativeBinaryPath = findFirstCandidate([
-    `../../native-runtime/zig-out/bin/${binName}`,
-    `../../../native-runtime/zig-out/bin/${binName}`,
-    `../bin/${binName}`,
-    binName,
-    `native-runtime/zig-out/bin/${binName}`,
-    `bin/${binName}`,
-  ]);
+  const nativeBinaryPath = findFirstCandidate(isStandaloneExecutable()
+    ? [`../bin/${binName}`, `bin/${binName}`, binName]
+    : [
+        `../../native-runtime/zig-out/bin/${binName}`,
+        `../../../native-runtime/zig-out/bin/${binName}`,
+        `../bin/${binName}`,
+        binName,
+        `native-runtime/zig-out/bin/${binName}`,
+        `bin/${binName}`,
+      ]);
 
   if (nativeBinaryPath && fs.existsSync(nativeBinaryPath)) {
     const testRun = spawnSync(nativeBinaryPath, ["--version"], { encoding: "utf-8" });
@@ -199,19 +201,21 @@ export function runDoctor(): DoctorReport {
     name: "Package Manager & Cache Subsystem",
     category: "package",
     status: "ok",
-    message: `Content-addressed package cache ready (${cacheDir})`,
+    message: `Package manager available; cache is configured at ${cacheDir}`,
+    details: fs.existsSync(cacheDir) ? "Cache directory exists; package availability and write access were not tested." : "Cache directory has not been created yet; it will be created when needed.",
   });
 
   // 7. Containerization & Docker Toolchain
   checks.push({
     name: "Container & Multi-Stage Deployment",
     category: "container",
-    status: "ok",
-    message: "Container generator verified with non-root execution (UID 10001)",
+    status: "warn",
+    message: "Container configuration support is available; image build and runtime were not tested by Doctor.",
+    details: "Run the documented container build and runtime checks to verify image behavior and non-root execution.",
   });
 
   // 8. VS Code Extension Check
-  const vsCodePkg = findFirstCandidate([
+  const vsCodePkg = isStandaloneExecutable() ? null : findFirstCandidate([
     "../../vscode-extension/package.json",
     "../../../vscode-extension/package.json",
     "vscode-extension/package.json",
@@ -258,8 +262,8 @@ export function runDoctor(): DoctorReport {
     name: "Security, Fuzzing & Audit Engine",
     category: "security",
     status: "ok",
-    message: "Security auditor, secret masking, and regression fuzzing corpus verified",
-    details: hasFuzz ? "fuzz regression test corpus active" : undefined,
+    message: "Security audit commands are available; no security scan was run by Doctor.",
+    details: hasFuzz ? "A fuzz regression corpus is present; it was not executed by Doctor." : "No fuzz regression corpus was found in this installation.",
   });
 
   const allOk = checks.every((c) => c.status !== "error");

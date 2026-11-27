@@ -1,6 +1,6 @@
 {
   "name": "hkd",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "The HKD Programming Language — compiler, VM, CLI, and standard library",
   "main": "dist/index.js",
   "bin": {
@@ -11,6 +11,7 @@
     "build:watch": "tsc --watch",
     "typecheck": "tsc --noEmit",
     "test:doctor": "npm run build && node scripts/doctor-smoke.cjs",
+    "test:release-manifest": "npm run build && node scripts/release-manifest-smoke.cjs",
     "website:build": "node website/build.mjs",
     "website:test": "node --test website/src/downloads.test.mjs && npm run website:build && npm run build && node scripts/website-smoke.cjs",
     "website:serve": "node scripts/website-serve.cjs",
